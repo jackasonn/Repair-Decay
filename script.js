@@ -46,7 +46,7 @@ const EVENT_TYPES=[ {
 // GLOBAL AUDIO / UI STATE
 // ───────────────────────────────────────────────
 const state= {
-  playing:false,startedAt:0,nextEventAt:0,selectedTrack:null,soloTrack:null,overallDecay:0,logs:[],audio:null,buffers: {
+  playing:false,startedAt:0,nextEventAt:0,selectedTrack:null,soloTrack:null,knobInteracting:false,overallDecay:0,logs:[],audio:null,buffers: {
   }
   ,sources: {
   }
@@ -675,9 +675,19 @@ document.addEventListener('DOMContentLoaded',()=> {
   els.play.addEventListener('click',()=>state.playing?stopPlayback():startPlayback());
   els.closeDialog.addEventListener('click',closeTrackDialog);
   els.dialog.addEventListener('click',e=> {
-    if(e.target===els.dialog)closeTrackDialog()
+    if(e.target===els.dialog&&!state.knobInteracting)closeTrackDialog()
   }
   );
+  els.knob.addEventListener('pointerdown',()=>{
+    state.knobInteracting=true
+  });
+  const releaseKnob=()=>{
+    setTimeout(()=>{
+      state.knobInteracting=false
+    },0)
+  };
+  els.knob.addEventListener('pointerup',releaseKnob);
+  els.knob.addEventListener('pointercancel',releaseKnob);
   els.knob.addEventListener('input',updateKnob);
   els.solo.addEventListener('click',toggleSolo)
 }
