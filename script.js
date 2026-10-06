@@ -595,7 +595,7 @@ function updateKnob() {
   }
 }
 // Solo only the currently selected instrument.
-function toggleSolo {
+function toggleSolo() {
   if(!state.selectedTrack)return;
   state.soloTrack=state.soloTrack===state.selectedTrack?null:state.selectedTrack;
   TRACKS.forEach(t=> {
@@ -606,7 +606,7 @@ function toggleSolo {
   updateDialog()
 }
 // Draw the live analyser waveform.
-function drawWaveform {
+function drawWaveform() {
   const c=els.waveform,r=c.getBoundingClientRect(),d=window.devicePixelRatio||1;
   c.width=Math.max(1,Math.floor(r.width*d));
   c.height=Math.max(1,Math.floor(r.height*d));
