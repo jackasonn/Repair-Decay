@@ -18,7 +18,7 @@ const TRACKS=[ {
 }
 ];
 const EVENT_TYPES=[ {
-  id:'detune',name:'DETUNE',description:'Pitch drift detected',severity:[10,22]
+  id:'detune',name:'DETUNE',description:'Pitch drift detected without changing playback speed',severity:[10,22]
 }
 , {
   id:'highpass',name:'HIGH PASS FILTER',description:'Low frequencies being cut away',severity:[12,24]
@@ -33,7 +33,7 @@ const EVENT_TYPES=[ {
   id:'phase',name:'PHASE DRIFT',description:'Stereo image becoming unstable',severity:[8,20]
 }
 , {
-  id:'warp',name:'WARP',description:'Tiny fluctuations in playback speed',severity:[8,18]
+  id:'warp',name:'WARP',description:'Tiny fluctuations in pitch without changing playback speed',severity:[8,18]
 }
 , {
   id:'stutter',name:'STUTTER',description:'Small sections repeating or catching',severity:[8,22]
@@ -52,7 +52,7 @@ const state= {
   }
   ,offsets: {
   }
-  ,analyser:null,masterGain:null,loaded:false,loading:false,demoMode:false,noiseBuffer:null
+  ,analyser:null,masterGain:null,loaded:false,loading:false,demoMode:false,noiseBuffer:null,pitchReady:false
 }
 ;
 const trackState=Object.fromEntries(TRACKS.map(t=>[t.id, {
@@ -161,7 +161,7 @@ function currentMasterOffset() {
   return (base+elapsed)%duration
 }
 // Create the Web Audio graph and a reusable noise buffer for crackle events.
-function initialiseAudio() {
+async function initialiseAudio() {
   if(state.audio)return;
   const C=window.AudioContext||window.webkitAudioContext;
   if(!C) {
@@ -183,12 +183,21 @@ function initialiseAudio() {
   for(let i=0;
   i<data.length;
   i++)data[i]=Math.random()*2-1;
-  state.noiseBuffer=noise
+  state.noiseBuffer=noise;
+  if(ctx.audioWorklet) {
+    try {
+      await ctx.audioWorklet.addModule('pitch-shifter.js');
+      state.pitchReady=true
+    }
+    catch(e) {
+      console.warn('Pitch shifter worklet could not load.',e)
+    }
+  }
 }
 async function loadAudio() {
   if(state.loading)return;
   state.loading=true;
-  initialiseAudio();
+  await initialiseAudio();
   if(!state.audio) {
     state.loading=false;
     return
@@ -223,7 +232,7 @@ async function loadAudio() {
 }
 // Build the audio effects chain for one stem.
 function makeTrackChain(id,source) {
-  const s=trackState[id],hp=state.audio.createBiquadFilter(),lp=state.audio.createBiquadFilter(),gain=state.audio.createGain(),artifactGain=state.audio.createGain(),lfo=state.audio.createOscillator(),lfoDepth=state.audio.createGain(),phase=state.audio.createStereoPanner(),phaseLfo=state.audio.createOscillator(),phaseDepth=state.audio.createGain(),warp=state.audio.createOscillator(),warpDepth=state.audio.createGain(),crush=state.audio.createWaveShaper();
+  const s=trackState[id],hp=state.audio.createBiquadFilter(),lp=state.audio.createBiquadFilter(),gain=state.audio.createGain(),artifactGain=state.audio.createGain(),lfo=state.audio.createOscillator(),lfoDepth=state.audio.createGain(),phase=state.audio.createStereoPanner(),phaseLfo=state.audio.createOscillator(),phaseDepth=state.audio.createGain(),warp=state.audio.createOscillator(),warpDepth=state.audio.createGain(),crush=state.audio.createWaveShaper(),pitchShift=state.pitchReady?new AudioWorkletNode(state.audio,'pitch-shifter',{numberOfInputs:1,numberOfOutputs:1,outputChannelCount:[2],parameterData:{pitchCents:s.detune}}):null;
   hp.type='highpass';
   lp.type='lowpass';
   hp.frequency.value=s.highpass;
@@ -232,9 +241,7 @@ function makeTrackChain(id,source) {
   artifactGain.gain.value=1;
   lfo.type='sine';
   lfo.frequency.value=.08;
-  lfoDepth.gain.value=Math.pow(2,s.detune/1200)-1;
-  lfo.connect(lfoDepth);
-  lfoDepth.connect(source.playbackRate);
+  lfoDepth.gain.value=0;
   lfo.start();
   phaseLfo.type='sine';
   phaseLfo.frequency.value=.17;
@@ -246,18 +253,25 @@ function makeTrackChain(id,source) {
   warp.frequency.value=.23;
   warpDepth.gain.value=0;
   warp.connect(warpDepth);
-  warpDepth.connect(source.playbackRate);
+  if(pitchShift) {
+    const pitchParam=pitchShift.parameters.get('pitchCents');
+    warpDepth.connect(pitchParam)
+  }
   warp.start();
   crush.curve=makeBitCurve(16);
   crush.oversample='none';
-  source.connect(crush);
+  if(pitchShift) {
+    source.connect(pitchShift);
+    pitchShift.connect(crush)
+  }
+  else source.connect(crush);
   crush.connect(hp);
   hp.connect(lp);
   lp.connect(phase);
   phase.connect(gain);
   gain.connect(state.masterGain);
   return {
-    source,highpass:hp,lowpass:lp,gain,artifactGain,lfo,lfoDepth,phase,phaseLfo,phaseDepth,warp,warpDepth,crush
+    source,highpass:hp,lowpass:lp,gain,artifactGain,lfo,lfoDepth,phase,phaseLfo,phaseDepth,warp,warpDepth,crush,pitchShift
   }
 }
 // Quantise the waveform to simulate reduced bit depth.
@@ -305,7 +319,7 @@ function startSources() {
     const s=state.audio.createBufferSource(),st=trackState[t.id];
     s.buffer=b;
     state.sources[t.id]=makeTrackChain(t.id,s);
-    state.sources[t.id].lfoDepth.gain.value=Math.pow(2,st.detune/1200)-1;
+    if(state.sources[t.id].pitchShift)state.sources[t.id].pitchShift.parameters.get('pitchCents').setValueAtTime(st.detune,state.audio.currentTime);
     s.start(0,state.offsets[t.id]||0)
   }
   );
@@ -415,7 +429,7 @@ function applyEvent() {
     const cents=Math.round((Math.random()*2-1)*(35+Math.random()*85));
     s.detune=Math.max(-120,Math.min(120,s.detune+cents));
     e.detail=(cents>0?'+':'')+cents+' CENTS';
-    if(d)d.lfoDepth.gain.setTargetAtTime(Math.pow(2,s.detune/1200)-1,state.audio.currentTime,.12)
+    if(d&&d.pitchShift)d.pitchShift.parameters.get('pitchCents').setTargetAtTime(s.detune,state.audio.currentTime,.12)
   }
   if(et.id==='highpass') {
     s.highpass=350+Math.random()*250;
@@ -443,8 +457,8 @@ function applyEvent() {
       return
     }
     s.warpDepth=Math.min(.018,s.warpDepth+.004+Math.random()*.004);
-    e.detail='±'+Math.round(s.warpDepth*1000)/10+'% SPEED';
-    if(d)d.warpDepth.gain.setTargetAtTime(s.warpDepth,state.audio.currentTime,.15)
+    e.detail='±'+Math.round(s.warpDepth*1000)+' CENTS PITCH';
+    if(d)d.warpDepth.gain.setTargetAtTime(s.warpDepth*1000,state.audio.currentTime,.15)
   }
   if(et.id==='stutter') {
     s.stutterDepth=Math.min(1,s.stutterDepth+.22+Math.random()*.18);
@@ -534,7 +548,7 @@ function repairTrack(id) {
   s.crackleDepth=0;
   if(state.sources[id]) {
     const d=state.sources[id];
-    d.lfoDepth.gain.setTargetAtTime(0,state.audio.currentTime,.12);
+    if(d.pitchShift)d.pitchShift.parameters.get('pitchCents').setTargetAtTime(0,state.audio.currentTime,.12);
     d.highpass.frequency.setTargetAtTime(20,state.audio.currentTime,.12);
     d.lowpass.frequency.setTargetAtTime(20000,state.audio.currentTime,.12);
     d.phaseDepth.gain.setTargetAtTime(0,state.audio.currentTime,.12);
