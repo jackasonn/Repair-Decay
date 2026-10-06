@@ -195,7 +195,10 @@ async function initialiseAudio() {
   }
 }
 async function loadAudio() {
-  if(state.loading)return;
+  if(state.loading) {
+    while(state.loading)await new Promise(resolve=>setTimeout(resolve,50));
+    return
+  }
   state.loading=true;
   await initialiseAudio();
   if(!state.audio) {
