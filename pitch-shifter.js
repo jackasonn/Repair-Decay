@@ -16,10 +16,6 @@ class PitchShiftProcessor extends AudioWorkletProcessor {
     };
   }
 
-  get pitchRatio() {
-    return Math.pow(2,(this.pitchCents||0)/1200);
-  }
-
   process(inputs,outputs,parameters) {
     const input=inputs[0];
     const output=outputs[0];
@@ -48,10 +44,9 @@ class PitchShiftProcessor extends AudioWorkletProcessor {
       this.started=true;
     }
 
-    const ratioBase=this.pitchRatio;
     for(let i=0;i<frames;i++) {
-      const dynamicCents=pitchParam&&pitchParam.length?pitchParam[Math.min(i,pitchParam.length-1)]:0;
-      const ratio=Math.pow(2,((this.pitchCents||0)+dynamicCents)/1200);
+      const cents=pitchParam&&pitchParam.length?pitchParam[Math.min(i,pitchParam.length-1)]:0;
+      const ratio=Math.pow(2,cents/1200);
 
       if(this.outputPosition%this.hop===0) {
         this.grains.push({
