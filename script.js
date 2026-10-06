@@ -267,7 +267,7 @@ function makeTrackChain(id,source) {
   warp.connect(warpDepth);
   if(pitchShift) {
     const pitchParam=pitchShift.parameters.get('pitchCents');
-    warpDepth.connect(pitchParam)
+    if(pitchParam)warpDepth.connect(pitchParam)
   }
   warp.start();
   crush.curve=makeBitCurve(16);
@@ -332,7 +332,8 @@ function startSources() {
     const s=state.audio.createBufferSource(),st=trackState[t.id];
     s.buffer=b;
     state.sources[t.id]=makeTrackChain(t.id,s);
-    if(state.sources[t.id].pitchShift)state.sources[t.id].pitchShift.parameters.get('pitchCents').setValueAtTime(st.detune,state.audio.currentTime);
+    const pitchParam=state.sources[t.id].pitchShift?.parameters.get('pitchCents');
+    if(pitchParam)pitchParam.setValueAtTime(st.detune,state.audio.currentTime);
     s.start(0,state.offsets[t.id]||0)
   }
   );
@@ -374,21 +375,32 @@ function loopPlayback() {
   updateUI()
 }
 async function startPlayback() {
-  if(!state.loaded) {
-    const ready=await loadAudio();
-    if(!ready)return
+  try {
+    if(!state.loaded) {
+      const ready=await loadAudio();
+      if(!ready)return
+    }
+    await initialiseAudio();
+    if(!state.audio)return;
+    if(state.audio.state==='suspended')await state.audio.resume();
+    startSources();
+    state.playing=true;
+    els.play.classList.add('playing');
+    els.play.setAttribute('aria-label','Pause song');
+    els.playbackState.textContent='PLAYING / DECAY ACTIVE';
+    scheduleNextEvent();
+    addLog('Playback started. Decay engine armed.','repair');
+    updateUI()
   }
-  await initialiseAudio();
-  if(!state.audio)return;
-  if(state.audio.state==='suspended')await state.audio.resume();
-  startSources();
-  state.playing=true;
-  els.play.classList.add('playing');
-  els.play.setAttribute('aria-label','Pause song');
-  els.playbackState.textContent='PLAYING / DECAY ACTIVE';
-  scheduleNextEvent();
-  addLog('Playback started. Decay engine armed.','repair');
-  updateUI()
+  catch(e) {
+    state.playing=false;
+    console.error('Playback failed:',e);
+    els.play.classList.remove('playing');
+    els.play.setAttribute('aria-label','Play song');
+    els.playbackState.textContent='PLAYBACK ERROR — SEE CONSOLE';
+    addLog('Playback failed: '+(e?.message||e),'event');
+    updateUI()
+  }
 }
 function stopPlayback(finished=false) {
   if(!state.audio)return;
@@ -443,7 +455,8 @@ function applyEvent() {
     const cents=Math.round((Math.random()*2-1)*(35+Math.random()*85));
     s.detune=Math.max(-120,Math.min(120,s.detune+cents));
     e.detail=(cents>0?'+':'')+cents+' CENTS';
-    if(d&&d.pitchShift)d.pitchShift.parameters.get('pitchCents').setTargetAtTime(s.detune,state.audio.currentTime,.12)
+    const pitchParam=d?.pitchShift?.parameters.get('pitchCents');
+    if(pitchParam)pitchParam.setTargetAtTime(s.detune,state.audio.currentTime,.12)
   }
   if(et.id==='highpass') {
     s.highpass=350+Math.random()*250;
@@ -562,7 +575,8 @@ function repairTrack(id) {
   s.crackleDepth=0;
   if(state.sources[id]) {
     const d=state.sources[id];
-    if(d.pitchShift)d.pitchShift.parameters.get('pitchCents').setTargetAtTime(0,state.audio.currentTime,.12);
+    const pitchParam=d.pitchShift?.parameters.get('pitchCents');
+    if(pitchParam)pitchParam.setTargetAtTime(0,state.audio.currentTime,.12);
     d.highpass.frequency.setTargetAtTime(20,state.audio.currentTime,.12);
     d.lowpass.frequency.setTargetAtTime(20000,state.audio.currentTime,.12);
     d.phaseDepth.gain.setTargetAtTime(0,state.audio.currentTime,.12);
