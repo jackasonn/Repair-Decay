@@ -185,53 +185,62 @@ async function initialiseAudio() {
   i++)data[i]=Math.random()*2-1;
   state.noiseBuffer=noise;
   if(ctx.audioWorklet) {
-    try {
-      await ctx.audioWorklet.addModule('pitch-shifter.js');
+    ctx.audioWorklet.addModule('pitch-shifter.js').then(()=>{
       state.pitchReady=true
-    }
-    catch(e) {
+    }).catch(e=>{
       console.warn('Pitch shifter worklet could not load.',e)
-    }
+    })
   }
 }
 async function loadAudio() {
   if(state.loading) {
     while(state.loading)await new Promise(resolve=>setTimeout(resolve,50));
-    return
+    return state.loaded
   }
   state.loading=true;
-  await initialiseAudio();
-  if(!state.audio) {
-    state.loading=false;
-    return
-  }
-  els.playbackState.textContent='LOADING TRACKS…';
-  let loaded=0;
-  for(const t of TRACKS) {
-    try {
-      const r=await fetch(t.file);
-      if(!r.ok)throw Error(r.status);
-      state.buffers[t.id]=await state.audio.decodeAudioData(await r.arrayBuffer());
-      state.offsets[t.id]=0;
-      loaded++
+  try {
+    await initialiseAudio();
+    if(!state.audio) {
+      els.playbackState.textContent='AUDIO NOT SUPPORTED';
+      return false
     }
-    catch(e) {
-      console.warn('Could not load '+t.file,e)
+    els.playbackState.textContent='LOADING TRACKS…';
+    let loaded=0;
+    for(const t of TRACKS) {
+      try {
+        const r=await fetch(t.file);
+        if(!r.ok)throw Error(r.status);
+        state.buffers[t.id]=await state.audio.decodeAudioData(await r.arrayBuffer());
+        state.offsets[t.id]=0;
+        loaded++
+      }
+      catch(e) {
+        console.warn('Could not load '+t.file,e)
+      }
     }
+    if(loaded===TRACKS.length) {
+      state.loaded=true;
+      state.demoMode=false;
+      els.playbackState.textContent='READY TO PLAY';
+      addLog('All five track stems loaded successfully.','repair')
+    }
+    else {
+      state.demoMode=true;
+      els.playbackState.textContent='ADD STEMS TO BEGIN';
+      addLog('Audio setup waiting: '+loaded+'/5 track stems found.','event')
+    }
+    updateUI();
+    return state.loaded
   }
-  if(loaded===TRACKS.length) {
-    state.loaded=true;
-    state.demoMode=false;
-    els.playbackState.textContent='READY TO PLAY';
-    addLog('All five track stems loaded successfully.','repair')
+  catch(e) {
+    console.error('Audio initialisation failed.',e);
+    els.playbackState.textContent='AUDIO ERROR — SEE CONSOLE';
+    addLog('Audio initialisation failed.','event');
+    return false
   }
-  else {
-    state.demoMode=true;
-    els.playbackState.textContent='ADD STEMS TO BEGIN';
-    addLog('Audio setup waiting: '+loaded+'/5 track stems found.','event')
+  finally {
+    state.loading=false
   }
-  updateUI();
-  state.loading=false
 }
 // Build the audio effects chain for one stem.
 function makeTrackChain(id,source) {
@@ -366,10 +375,11 @@ function loopPlayback() {
 }
 async function startPlayback() {
   if(!state.loaded) {
-    await loadAudio();
-    if(!state.loaded)return
+    const ready=await loadAudio();
+    if(!ready)return
   }
   await initialiseAudio();
+  if(!state.audio)return;
   if(state.audio.state==='suspended')await state.audio.resume();
   startSources();
   state.playing=true;
