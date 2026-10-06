@@ -267,6 +267,7 @@ function makeTrackChain(id,source) {
   else source.connect(crush);
   crush.connect(hp);
   hp.connect(lp);
+  artifactGain.connect(hp);
   lp.connect(phase);
   phase.connect(gain);
   gain.connect(state.masterGain);
@@ -361,11 +362,11 @@ function loopPlayback() {
   updateUI()
 }
 async function startPlayback() {
-  initialiseAudio();
   if(!state.loaded) {
     await loadAudio();
     if(!state.loaded)return
   }
+  await initialiseAudio();
   if(state.audio.state==='suspended')await state.audio.resume();
   startSources();
   state.playing=true;
