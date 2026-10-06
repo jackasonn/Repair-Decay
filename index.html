@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b0906">
+    <title>REPAIR / DECAY — Interactive Music</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="scanlines" aria-hidden="true"></div>
+    <header class="site-header">
+        <a class="wordmark" href="index.html" aria-label="Repair Decay home">REPAIR<span>/</span>DECAY</a>
+        <div class="system-status">
+            <span class="status-dot" id="system-dot"></span>
+            <span id="system-status">SYSTEM READY</span>
+        </div>
+    </header>
+    <main>
+        <section class="player-section" aria-label="Song player">
+            <div class="album-art" id="album-art" role="img" aria-label="Album artwork placeholder">
+                <span class="art-label">SONG<br>IMAGE</span>
+                <span class="art-noise">001</span>
+            </div>
+            <div class="player-panel">
+                <div class="song-heading">
+                    <div>
+                        <p class="eyebrow">INTERACTIVE MUSIC ARCHIVE / 001</p>
+                        <h1>COME WHAT MAY TOMORROW</h1>
+                        <p class="artist">JACKSON MOORE</p>
+                    </div>
+                    <button class="play-button" id="play-button" type="button" aria-label="Play song">
+                        <span class="play-icon">▶</span>
+                    </button>
+                </div>
+                <div class="waveform-wrap">
+                    <canvas id="waveform" aria-label="Audio waveform visualisation"></canvas>
+                    <div class="waveform-line"></div>
+                </div>
+                <div class="player-meta">
+                    <span id="playback-state">READY TO PLAY</span>
+                    <span id="playback-time">00:00 / --:--</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="tracks-section" aria-labelledby="tracks-title">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">INDIVIDUAL COMPONENTS</p>
+                    <h2 id="tracks-title">THE SONG IS FRAGILE</h2>
+                </div>
+                <p class="section-note">Each component can deteriorate independently.<br>Keep an eye on the system.</p>
+            </div>
+            <div class="track-grid" id="track-grid"></div>
+        </section>
+
+        <section class="logs-section" aria-label="Maintenance and decay logs">
+            <div class="log-panel">
+                <div class="panel-heading">
+                    <span>MAINTENANCE LOG</span>
+                    <span class="panel-code">LOG_01</span>
+                </div>
+                <div class="log-list" id="maintenance-log" aria-live="polite"></div>
+            </div>
+            <div class="log-panel decay-panel">
+                <div class="panel-heading">
+                    <span>DECAY LEVEL</span>
+                    <span class="panel-code" id="decay-code">000</span>
+                </div>
+                <div class="decay-number" id="decay-number">0%</div>
+                <div class="decay-meter"><span id="overall-decay-meter"></span></div>
+                <p class="decay-caption" id="decay-caption">SYSTEM INTACT — NO REPAIRS REQUIRED</p>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <p>AN EXPERIMENT IN UPKEEP, BREAKDOWN &amp; LISTENING.</p>
+        <a href="about.html">ABOUT THE PROJECT <span>↗</span></a>
+    </footer>
+
+    <dialog class="track-dialog" id="track-dialog">
+        <div class="dialog-inner">
+            <button class="close-dialog" id="close-dialog" type="button" aria-label="Close track information">×</button>
+            <div class="dialog-topline">
+                <span class="eyebrow">TRACK DIAGNOSTICS</span>
+                <span id="dialog-track-code">TRACK_01</span>
+            </div>
+            <h2 id="dialog-title">DRUMS</h2>
+            <p class="dialog-status" id="dialog-status">NORMAL</p>
+            <div class="diagnostic-grid">
+                <div><p class="mini-label">DECAY</p><strong id="dialog-decay">0%</strong></div>
+                <div><p class="mini-label">ACTIVE EVENTS</p><strong id="dialog-event-count">0</strong></div>
+                <div><p class="mini-label">SIGNAL</p><strong id="dialog-signal">STABLE</strong></div>
+            </div>
+            <div class="event-history">
+                <div class="mini-label">EVENT HISTORY</div>
+                <ul id="dialog-events"></ul>
+            </div>
+            <div class="repair-zone">
+                <div class="repair-copy">
+                    <p class="mini-label">MANUAL REPAIR</p>
+                    <p>Turn the control to restore this track. Full rotation clears all active decay events.</p>
+                </div>
+                <div class="knob-wrap">
+                    <div class="knob" id="repair-knob-visual"><span></span></div>
+                    <input id="repair-knob" class="knob-input" type="range" min="0" max="100" value="0" aria-label="Repair control">
+                    <span class="knob-label">REPAIR</span>
+                </div>
+            </div>
+            <button class="solo-button" id="solo-button" type="button">SOLO TRACK</button>
+        </div>
+    </dialog>
+    <script src="script.js"></script>
+</body>
+</html>
