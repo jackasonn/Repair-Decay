@@ -52,7 +52,7 @@ const state= {
   }
   ,offsets: {
   }
-  ,analyser:null,masterGain:null,loaded:false,demoMode:false,noiseBuffer:null
+  ,analyser:null,masterGain:null,loaded:false,loading:false,demoMode:false,noiseBuffer:null
 }
 ;
 const trackState=Object.fromEntries(TRACKS.map(t=>[t.id, {
@@ -153,6 +153,13 @@ function addLog(message,type='event') {
 function scheduleNextEvent() {
   state.nextEventAt=performance.now()+8000+Math.random()*10000
 }
+// Return the current position on the drum timeline, including any paused offset.
+function currentMasterOffset() {
+  const duration=state.buffers.drums?.duration||1;
+  const base=state.offsets.drums||0;
+  const elapsed=state.playing&&state.audio?Math.max(0,state.audio.currentTime-state.startedAt):0;
+  return (base+elapsed)%duration
+}
 // Create the Web Audio graph and a reusable noise buffer for crackle events.
 function initialiseAudio() {
   if(state.audio)return;
@@ -179,6 +186,8 @@ function initialiseAudio() {
   state.noiseBuffer=noise
 }
 async function loadAudio() {
+  if(state.loading)return;
+  state.loading=true;
   initialiseAudio();
   if(!state.audio)return;
   els.playbackState.textContent='LOADING TRACKS…';
@@ -206,7 +215,8 @@ async function loadAudio() {
     els.playbackState.textContent='ADD STEMS TO BEGIN';
     addLog('Audio setup waiting: '+loaded+'/5 track stems found.','event')
   }
-  updateUI()
+  updateUI();
+  state.loading=false
 }
 // Build the audio effects chain for one stem.
 function makeTrackChain(id,source) {
@@ -350,11 +360,10 @@ async function startPlayback() {
 }
 function stopPlayback(finished=false) {
   if(!state.audio)return;
-  const elapsed=state.audio.currentTime-state.startedAt;
+  const masterOffset=currentMasterOffset();
   state.playing=false;
   state.nextEventAt=0;
   const drumDuration=state.buffers.drums?.duration||1;
-  const masterOffset=Math.max(0,elapsed)%drumDuration;
   TRACKS.forEach(t=> {
     const d=state.sources[t.id];
     state.offsets[t.id]=masterOffset%(state.buffers[t.id]?.duration||drumDuration);
@@ -427,7 +436,7 @@ function applyEvent() {
   if(et.id==='warp') {
     if(t.id==='drums') {
       scheduleNextEvent();
-      return applyEvent()
+      return
     }
     s.warpDepth=Math.min(.018,s.warpDepth+.004+Math.random()*.004);
     e.detail='±'+Math.round(s.warpDepth*1000)/10+'% SPEED';
@@ -508,9 +517,8 @@ function repairTrack(id) {
   const s=trackState[id];
   if(!s.events.length)return;
   const n=s.events.length;
-  const currentMasterOffset=state.playing&&state.audio?Math.max(0,state.audio.currentTime-state.startedAt):(state.offsets.drums||0);
   const drumDuration=state.buffers.drums?.duration||1;
-  const syncOffset=currentMasterOffset%drumDuration;
+  const syncOffset=currentMasterOffset();
   s.events=[];
   s.detune=0;
   s.highpass=20;
