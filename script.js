@@ -443,8 +443,8 @@ function applyEvent() {
     if(d)d.lowpass.frequency.setTargetAtTime(s.lowpass,state.audio.currentTime,.08)
   }
   if(et.id==='bitcrush') {
-    s.bitDepth=Math.max(3,s.bitDepth-Math.round(2+Math.random()*3));
-    e.detail=s.bitDepth+' BIT';
+    s.bitDepth=Math.max(2,s.bitDepth-Math.round(4+Math.random()*5));
+    e.detail=s.bitDepth+' BIT — HEAVY REDUCTION';
     if(d)d.crush.curve=makeBitCurve(s.bitDepth)
   }
   if(et.id==='phase') {
