@@ -27,7 +27,7 @@ const EVENT_TYPES=[ {
   id:'lowpass',name:'LOW PASS FILTER',description:'High frequencies being cut away',severity:[12,24]
 }
 , {
-  id:'bitcrush',name:'BIT DEGRADATION',description:'Reduced bit depth and sample-rate fidelity',severity:[10,24]
+  id:'bitcrush',name:'BIT DEGRADATION',description:'Reduced bit depth fidelity',severity:[10,24]
 }
 , {
   id:'phase',name:'PHASE DRIFT',description:'Stereo image becoming unstable',severity:[8,20]
@@ -189,7 +189,10 @@ async function loadAudio() {
   if(state.loading)return;
   state.loading=true;
   initialiseAudio();
-  if(!state.audio)return;
+  if(!state.audio) {
+    state.loading=false;
+    return
+  }
   els.playbackState.textContent='LOADING TRACKS…';
   let loaded=0;
   for(const t of TRACKS) {
@@ -220,12 +223,13 @@ async function loadAudio() {
 }
 // Build the audio effects chain for one stem.
 function makeTrackChain(id,source) {
-  const s=trackState[id],hp=state.audio.createBiquadFilter(),lp=state.audio.createBiquadFilter(),gain=state.audio.createGain(),lfo=state.audio.createOscillator(),lfoDepth=state.audio.createGain(),phase=state.audio.createStereoPanner(),phaseLfo=state.audio.createOscillator(),phaseDepth=state.audio.createGain(),warp=state.audio.createOscillator(),warpDepth=state.audio.createGain(),crush=state.audio.createWaveShaper();
+  const s=trackState[id],hp=state.audio.createBiquadFilter(),lp=state.audio.createBiquadFilter(),gain=state.audio.createGain(),artifactGain=state.audio.createGain(),lfo=state.audio.createOscillator(),lfoDepth=state.audio.createGain(),phase=state.audio.createStereoPanner(),phaseLfo=state.audio.createOscillator(),phaseDepth=state.audio.createGain(),warp=state.audio.createOscillator(),warpDepth=state.audio.createGain(),crush=state.audio.createWaveShaper();
   hp.type='highpass';
   lp.type='lowpass';
   hp.frequency.value=s.highpass;
   lp.frequency.value=s.lowpass;
   gain.gain.value=state.soloTrack&&state.soloTrack!==id?0:1;
+  artifactGain.gain.value=1;
   lfo.type='sine';
   lfo.frequency.value=.08;
   lfoDepth.gain.value=Math.pow(2,s.detune/1200)-1;
@@ -253,7 +257,7 @@ function makeTrackChain(id,source) {
   phase.connect(gain);
   gain.connect(state.masterGain);
   return {
-    source,highpass:hp,lowpass:lp,gain,lfo,lfoDepth,phase,phaseLfo,phaseDepth,warp,warpDepth,crush
+    source,highpass:hp,lowpass:lp,gain,artifactGain,lfo,lfoDepth,phase,phaseLfo,phaseDepth,warp,warpDepth,crush
   }
 }
 // Quantise the waveform to simulate reduced bit depth.
@@ -374,7 +378,7 @@ function stopPlayback(finished=false) {
       catch(_) {
       }
       ;
-      [d.lfo,d.phaseLfo,d.warp,d.crackleLfo].forEach(o=> {
+      [d.lfo,d.phaseLfo,d.warp].forEach(o=> {
         try {
           o.stop()
         }
@@ -446,7 +450,7 @@ function applyEvent() {
     s.stutterDepth=Math.min(1,s.stutterDepth+.22+Math.random()*.18);
     e.detail='CATCH / REPEAT';
     if(d) {
-      const now=state.audio.currentTime,elapsed=Math.max(0,now-state.startedAt),duration=state.buffers[t.id]?.duration||1,offset=Math.min(duration-.05,Math.max(.05,elapsed%(duration))),repeat=.055+s.stutterDepth*.07,repeatStart=Math.max(0,offset-repeat),old=d.source;
+      const now=state.audio.currentTime,duration=state.buffers[t.id]?.duration||1,offset=Math.min(duration-.05,Math.max(.05,currentMasterOffset()%(duration))),repeat=.055+s.stutterDepth*.07,repeatStart=Math.max(0,offset-repeat),old=d.source;
       try {
         old.onended=null
       }
@@ -481,6 +485,7 @@ function applyEvent() {
           const cd=makeTrackChain(t.id,cs);
           cd.gain.gain.value=state.soloTrack&&state.soloTrack!==t.id?0:1;
           state.sources[t.id]=cd;
+          if(t.id==='drums')cd.source.onended=()=>{if(state.playing)loopPlayback()};
           cs.start(0,Math.min(duration,offset));
         }
       }
@@ -501,7 +506,7 @@ function applyEvent() {
         ng.gain.linearRampToValueAtTime(.04+.08*s.crackleDepth,when+.002);
         ng.gain.exponentialRampToValueAtTime(.001,when+.015+Math.random()*.025);
         n.connect(ng);
-        ng.connect(d.highpass);
+        ng.connect(d.artifactGain);
         n.start(when);
         n.stop(when+.05)
       }
@@ -517,7 +522,6 @@ function repairTrack(id) {
   const s=trackState[id];
   if(!s.events.length)return;
   const n=s.events.length;
-  const drumDuration=state.buffers.drums?.duration||1;
   const syncOffset=currentMasterOffset();
   s.events=[];
   s.detune=0;
