@@ -1,4 +1,8 @@
 class PitchShiftProcessor extends AudioWorkletProcessor {
+  static get parameterDescriptors() {
+    return [{name:'pitchCents',defaultValue:0,minValue:-1200,maxValue:1200,automationRate:'a-rate'}]
+  }
+
   constructor() {
     super();
     this.grainSize=1024;
