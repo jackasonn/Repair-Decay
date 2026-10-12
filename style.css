@@ -750,3 +750,227 @@ h2 {
     flex-direction:column
   }
 }
+
+
+/* Song navigation */
+.song-navigation {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 40;
+}
+.song-arrow {
+  position: fixed;
+  top: 48%;
+  transform: translateY(-50%);
+  width: 76px;
+  min-height: 112px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 6px;
+  border: 1px solid rgba(228,211,140,.38);
+  background: rgba(10,8,5,.82);
+  color: var(--cream);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: background .2s ease, border-color .2s ease, color .2s ease, opacity .2s ease, transform .2s ease;
+  backdrop-filter: blur(8px);
+}
+.song-arrow-left { left: 14px; }
+.song-arrow-right { right: 14px; }
+.nav-arrow {
+  font-family: 'VT323', monospace;
+  font-size: 3rem;
+  line-height: .8;
+}
+.nav-label {
+  font-size: .57rem;
+  letter-spacing: .12em;
+}
+.song-arrow:hover:not(:disabled) {
+  border-color: var(--green);
+  color: var(--green);
+  background: rgba(13,20,12,.94);
+  transform: translateY(-50%) scale(1.04);
+}
+.song-arrow:focus-visible {
+  outline: 2px solid var(--cream);
+  outline-offset: 4px;
+}
+.song-arrow:disabled {
+  opacity: .24;
+  cursor: not-allowed;
+}
+
+/* Mini live audio signifiers inside each instrument card */
+.track-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
+}
+.track-card.healthy {
+  border-color: rgba(127,154,99,.28);
+}
+.track-card.healthy .track-visual {
+  background: radial-gradient(circle at 50% 30%, rgba(127,154,99,.11), transparent 58%);
+}
+.track-visual::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.track-card.decaying .track-visual::after {
+  background: var(--yellow);
+  animation: trackFlash var(--flash-duration, 2.6s) ease-in-out infinite;
+}
+.track-card.critical .track-visual::after {
+  background: var(--red);
+  animation: trackFlash var(--flash-duration, 1.7s) ease-in-out infinite;
+}
+@keyframes trackFlash {
+  0%, 100% { opacity: var(--flash-low, .03); }
+  50% { opacity: var(--flash-high, .3); }
+}
+.track-signal {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  margin: auto 0 25px;
+  padding-top: 18px;
+}
+.signal-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.signal-label,
+.signal-reading {
+  color: var(--muted);
+  font-size: .55rem;
+  letter-spacing: .1em;
+}
+.signal-light {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #4b4c3b;
+  box-shadow: none;
+}
+.track-card.signal-playing .signal-light {
+  background: var(--green);
+  box-shadow: 0 0 9px var(--green);
+  animation: signalBlink 1.3s steps(2, end) infinite;
+}
+.track-card.decaying .signal-light,
+.track-card.decaying .signal-bars span { background: var(--yellow); }
+.track-card.critical .signal-light,
+.track-card.critical .signal-bars span { background: var(--red); }
+@keyframes signalBlink {
+  50% { opacity: .3; }
+}
+.signal-bars {
+  height: 36px;
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  margin: 8px 0 7px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid rgba(228,211,140,.14);
+}
+.signal-bars span {
+  height: 4px;
+  min-height: 4px;
+  flex: 1;
+  background: var(--green);
+  opacity: .85;
+  box-shadow: 0 0 7px rgba(127,154,99,.2);
+  transition: height .09s linear, background .25s ease;
+}
+.signal-reading {
+  display: block;
+  font-size: .52rem;
+}
+
+/* The whole interface shifts from calm green to amber/red as the song destabilises. */
+body {
+  transition: background .45s ease;
+}
+body.decay-calm {
+  background: radial-gradient(circle at 50% 0%, rgba(68,111,67,.22), transparent 35rem),
+    linear-gradient(135deg, #080d08, #0d120b 52%, #070906);
+}
+body.decay-warning {
+  background: radial-gradient(circle at 50% 0%, rgba(155,116,30,.24), transparent 35rem),
+    linear-gradient(135deg, #100c05, #181106 52%, #0b0805);
+}
+body.decay-critical {
+  background: radial-gradient(circle at 50% 0%, rgba(155,43,37,.34), transparent 35rem),
+    linear-gradient(135deg, #120605, #1c0908 52%, #090504);
+}
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  pointer-events: none;
+  opacity: 0;
+}
+body.decay-warning::after {
+  background: rgba(215,167,45,.22);
+  animation: screenFlash var(--screen-flash-duration, 2.8s) ease-in-out infinite;
+}
+body.decay-critical::after {
+  background: rgba(185,43,37,.36);
+  animation: screenFlash var(--screen-flash-duration, 1.6s) ease-in-out infinite;
+}
+@keyframes screenFlash {
+  0%, 100% { opacity: var(--screen-flash-low, .02); }
+  50% { opacity: var(--screen-flash-high, .18); }
+}
+.site-header,
+main,
+.site-footer {
+  position: relative;
+  z-index: 16;
+}
+
+@media (max-width: 1100px) {
+  .song-arrow { width: 54px; min-height: 84px; }
+  .nav-arrow { font-size: 2.3rem; }
+  .nav-label { font-size: .49rem; }
+  .song-arrow-left { left: 5px; }
+  .song-arrow-right { right: 5px; }
+  .site-header, .site-footer, main { width: min(100% - 96px, 1180px); }
+}
+@media (max-width: 600px) {
+  .song-arrow {
+    top: 155px;
+    width: 43px;
+    min-height: 58px;
+    padding: 5px 2px;
+    background: rgba(10,8,5,.92);
+  }
+  .song-arrow-left { left: 5px; }
+  .song-arrow-right { right: 5px; }
+  .nav-arrow { font-size: 1.8rem; }
+  .nav-label { display: none; }
+  .site-header, .site-footer, main { width: calc(100% - 74px); }
+  .track-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .track-card.decaying .track-visual::after,
+  .track-card.critical .track-visual::after,
+  body.decay-warning::after,
+  body.decay-critical::after,
+  .track-card.signal-playing .signal-light {
+    animation: none !important;
+  }
+  .song-arrow,
+  .signal-bars span,
+  body { transition: none !important; }
+}
