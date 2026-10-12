@@ -9,6 +9,16 @@
 </head>
 <body>
     <div class="scanlines" aria-hidden="true"></div>
+    <nav class="song-navigation" aria-label="Song navigation">
+        <button class="song-arrow song-arrow-left" id="previous-song" type="button" aria-label="Previous song" title="Previous song" disabled>
+            <span class="nav-arrow" aria-hidden="true">←</span>
+            <span class="nav-label">PREV</span>
+        </button>
+        <button class="song-arrow song-arrow-right" id="next-song" type="button" aria-label="Next song" title="Next song">
+            <span class="nav-arrow" aria-hidden="true">→</span>
+            <span class="nav-label">NEXT</span>
+        </button>
+    </nav>
     <header class="site-header">
         <a class="wordmark" href="index.html" aria-label="Repair Decay home">REPAIR<span>/</span>DECAY</a>
         <div class="system-status">
@@ -20,14 +30,14 @@
         <section class="player-section" aria-label="Song player">
             <div class="album-art" id="album-art" role="img" aria-label="Album artwork placeholder">
                 <span class="art-label">SONG<br>IMAGE</span>
-                <span class="art-noise">001</span>
+                <span class="art-noise" id="art-noise">001</span>
             </div>
             <div class="player-panel">
                 <div class="song-heading">
                     <div>
-                        <p class="eyebrow">ALBUM NAME</p>
-                        <h1>ON TIME</h1>
-                        <p class="artist">TAYLA KANE</p>
+                        <p class="eyebrow" id="album-name">ALBUM NAME</p>
+                        <h1 id="song-title">ON TIME</h1>
+                        <p class="artist" id="song-artist">TAYLA KANE / JACKSON MOORE</p>
                     </div>
                     <button class="play-button" id="play-button" type="button" aria-label="Play song">
                         <span class="play-icon">▶</span>
