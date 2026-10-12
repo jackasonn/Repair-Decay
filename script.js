@@ -6,7 +6,7 @@ const SONGS = [
     id: 'on-time',
     title: 'ON TIME',
     album: 'ALBUM NAME',
-    artist: 'TAYLA KANE / JACKSON MOORE',
+    artist: 'TAYLA KANE',
     tracks: [
       { id: 'drums', name: 'DRUMS', file: 'assets/on-time-drums.mp3' },
       { id: 'bass', name: 'BASS', file: 'assets/on-time-bass.mp3' },
@@ -19,7 +19,7 @@ const SONGS = [
     id: 'reconcile',
     title: 'RECONCILE',
     album: 'ALBUM NAME',
-    artist: 'TAYLA KANE / JACKSON MOORE',
+    artist: 'TAYLA KANE',
     tracks: [
       { id: 'drums', name: 'DRUMS', file: 'assets/reconcile-drums.mp3' },
       { id: 'bass', name: 'BASS', file: 'assets/reconcile-bass.mp3' },
