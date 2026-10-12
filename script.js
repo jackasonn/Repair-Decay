@@ -489,26 +489,24 @@ function startSources() {
 }
 function handleSongFinished(generation) {
   if (!state.playing || generation !== state.songGeneration) return;
-  const nextIndex = currentSongIndex + 1;
-  addLog(SONGS[currentSongIndex].title + ' finished. ' +
-    (nextIndex < SONGS.length ? 'Moving to ' + SONGS[nextIndex].title + '.' : 'Album playback complete.'), 'repair');
-  if (nextIndex < SONGS.length) {
-    switchSong(nextIndex, true);
-  } else {
-    stopPlayback(true);
-    els.playbackState.textContent = 'ALBUM COMPLETE';
-    updateUI();
-  }
+  if (rhythm && !rhythm.finished) finishRhythmRepair();
+  stopPlayback(true);
+  alignAllOffsets(0);
+  els.playbackState.textContent = 'SONG COMPLETE / PLAY TO RESTART';
+
 }
 
 async function startPlayback() {
+  if (state.starting || state.playing) return;
+  state.starting = true;
+  const generation = state.songGeneration;
   try {
     if (!state.loaded || state.loadedSongIndex !== currentSongIndex) {
       const ready = await loadAudio();
       if (!ready || state.loadedSongIndex !== currentSongIndex) return;
     }
     await initialiseAudio();
-    if (!state.audio) return;
+    if (!state.audio || generation !== state.songGeneration) return;
     if (state.audio.state === 'suspended') await state.audio.resume();
 
     state.playing = true;
@@ -516,8 +514,8 @@ async function startPlayback() {
     els.play.classList.add('playing');
     els.play.setAttribute('aria-label', 'Pause song');
     els.playbackState.textContent = 'PLAYING / DECAY ACTIVE';
-    scheduleNextEvent();
-    addLog('Playback started. Decay engine armed.', 'repair');
+    if (!rhythm || (rhythm.finished && (state.offsets.drums || 0) === 0)) prepareRhythmRepair();
+    addLog('Playback started. Drums rhythm test armed.', 'repair');
     updateUI();
     updateTrackAudioVisuals();
   } catch (error) {
@@ -528,6 +526,8 @@ async function startPlayback() {
     els.playbackState.textContent = 'PLAYBACK ERROR — SEE CONSOLE';
     addLog('Playback failed: ' + (error && error.message ? error.message : error), 'event');
     updateUI();
+  } finally {
+    state.starting = false;
   }
 }
 function stopPlayback(finished = false) {
@@ -695,6 +695,10 @@ function repairTrack(id) {
 function openTrackDialog(id) {
   state.selectedTrack=id;
   els.knob.value=0;
+  els.knob.disabled = id === 'drums' && !!rhythm;
+  document.querySelector('.repair-copy p:last-child').textContent = els.knob.disabled
+    ? 'Use F in the rhythm lane on the main page to repair drums.'
+    : 'Turn the control to restore this track. Full rotation clears all active decay events.';
   updateDialog();
   els.dialog.showModal()
 }
@@ -724,6 +728,7 @@ function updateDialog() {
   els.solo.classList.toggle('active',state.soloTrack===t.id)
 }
 function updateKnob() {
+  if (state.selectedTrack === 'drums' && rhythm) return;
   const v=Number(els.knob.value),a=-135+v/100*270;
   els.knobVisual.style.transform='rotate('+a+'deg)';
   if(v>=100&&state.selectedTrack) {
@@ -796,7 +801,7 @@ function updatePlaybackClock() {
     const masterTrack = TRACKS.find(t => t.id === 'drums') || TRACKS[0];
     const duration = masterTrack && state.buffers[masterTrack.id] ? state.buffers[masterTrack.id].duration : 0;
     els.playbackTime.textContent = formatTime(position) + ' / ' + (duration ? formatTime(duration) : '--:--');
-    if (state.playing && state.nextEventAt && performance.now() >= state.nextEventAt) applyEvent();
+    updateRhythmRepair();
     updateTrackAudioVisuals();
   }
   requestAnimationFrame(updatePlaybackClock);
@@ -822,6 +827,8 @@ async function switchSong(nextIndex, finishedNaturally = false) {
   if (els.dialog && els.dialog.open) closeTrackDialog();
   if (state.playing) stopPlayback(finishedNaturally);
 
+  rhythm = null;
+  document.getElementById('rhythm-panel').hidden = true;
   state.songGeneration++;
   currentSongIndex = nextIndex;
   TRACKS = SONGS[currentSongIndex].tracks;
@@ -868,7 +875,11 @@ document.addEventListener('DOMContentLoaded', () => {
   updatePlaybackClock();
   loadAudio();
 
-  els.play.addEventListener('click', () => state.playing ? stopPlayback() : startPlayback());
+  els.play.addEventListener('click', () => {
+    state.playing ? stopPlayback() : startPlayback();
+  });
+  document.addEventListener('keydown', handleRepairKey);
+  document.getElementById('repair-retry').addEventListener('click', restartRhythmRepair);
   els.previousSong.addEventListener('click', () => switchSong(currentSongIndex - 1));
   els.nextSong.addEventListener('click', () => switchSong(currentSongIndex + 1));
   els.closeDialog.addEventListener('click', closeTrackDialog);
@@ -884,3 +895,136 @@ document.addEventListener('DOMContentLoaded', () => {
   els.knob.addEventListener('input', updateKnob);
   els.solo.addEventListener('click', toggleSolo);
 });
+
+// MVP: one fixed drum target; onset cues are derived from the decoded stem.
+// All timing uses the shared Web Audio song clock, including pause/resume.
+const REPAIR_WINDOW = 0.14;
+let rhythm = null;
+function drumRepairBeats(buffer) {
+  const samples = buffer.getChannelData(0), hop = Math.floor(buffer.sampleRate * .01);
+  const energies = [];
+  for (let i = 0; i < samples.length; i += hop) {
+    let energy = 0;
+    for (let j = i; j < Math.min(i + hop, samples.length); j++) energy += samples[j] ** 2;
+    energies.push(energy / hop);
+  }
+  const peaks = [];
+  for (let i = 500; i < Math.min(2000, energies.length - 1); i++) {
+    const baseline = energies.slice(i - 12, i).reduce((a, b) => a + b, 0) / 12;
+    if (energies[i] > Math.max(.00001, baseline * 2) && energies[i] >= energies[i-1] && energies[i] > energies[i+1]) {
+      if (!peaks.length || i * .01 - peaks[peaks.length - 1] > .4) peaks.push(i * .01);
+    }
+  }
+  return peaks.slice(0, 16);
+}
+function prepareRhythmRepair() {
+  const beats = drumRepairBeats(state.buffers.drums);
+  rhythm = { beats, judged: new Set(), hits: 0, stability: 50, active: false, finished: false };
+  document.getElementById('rhythm-panel').hidden = false;
+  document.getElementById('repair-retry').hidden = true;
+  setRepairFeedback('LISTEN — DRUM DAMAGE AT 2 SECONDS. PRESS F AT THE CENTRE.');
+  renderRepairState();
+  if (!beats.length) {
+    rhythm.finished = true;
+    setRepairFeedback('NO DRUM CUES FOUND — REPAIR TEST UNAVAILABLE');
+    document.getElementById('repair-retry').hidden = false;
+  }
+}
+function setRepairFeedback(message) {
+  document.getElementById('repair-feedback').textContent = message;
+}
+function renderRepairState() {
+  document.getElementById('repair-stability').value = rhythm.stability;
+  document.getElementById('repair-stability-text').textContent = Math.round(rhythm.stability) + '%';
+  document.getElementById('repair-progress').textContent = rhythm.hits + ' / ' + rhythm.beats.length + ' beats repaired';
+}
+function updateRhythmRepair() {
+  if (!rhythm) return;
+  const position = currentMasterOffset();
+  if (state.playing && !rhythm.finished) {
+    if (!rhythm.active && position >= 2) {
+      rhythm.active = true;
+      trackState.drums.events = [{ type:'lowpass', name:'DRUM SIGNAL DAMAGE', description:'Rhythm repair required', severity:40, time:new Date() }];
+      trackState.drums.lowpass = 1800;
+      state.sources.drums?.lowpass.frequency.setTargetAtTime(1800, state.audio.currentTime, .08);
+      addLog('DRUMS damaged. Follow the signal lane and press F.', 'event');
+      setRepairFeedback('DRUMS DECAYING — PRESS F AT THE CENTRE MARKER');
+      updateUI();
+    }
+    rhythm.beats.forEach((beat, i) => {
+      if (!rhythm.judged.has(i) && position > beat + REPAIR_WINDOW) {
+        rhythm.judged.add(i);
+        rhythm.stability = Math.max(0, rhythm.stability - 10);
+        setRepairFeedback('MISS — BEAT PASSED');
+        renderRepairState();
+      }
+    });
+    if (position > rhythm.beats[rhythm.beats.length - 1] + .5) finishRhythmRepair();
+  }
+  drawRepairSignal(position);
+}
+function handleRepairKey(event) {
+  if (event.code !== 'KeyF' || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
+  if (!rhythm?.active || rhythm.finished || !state.playing || els.dialog.open) return;
+  if (/INPUT|TEXTAREA|SELECT/.test(event.target.tagName) || event.target.isContentEditable) return;
+  event.preventDefault();
+  updateRhythmRepair();
+  if (rhythm.finished) return;
+  const position = currentMasterOffset();
+  const index = rhythm.beats.findIndex((beat, i) => !rhythm.judged.has(i) && Math.abs(position - beat) <= REPAIR_WINDOW);
+  if (index >= 0) {
+    rhythm.judged.add(index);
+    rhythm.hits++;
+    rhythm.stability = Math.min(100, rhythm.stability + 8);
+    setRepairFeedback('CORRECT — SIGNAL STABILISING');
+  } else {
+    rhythm.stability = Math.max(0, rhythm.stability - 10);
+    setRepairFeedback('MISS — OUTSIDE REPAIR WINDOW');
+  }
+  renderRepairState();
+}
+function finishRhythmRepair() {
+  if (!rhythm || rhythm.finished) return;
+  rhythm.finished = true;
+  const restored = rhythm.hits >= Math.ceil(rhythm.beats.length * .7) && rhythm.stability >= 50;
+  if (restored) repairTrack('drums');
+  const result = restored ? 'DRUMS RESTORED' : 'REPAIR FAILED — DRUM SIGNAL STILL DAMAGED';
+  setRepairFeedback(result);
+  addLog(result, restored ? 'repair' : 'event');
+  document.getElementById('repair-retry').hidden = false;
+}
+function restartRhythmRepair() {
+  stopPlayback();
+  alignAllOffsets(0);
+  repairTrack('drums');
+  rhythm = null;
+  startPlayback();
+}
+function drawRepairSignal(position) {
+  const canvas = document.getElementById('repair-signal'), rect = canvas.getBoundingClientRect();
+  const ratio = window.devicePixelRatio || 1;
+  canvas.width = Math.max(1, Math.round(rect.width * ratio));
+  canvas.height = Math.round(120 * ratio);
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  const centre = rect.width / 2, scale = rect.width / 6;
+  ctx.fillStyle = 'rgba(127,154,99,.18)';
+  ctx.fillRect(centre - REPAIR_WINDOW * scale, 0, REPAIR_WINDOW * scale * 2, 120);
+  const buffer = state.buffers.drums, samples = buffer?.getChannelData(0);
+  ctx.strokeStyle = '#8e8154'; ctx.beginPath();
+  for (let x = 0; x < rect.width; x += 2) {
+    const time = position + (x - centre) / scale;
+    const sample = samples && time >= 0 ? samples[Math.floor(time * buffer.sampleRate)] || 0 : 0;
+    const y = 60 + sample * 48;
+    if (!x) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  rhythm.beats.forEach((beat, i) => {
+    const x = centre + (beat - position) * scale;
+    ctx.fillStyle = rhythm.judged.has(i) ? '#6c6757' : '#d7a72d';
+    ctx.fillRect(x - 2, 16, 4, 88);
+  });
+  const cue = state.playing && !rhythm.finished && rhythm.beats.some(beat => Math.abs(position - beat) <= REPAIR_WINDOW);
+  ctx.strokeStyle = cue ? '#e4d38c' : '#7f9a63';
+  ctx.lineWidth = cue ? 4 : 2; ctx.beginPath(); ctx.moveTo(centre, 0); ctx.lineTo(centre, 120); ctx.stroke();
+}

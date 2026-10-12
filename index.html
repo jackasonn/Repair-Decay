@@ -54,6 +54,17 @@
             </div>
         </section>
 
+        <section class="rhythm-panel" id="rhythm-panel" aria-label="Drums rhythm repair" hidden>
+            <div class="panel-heading"><span>DRUMS / RHYTHM REPAIR</span><span>KEY: F</span></div>
+            <p>Press <kbd>F</kbd> when a moving beat reaches the centre marker. Each beat needs a fresh press.</p>
+            <canvas id="repair-signal" aria-label="Drum signal and approaching repair beats"></canvas>
+            <p id="repair-feedback" role="status">LISTEN — REPAIR STARTING</p>
+            <label for="repair-stability">SIGNAL STABILITY <span id="repair-stability-text">50%</span></label>
+            <progress id="repair-stability" max="100" value="50"></progress>
+            <p id="repair-progress">0 beats repaired</p>
+            <button class="solo-button" id="repair-retry" type="button" hidden>REPLAY SONG / TRY AGAIN</button>
+        </section>
+
         <section class="tracks-section" aria-label="Song tracks">
             <div class="track-grid" id="track-grid"></div>
         </section>
