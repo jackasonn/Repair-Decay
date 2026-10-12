@@ -5,8 +5,8 @@ const SONGS = [
   {
     id: 'on-time',
     title: 'ON TIME',
-    album: 'ALBUM NAME',
-    artist: 'TAYLA KANE',
+    number: 1,
+    artist: 'TAYLA KANE AND JACKSON MOORE',
     tracks: [
       { id: 'drums', name: 'DRUMS', file: 'assets/on-time-drums.mp3' },
       { id: 'bass', name: 'BASS', file: 'assets/on-time-bass.mp3' },
@@ -18,8 +18,8 @@ const SONGS = [
   {
     id: 'reconcile',
     title: 'RECONCILE',
-    album: 'ALBUM NAME',
-    artist: 'TAYLA KANE',
+    number: 2,
+    artist: 'JACKSON MOORE',
     tracks: [
       { id: 'drums', name: 'DRUMS', file: 'assets/reconcile-drums.mp3' },
       { id: 'bass', name: 'BASS', file: 'assets/reconcile-bass.mp3' },
@@ -74,7 +74,8 @@ function createTrackState(tracks) {
     phaseDepth: 0, warpDepth: 0, stutterDepth: 0, crackleDepth: 0
   }]));
 }
-let trackState = createTrackState(TRACKS);
+const songTrackStates = Object.fromEntries(SONGS.map(song => [song.id, createTrackState(song.tracks)]));
+let trackState = songTrackStates[SONGS[currentSongIndex].id];
 const els= {
 }
 ;
@@ -108,7 +109,7 @@ function cacheElements() {
   els.previousSong = document.getElementById('previous-song');
   els.nextSong = document.getElementById('next-song');
   els.songTitle = document.getElementById('song-title');
-  els.albumName = document.getElementById('album-name');
+  els.songNumber = document.getElementById('song-number');
   els.songArtist = document.getElementById('song-artist');
   els.albumArt = document.getElementById('album-art');
   els.artNoise = document.getElementById('art-noise');
@@ -199,6 +200,8 @@ function updateUI() {
   document.body.classList.toggle('decay-calm', state.overallDecay < 30);
   document.body.classList.toggle('decay-warning', state.overallDecay >= 30 && state.overallDecay < 70);
   document.body.classList.toggle('decay-critical', state.overallDecay >= 70);
+  const decayAccent = state.overallDecay >= 70 ? '#b94b42' : state.overallDecay >= 30 ? '#d7a72d' : '#7f9a63';
+  document.body.style.setProperty('--decay-accent', decayAccent);
   document.body.style.setProperty('--screen-flash-low', Math.max(0.01, state.overallDecay / 100 * 0.08).toFixed(3));
   document.body.style.setProperty('--screen-flash-high', Math.max(0.025, state.overallDecay / 100 * 0.44).toFixed(3));
   document.body.style.setProperty('--screen-flash-duration', (3.6 - state.overallDecay / 100 * 2.4).toFixed(2) + 's');
@@ -228,14 +231,43 @@ function addLog(message,type='event') {
 function scheduleNextEvent() {
   state.nextEventAt=performance.now()+8000+Math.random()*10000
 }
-// Return the current position on the song timeline, including any paused offset.
+// One shared timeline drives every stem, both while playing and while paused.
+function masterTrackForSong() {
+  return TRACKS.find(track => track.id === 'drums') || TRACKS[0] || null;
+}
 function currentMasterOffset() {
-  const masterTrack = TRACKS.find(t => t.id === 'drums') || TRACKS[0];
+  const masterTrack = masterTrackForSong();
   if (!masterTrack) return 0;
-  const duration = state.buffers[masterTrack.id] ? state.buffers[masterTrack.id].duration : 1;
+  const buffer = state.buffers[masterTrack.id];
+  const duration = buffer ? buffer.duration : 1;
   const base = state.offsets[masterTrack.id] || 0;
   const elapsed = state.playing && state.audio ? Math.max(0, state.audio.currentTime - state.startedAt) : 0;
   return (base + elapsed) % Math.max(0.01, duration);
+}
+function alignAllOffsets(position) {
+  TRACKS.forEach(track => {
+    const buffer = state.buffers[track.id];
+    const duration = buffer ? buffer.duration : 1;
+    state.offsets[track.id] = Math.max(0, Math.min(position, Math.max(0, duration - 0.01)));
+  });
+}
+function clearSources() {
+  Object.values(state.sources).forEach(chain => {
+    try { chain.source.onended = null; } catch (_) {}
+    [chain.lfo, chain.phaseLfo, chain.warp].forEach(oscillator => {
+      try { oscillator.stop(); } catch (_) {}
+    });
+    try { chain.source.stop(); } catch (_) {}
+  });
+  state.sources = {};
+}
+function attachTrackEndHandler(trackId, chain, generation = state.songGeneration) {
+  const master = masterTrackForSong();
+  if (!master || trackId !== master.id || !chain) return;
+  chain.source.onended = () => {
+    if (!state.playing || generation !== state.songGeneration) return;
+    handleSongFinished(generation);
+  };
 }
 // Create the Web Audio graph and a reusable noise buffer for crackle events.
 async function initialiseAudio() {
@@ -433,93 +465,69 @@ function makeBitCurve(bits) {
   }
   return curve
 }
-// Start every stem for the selected song from its stored timeline offset.
+// Schedule all active stems at the same audio-clock instant and shared song position.
 function startSources() {
-  Object.values(state.sources).forEach(d => {
-    try { d.source.onended = null; } catch (_) {}
-    [d.lfo, d.phaseLfo, d.warp].forEach(oscillator => {
-      try { oscillator.stop(); } catch (_) {}
-    });
-    try { d.source.stop(); } catch (_) {}
-  });
-  state.sources = {};
+  clearSources();
+  const generation = state.songGeneration;
+  const startAt = state.audio.currentTime + 0.035;
 
   TRACKS.forEach(track => {
     const buffer = state.buffers[track.id];
     if (!buffer) return;
     const source = state.audio.createBufferSource();
     source.buffer = buffer;
-    state.sources[track.id] = makeTrackChain(track.id, source);
-    const pitchParam = state.sources[track.id].pitchShift && state.sources[track.id].pitchShift.parameters.get('pitchCents');
-    if (pitchParam) pitchParam.setValueAtTime(trackState[track.id].detune, state.audio.currentTime);
-    source.start(0, state.offsets[track.id] || 0);
-  });
+    const chain = makeTrackChain(track.id, source);
+    state.sources[track.id] = chain;
 
-  const masterTrack = TRACKS.find(t => t.id === 'drums') || TRACKS[0];
-  const masterSource = masterTrack && state.sources[masterTrack.id];
-  if (masterSource) {
-    masterSource.source.onended = () => {
-      if (state.playing) loopPlayback();
-    };
-  }
-  state.startedAt = state.audio.currentTime;
+    const pitchParam = chain.pitchShift && chain.pitchShift.parameters.get('pitchCents');
+    if (pitchParam) pitchParam.setValueAtTime(trackState[track.id].detune, startAt);
+    attachTrackEndHandler(track.id, chain, generation);
+    const position = Math.max(0, Math.min(state.offsets[track.id] || 0, Math.max(0, buffer.duration - 0.01)));
+    source.start(startAt, position);
+  });
+  state.startedAt = startAt;
 }
-// Restart the song from the beginning with every stem aligned.
-function loopPlayback() {
-  if(!state.audio||!state.playing)return;
-  state.playing=false;
-  Object.values(state.sources).forEach(d=> {
-    try {
-      d.source.onended=null
-    }
-    catch(_) {
-    }
-    try {
-      d.source.stop()
-    }
-    catch(_) {
-    }
+function handleSongFinished(generation) {
+  if (!state.playing || generation !== state.songGeneration) return;
+  const nextIndex = currentSongIndex + 1;
+  addLog(SONGS[currentSongIndex].title + ' finished. ' +
+    (nextIndex < SONGS.length ? 'Moving to ' + SONGS[nextIndex].title + '.' : 'Album playback complete.'), 'repair');
+  if (nextIndex < SONGS.length) {
+    switchSong(nextIndex, true);
+  } else {
+    stopPlayback(true);
+    els.playbackState.textContent = 'ALBUM COMPLETE';
+    updateUI();
   }
-  );
-  state.sources= {
-  }
-  ;
-  TRACKS.forEach(t=> {
-    state.offsets[t.id]=0
-  }
-  );
-  state.playing=true;
-  startSources();
-  els.playbackState.textContent='PLAYING / DECAY ACTIVE';
-  addLog('Song looped. All tracks resynchronised from the beginning.','repair');
-  updateUI()
 }
+
 async function startPlayback() {
   try {
-    if(!state.loaded) {
-      const ready=await loadAudio();
-      if(!ready)return
+    if (!state.loaded || state.loadedSongIndex !== currentSongIndex) {
+      const ready = await loadAudio();
+      if (!ready || state.loadedSongIndex !== currentSongIndex) return;
     }
     await initialiseAudio();
-    if(!state.audio)return;
-    if(state.audio.state==='suspended')await state.audio.resume();
+    if (!state.audio) return;
+    if (state.audio.state === 'suspended') await state.audio.resume();
+
+    state.playing = true;
     startSources();
-    state.playing=true;
     els.play.classList.add('playing');
-    els.play.setAttribute('aria-label','Pause song');
-    els.playbackState.textContent='PLAYING / DECAY ACTIVE';
+    els.play.setAttribute('aria-label', 'Pause song');
+    els.playbackState.textContent = 'PLAYING / DECAY ACTIVE';
     scheduleNextEvent();
-    addLog('Playback started. Decay engine armed.','repair');
-    updateUI()
-  }
-  catch(e) {
-    state.playing=false;
-    console.error('Playback failed:',e);
+    addLog('Playback started. Decay engine armed.', 'repair');
+    updateUI();
+    updateTrackAudioVisuals();
+  } catch (error) {
+    state.playing = false;
+    console.error('Playback failed:', error);
     els.play.classList.remove('playing');
-    els.play.setAttribute('aria-label','Play song');
-    els.playbackState.textContent='PLAYBACK ERROR — SEE CONSOLE';
-    addLog('Playback failed: '+(e?.message||e),'event');
-    updateUI()
+    els.play.setAttribute('aria-label', 'Play song');
+    els.playbackState.textContent = 'PLAYBACK ERROR — SEE CONSOLE';
+    addLog('Playback failed: ' + (error && error.message ? error.message : error), 'event');
+    updateUI();
   }
 }
 function stopPlayback(finished = false) {
@@ -527,28 +535,16 @@ function stopPlayback(finished = false) {
     state.playing = false;
     return;
   }
-  const masterOffset = currentMasterOffset();
+  const sharedPosition = currentMasterOffset();
   state.playing = false;
   state.nextEventAt = 0;
-  const masterTrack = TRACKS.find(t => t.id === 'drums') || TRACKS[0];
-  const masterDuration = masterTrack && state.buffers[masterTrack.id] ? state.buffers[masterTrack.id].duration : 1;
+  alignAllOffsets(sharedPosition);
+  clearSources();
 
-  TRACKS.forEach(track => {
-    const chain = state.sources[track.id];
-    const duration = state.buffers[track.id] ? state.buffers[track.id].duration : masterDuration;
-    state.offsets[track.id] = masterOffset % Math.max(0.01, duration);
-    if (!chain) return;
-    try { chain.source.onended = null; } catch (_) {}
-    [chain.lfo, chain.phaseLfo, chain.warp].forEach(oscillator => {
-      try { oscillator.stop(); } catch (_) {}
-    });
-    try { chain.source.stop(); } catch (_) {}
-  });
-  state.sources = {};
   els.play.classList.remove('playing');
   els.play.setAttribute('aria-label', 'Play song');
   els.playbackState.textContent = finished ? 'SONG COMPLETE' : 'PAUSED';
-  if (!finished) addLog('Playback paused. All tracks resynchronised to the song timeline.', 'repair');
+  if (!finished) addLog('Playback paused. All stems held at the same timeline position.', 'repair');
   updateUI();
   updateTrackAudioVisuals();
 }
@@ -618,28 +614,26 @@ function applyEvent() {
       ns.start(now+.01,repeatStart);
       ns.stop(now+.01+repeat);
       state.sources[t.id]=nd;
-      setTimeout(()=> {
-        if(state.playing&&state.sources[t.id]===nd) {
-          try {
-            nd.source.onended=null
-          }
-          catch(_) {
-          }
-          try {
-            nd.source.stop()
-          }
-          catch(_) {
-          }
-          const cs=state.audio.createBufferSource();
-          cs.buffer=state.buffers[t.id];
-          const cd=makeTrackChain(t.id,cs);
-          cd.gain.gain.value=state.soloTrack&&state.soloTrack!==t.id?0:1;
-          state.sources[t.id]=cd;
-          if(t.id==='drums')cd.source.onended=()=>{if(state.playing)loopPlayback()};
-          cs.start(0,Math.min(duration,offset));
+      setTimeout(() => {
+        if (state.playing && state.sources[t.id] === nd) {
+          try { nd.source.onended = null; } catch (_) {}
+          [nd.lfo, nd.phaseLfo, nd.warp].forEach(oscillator => {
+            try { oscillator.stop(); } catch (_) {}
+          });
+          try { nd.source.stop(); } catch (_) {}
+
+          // After the brief repeat, rejoin at the live master-clock position.
+          const resumePosition = currentMasterOffset();
+          const cs = state.audio.createBufferSource();
+          cs.buffer = state.buffers[t.id];
+          const cd = makeTrackChain(t.id, cs);
+          state.sources[t.id] = cd;
+          attachTrackEndHandler(t.id, cd, state.songGeneration);
+          const resumeAt = state.audio.currentTime + 0.015;
+          const resumeOffset = Math.max(0, Math.min(resumePosition, Math.max(0, duration - 0.01)));
+          cs.start(resumeAt, resumeOffset);
         }
-      }
-      ,Math.round((repeat+.02)*1000))
+      }, Math.round((repeat + .02) * 1000))
     }
   }
   if(et.id==='crackle') {
@@ -667,54 +661,35 @@ function applyEvent() {
   updateUI();
   scheduleNextEvent()
 }
-// Clear every active fault on a stem and resynchronise it to the drum timeline.
+// Repair one stem, then keep every stem on the same song-clock position.
 function repairTrack(id) {
-  const s=trackState[id];
-  if(!s.events.length)return;
-  const n=s.events.length;
-  const syncOffset=currentMasterOffset();
-  s.events=[];
-  s.detune=0;
-  s.highpass=20;
-  s.lowpass=20000;
-  s.bitDepth=16;
-  s.phaseDepth=0;
-  s.warpDepth=0;
-  s.stutterDepth=0;
-  s.crackleDepth=0;
-  if(state.sources[id]) {
-    const d=state.sources[id];
-    const pitchParam=d.pitchShift?.parameters.get('pitchCents');
-    if(pitchParam)pitchParam.setTargetAtTime(0,state.audio.currentTime,.12);
-    d.highpass.frequency.setTargetAtTime(20,state.audio.currentTime,.12);
-    d.lowpass.frequency.setTargetAtTime(20000,state.audio.currentTime,.12);
-    d.phaseDepth.gain.setTargetAtTime(0,state.audio.currentTime,.12);
-    d.warpDepth.gain.setTargetAtTime(0,state.audio.currentTime,.12);
-    d.crush.curve=makeBitCurve(16)
+  const s = trackState[id];
+  if (!s || !s.events.length) return;
+  const eventCount = s.events.length;
+  const sharedPosition = currentMasterOffset();
+
+  s.events = [];
+  s.detune = 0;
+  s.highpass = 20;
+  s.lowpass = 20000;
+  s.bitDepth = 16;
+  s.phaseDepth = 0;
+  s.warpDepth = 0;
+  s.stutterDepth = 0;
+  s.crackleDepth = 0;
+
+  alignAllOffsets(sharedPosition);
+  if (state.playing) {
+    // Reset every Web Audio source at the same clock instant to avoid drift.
+    startSources();
   }
-  state.offsets[id]=syncOffset;
-  if(state.playing) {
-    Object.values(state.sources).forEach(d=> {
-      try {
-        d.source.onended=null
-      }
-      catch(_) {
-      }
-      try {
-        d.source.stop()
-      }
-      catch(_) {
-      }
-    }
-    );
-    state.sources= {
-    }
-    ;
-    startSources()
-  }
-  addLog(TRACKS.find(t=>t.id===id).name+' repaired by visitor / '+n+' event'+(n===1?'':'s')+' cleared. Track resynchronised.','repair');
+
+  const track = TRACKS.find(item => item.id === id);
+  addLog((track ? track.name : id.toUpperCase()) + ' repaired by visitor / ' +
+    eventCount + ' event' + (eventCount === 1 ? '' : 's') + ' cleared. All stems remain synchronised.', 'repair');
   updateUI();
-  if(state.selectedTrack===id)updateDialog()
+  updateTrackAudioVisuals();
+  if (state.selectedTrack === id) updateDialog();
 }
 // Open the diagnostic window for an instrument.
 function openTrackDialog(id) {
@@ -829,7 +804,7 @@ function updatePlaybackClock() {
 function renderCurrentSong() {
   const song = SONGS[currentSongIndex];
   els.songTitle.textContent = song.title;
-  els.albumName.textContent = song.album;
+  els.songNumber.textContent = 'SONG ' + String(song.number).padStart(2, '0');
   els.songArtist.textContent = song.artist;
   els.artNoise.textContent = String(currentSongIndex + 1).padStart(3, '0');
   els.albumArt.setAttribute('aria-label', song.title + ' artwork placeholder');
@@ -841,15 +816,16 @@ function updateSongNavigation() {
   els.previousSong.setAttribute('aria-label', currentSongIndex > 0 ? 'Previous song: ' + SONGS[currentSongIndex - 1].title : 'No previous song');
   els.nextSong.setAttribute('aria-label', currentSongIndex < SONGS.length - 1 ? 'Next song: ' + SONGS[currentSongIndex + 1].title : 'No next song');
 }
-async function switchSong(nextIndex) {
+async function switchSong(nextIndex, finishedNaturally = false) {
   if (nextIndex < 0 || nextIndex >= SONGS.length || nextIndex === currentSongIndex) return;
 
   if (els.dialog && els.dialog.open) closeTrackDialog();
-  if (state.playing) stopPlayback();
+  if (state.playing) stopPlayback(finishedNaturally);
+
   state.songGeneration++;
   currentSongIndex = nextIndex;
   TRACKS = SONGS[currentSongIndex].tracks;
-  trackState = createTrackState(TRACKS);
+  trackState = songTrackStates[SONGS[currentSongIndex].id];
   state.playing = false;
   state.selectedTrack = null;
   state.soloTrack = null;
@@ -871,11 +847,14 @@ async function switchSong(nextIndex) {
   renderTracks();
   updateUI();
   addLog('Loaded song ' + SONGS[currentSongIndex].title + '. Preparing its individual stems.', 'repair');
-  await loadAudio();
+
+  const ready = await loadAudio();
+  if (ready && state.loadedSongIndex === currentSongIndex) {
+    await startPlayback();
+  }
   updateUI();
   updateTrackAudioVisuals();
 }
-
 // Initialise the interface and audio system.
 document.addEventListener('DOMContentLoaded', () => {
   cacheElements();
