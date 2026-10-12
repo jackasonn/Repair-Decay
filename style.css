@@ -974,3 +974,51 @@ main,
   .signal-bars span,
   body { transition: none !important; }
 }
+
+
+/* Compact album credit beside the wordmark */
+.brand-lockup {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  column-gap: 18px;
+  row-gap: 5px;
+  min-width: 0;
+}
+.album-credit {
+  max-width: 370px;
+  color: var(--muted);
+  font-size: .61rem;
+  line-height: 1.5;
+  letter-spacing: .015em;
+}
+.wordmark span {
+  color: var(--decay-accent, var(--red));
+  transition: color .3s ease;
+}
+.play-button {
+  border-color: var(--decay-accent, var(--green));
+  color: var(--decay-accent, var(--green));
+  transition: transform .18s ease, background .18s ease, box-shadow .18s ease, border-color .3s ease, color .3s ease;
+}
+.play-button.playing {
+  border-color: var(--decay-accent, var(--green));
+  color: var(--decay-accent, var(--green));
+}
+.tracks-section {
+  margin-top: 40px;
+}
+@media (max-width: 850px) {
+  .brand-lockup {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .album-credit { max-width: 290px; }
+}
+@media (max-width: 560px) {
+  .album-credit {
+    font-size: .53rem;
+    max-width: 220px;
+  }
+}
