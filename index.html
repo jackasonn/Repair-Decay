@@ -20,7 +20,7 @@
         </button>
     </nav>
     <header class="site-header">
-        <a class="wordmark" href="index.html" aria-label="Repair Decay home">REPAIR<span>/</span>DECAY</a>
+        <div class="brand-lockup"><a class="wordmark" href="index.html" aria-label="Repair Decay home">REPAIR<span>/</span>DECAY</a><span class="album-credit">an interactive music album by Tayla, Kanna, Shiya, and Jackson</span></div>
         <div class="system-status">
             <span class="status-dot" id="system-dot"></span>
             <span id="system-status">SYSTEM READY</span>
@@ -35,9 +35,9 @@
             <div class="player-panel">
                 <div class="song-heading">
                     <div>
-                        <p class="eyebrow" id="album-name">ALBUM NAME</p>
+                        <p class="eyebrow" id="song-number">SONG 01</p>
                         <h1 id="song-title">ON TIME</h1>
-                        <p class="artist" id="song-artist">TAYLA KANE</p>
+                        <p class="artist" id="song-artist">TAYLA KANE AND JACKSON MOORE</p>
                     </div>
                     <button class="play-button" id="play-button" type="button" aria-label="Play song">
                         <span class="play-icon">▶</span>
@@ -54,14 +54,7 @@
             </div>
         </section>
 
-        <section class="tracks-section" aria-labelledby="tracks-title">
-            <div class="section-heading">
-                <div>
-                    <p class="eyebrow">INDIVIDUAL COMPONENTS</p>
-                    <h2 id="tracks-title">THE SONG IS FRAGILE</h2>
-                </div>
-                <p class="section-note">Each component can deteriorate independently.<br>Keep an eye on the system.</p>
-            </div>
+        <section class="tracks-section" aria-label="Song tracks">
             <div class="track-grid" id="track-grid"></div>
         </section>
 
