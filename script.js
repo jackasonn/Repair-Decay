@@ -905,32 +905,3 @@ document.addEventListener('DOMContentLoaded', () => {
   els.knob.addEventListener('input', updateKnob);
   els.solo.addEventListener('click', toggleSolo);
 });
-,()=> {
-  cacheElements();
-  renderTracks();
-  addLog('Maintenance system initialised.','repair');
-  addLog('Waiting for five individual audio stems.','event');
-  updateUI();
-  drawWaveform();
-  updatePlaybackClock();
-  loadAudio();
-  els.play.addEventListener('click',()=>state.playing?stopPlayback():startPlayback());
-  els.closeDialog.addEventListener('click',closeTrackDialog);
-  els.dialog.addEventListener('click',e=> {
-    if(e.target===els.dialog&&!state.knobInteracting)closeTrackDialog()
-  }
-  );
-  els.knob.addEventListener('pointerdown',()=>{
-    state.knobInteracting=true
-  });
-  const releaseKnob=()=>{
-    setTimeout(()=>{
-      state.knobInteracting=false
-    },0)
-  };
-  els.knob.addEventListener('pointerup',releaseKnob);
-  els.knob.addEventListener('pointercancel',releaseKnob);
-  els.knob.addEventListener('input',updateKnob);
-  els.solo.addEventListener('click',toggleSolo)
-}
-);
