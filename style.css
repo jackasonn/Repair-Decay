@@ -1022,3 +1022,12 @@ main,
     max-width: 220px;
   }
 }
+
+/* Single-instrument rhythm repair uses the existing diagnostic palette. */
+.rhythm-panel { margin-top:28px; padding:18px; border:1px solid var(--line); background:var(--panel); }
+.rhythm-panel[hidden], #repair-retry[hidden] { display:none; }
+.rhythm-panel p, .rhythm-panel label { font-size:.75rem; line-height:1.6; }
+.rhythm-panel kbd { color:var(--yellow); border:1px solid var(--line); padding:2px 6px; }
+#repair-signal { display:block; width:100%; height:120px; border-block:1px solid var(--line); }
+#repair-feedback { color:var(--yellow); min-height:1.6em; }
+#repair-stability { width:100%; height:12px; accent-color:var(--green); }
