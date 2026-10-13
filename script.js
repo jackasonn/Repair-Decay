@@ -83,6 +83,8 @@ const els= {
 // Cache the page elements once the DOM has loaded.
 function cacheElements() {
   els.grid = document.getElementById('track-grid');
+  els.playerSection = document.getElementById('player-section');
+  els.playerPanel = document.getElementById('player-panel');
   els.play = document.getElementById('play-button');
   els.waveform = document.getElementById('waveform');
   els.playbackState = document.getElementById('playback-state');
@@ -526,6 +528,15 @@ async function startPlayback() {
   if (state.starting || state.playing) return;
   state.starting = true;
   const generation = state.songGeneration;
+
+  // Resume the existing AudioContext immediately while this call is still
+  // running in the user's play-button gesture. Waiting for stem loading first
+  // can lose Safari's transient user activation and leave playback silent.
+  let gestureResumePromise = null;
+  if (state.audio && state.audio.state === 'suspended') {
+    try { gestureResumePromise = state.audio.resume(); } catch (_) {}
+  }
+
   try {
     if (!state.loaded || state.loadedSongIndex !== currentSongIndex) {
       const ready = await loadAudio();
@@ -533,7 +544,13 @@ async function startPlayback() {
     }
     await initialiseAudio();
     if (!state.audio || generation !== state.songGeneration) return;
-    if (state.audio.state === 'suspended') await state.audio.resume();
+    if (state.audio.state === 'suspended') {
+      if (gestureResumePromise) await gestureResumePromise;
+      if (state.audio.state === 'suspended') await state.audio.resume();
+    }
+    if (state.audio.state !== 'running') {
+      throw new Error('The audio engine is still suspended. Press play again to allow audio playback.');
+    }
 
     state.playing = true;
     if (!state.nextEventAt || state.nextEventAt <= performance.now()) scheduleNextEvent();
@@ -1070,10 +1087,40 @@ async function switchSong(nextIndex, finishedNaturally = false) {
   updateUI();
   updateTrackAudioVisuals();
 }
+
+// Keep the cover square and align its outer height precisely with the player
+// panel on desktop. A stacked mobile layout keeps the cover square on its own.
+function syncAlbumCoverToPlayerPanel() {
+  if (!els.playerSection || !els.playerPanel || !els.albumArt) return;
+  if (window.matchMedia && window.matchMedia('(max-width: 850px)').matches) {
+    els.playerSection.style.removeProperty('grid-template-columns');
+    els.albumArt.style.removeProperty('width');
+    els.albumArt.style.removeProperty('height');
+    return;
+  }
+  const target = Math.ceil(els.playerPanel.getBoundingClientRect().height);
+  if (!target) return;
+  const current = Math.round(parseFloat(els.albumArt.style.width) || 0);
+  if (Math.abs(current - target) <= 1) return;
+  els.playerSection.style.gridTemplateColumns = target + 'px minmax(0, 1fr)';
+  els.albumArt.style.width = target + 'px';
+  els.albumArt.style.height = target + 'px';
+}
+function setupAlbumCoverSizing() {
+  syncAlbumCoverToPlayerPanel();
+  if (typeof ResizeObserver !== 'undefined' && els.playerPanel) {
+    const observer = new ResizeObserver(() => requestAnimationFrame(syncAlbumCoverToPlayerPanel));
+    observer.observe(els.playerPanel);
+    state.albumResizeObserver = observer;
+  }
+  window.addEventListener('resize', () => requestAnimationFrame(syncAlbumCoverToPlayerPanel), { passive: true });
+}
+
 // Initialise the interface and audio system.
 document.addEventListener('DOMContentLoaded', () => {
   cacheElements();
   renderCurrentSong();
+  setupAlbumCoverSizing();
   updateSongNavigation();
   renderTracks();
   addLog('Maintenance system initialised.', 'repair');
