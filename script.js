@@ -65,7 +65,7 @@ const state= {
   }
   ,offsets: {
   }
-  ,analyser:null,masterGain:null,loaded:false,loadedSongIndex:null,loading:false,loadingPromise:null,songGeneration:0,demoMode:false,noiseBuffer:null,pitchReady:false,waveformCtx:null,waveformData:null,waveformPixelWidth:0,waveformPixelHeight:0,waveformDrawAt:0,lastTrackVisualAt:0,lastClockTextAt:0,waveformColour:'#7f9a63',particlePulse:0,lastParticlePulseAt:0,repairLockToastTimer:null
+  ,analyser:null,masterGain:null,loaded:false,loadedSongIndex:null,loading:false,loadingPromise:null,songGeneration:0,demoMode:false,noiseBuffer:null,pitchReady:false,waveformCtx:null,waveformData:null,waveformPixelWidth:0,waveformPixelHeight:0,waveformDrawAt:0,lastTrackVisualAt:0,lastClockTextAt:0,waveformColour:'#7f9a63',particlePulse:0,lastParticlePulseAt:0,repairLockToastTimer:null,decayTimer:null
 }
 ;
 function createTrackState(tracks) {
@@ -238,7 +238,32 @@ function addLog(message,type='event') {
   els.maintenance.innerHTML=state.logs.map(l=>'<div class="log-entry '+l.type+'"><span class="time">'+l.time+'</span><span>'+l.message+'</span></div>').join('')
 }
 function scheduleNextEvent() {
-  state.nextEventAt=performance.now()+8000+Math.random()*10000
+  if (state.decayTimer) clearTimeout(state.decayTimer);
+  state.decayTimer = null;
+
+  if (!state.playing) {
+    state.nextEventAt = 0;
+    return;
+  }
+
+  // Keep decay scheduling independent from requestAnimationFrame so a visual
+  // update hiccup cannot permanently stop the decay system.
+  const delay = 8000 + Math.random() * 10000;
+  state.nextEventAt = performance.now() + delay;
+  state.decayTimer = setTimeout(() => {
+    state.decayTimer = null;
+    if (!state.playing) {
+      state.nextEventAt = 0;
+      return;
+    }
+    try {
+      applyEvent();
+    } catch (error) {
+      console.error('Decay event failed; retrying the decay schedule.', error);
+      addLog('A decay event failed to apply. Retrying the decay system.', 'event');
+      scheduleNextEvent();
+    }
+  }, delay);
 }
 // One shared timeline drives every stem, both while playing and while paused.
 function masterTrackForSong() {
@@ -582,6 +607,8 @@ function stopPlayback(finished = false) {
   const sharedPosition = currentMasterOffset();
   state.playing = false;
   state.nextEventAt = 0;
+  if (state.decayTimer) clearTimeout(state.decayTimer);
+  state.decayTimer = null;
   alignAllOffsets(sharedPosition);
   clearSources();
 
@@ -1021,7 +1048,6 @@ function updatePlaybackClock() {
       els.playbackTime.textContent = formatTime(position) + ' / ' + (duration ? formatTime(duration) : '--:--');
       state.lastClockTextAt = now;
     }
-    if (state.playing && state.nextEventAt && now >= state.nextEventAt) applyEvent();
     if (state.playing && now - state.lastTrackVisualAt >= 100) {
       updateTrackAudioVisuals();
       state.lastTrackVisualAt = now;
