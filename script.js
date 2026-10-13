@@ -117,21 +117,22 @@ function cacheElements() {
 }
 // Build the instrument cards for the selected song.
 function renderTracks() {
-  els.grid.innerHTML = TRACKS.map((t, i) => {
+  els.grid.innerHTML = TRACKS.map(t => {
     const bars = Array.from({ length: 12 }, () => '<span></span>').join('');
     return '<button class="track-card healthy" type="button" data-track="' + t.id + '" aria-label="Open ' + t.name + ' track diagnostics">' +
       '<div class="track-visual" aria-hidden="true"></div>' +
-      '<img class="track-instrument-image" src="assets/' + t.id + '.png" alt="" loading="lazy" decoding="async">' +
-      '<span class="track-index">0' + (i + 1) + '</span>' +
-      '<div class="track-signal" aria-hidden="true">' +
-        '<div class="signal-heading"><span class="signal-label">AUDIO SIGNAL</span><span class="signal-light"></span></div>' +
-        '<div class="signal-bars">' + bars + '</div>' +
-        '<span class="signal-reading" data-level="' + t.id + '">STANDBY</span>' +
+      '<div class="track-artwork-stage">' +
+        '<img class="track-instrument-image" src="assets/' + t.id + '.png" alt="" loading="lazy" decoding="async">' +
       '</div>' +
-      '<span class="track-name">' + t.name + '</span>' +
-      '<span class="track-status" data-status="' + t.id + '">NORMAL</span>' +
-      '<span class="track-meter"><span data-meter="' + t.id + '"></span></span>' +
-      '<span class="track-event-count" data-count="' + t.id + '">NO ACTIVE EVENTS</span>' +
+      '<div class="track-signal" aria-hidden="true">' +
+        '<div class="signal-bars">' + bars + '</div>' +
+      '</div>' +
+      '<div class="track-info">' +
+        '<span class="track-name">' + t.name + '</span>' +
+        '<span class="track-status" data-status="' + t.id + '">NORMAL</span>' +
+        '<span class="track-meter"><span data-meter="' + t.id + '"></span></span>' +
+        '<span class="track-event-count" data-count="' + t.id + '">NO ACTIVE EVENTS</span>' +
+      '</div>' +
     '</button>';
   }).join('');
   els.grid.querySelectorAll('.track-card').forEach(card => {
@@ -730,22 +731,17 @@ function renderDialogParticles(trackId, decay) {
   if (state.particleSignature === signature) return;
   state.particleSignature = signature;
 
-  const count = 5 + tier * 3;
-  const palette = decay >= 70
-    ? ['#b94b42', '#b94b42', '#b94b42', '#d7a72d', '#d7a72d', '#7f9a63']
-    : decay >= 30
-      ? ['#d7a72d', '#d7a72d', '#7f9a63', '#7f9a63', '#b94b42']
-      : ['#7f9a63', '#7f9a63', '#7f9a63', '#d7a72d'];
-  const drift = 12 + decay * .55;
-  const life = 6.5 - decay * .05;
-  const opacity = .35 + decay * .0055;
-  const shake = 1 + decay * .12;
+  const count = 12 + tier * 2;
+  const colour = decay >= 70 ? '#b94b42' : decay >= 30 ? '#d7a72d' : '#7f9a63';
+  const drift = 16 + decay * .62;
+  const life = 6.5 - decay * .045;
+  const opacity = .62 + decay * .0028;
+  const shake = 2 + decay * .14;
 
   els.dialogParticles.innerHTML = Array.from({ length: count }, () => {
-    const colour = palette[Math.floor(Math.random() * palette.length)];
-    const size = 2 + Math.random() * (3 + decay * .04);
-    const x = 8 + Math.random() * 84;
-    const y = 8 + Math.random() * 84;
+    const size = 4 + Math.random() * (5 + decay * .05);
+    const x = 6 + Math.random() * 88;
+    const y = 6 + Math.random() * 88;
     const dx = (Math.random() * 2 - 1) * drift;
     const dy = (Math.random() * 2 - 1) * drift;
     const jitter = Math.random() * shake;
@@ -840,20 +836,16 @@ function updateDialog() {
   }
 
   els.faultSwitches.innerHTML = EVENT_TYPES.map(event => {
-    const activeCount = s.events.filter(item => item.type === event.id).length;
-    const active = activeCount > 0;
-    const stateLabel = active ? 'ACTIVE' : 'CLEAR';
-    return '<div class="fault-switch-row ' + (active ? 'fault-active' : '') + '">' +
-      '<div class="fault-switch-copy">' +
-        '<span class="fault-switch-name">' + event.name + '</span>' +
-        '<span class="fault-switch-state">' + (active ? stateLabel + (activeCount > 1 ? ' ×' + activeCount : '') : stateLabel) + '</span>' +
-      '</div>' +
-      '<button class="fault-switch ' + (active ? 'is-on' : '') + '" type="button" role="switch" aria-checked="' + active + '" ' +
-        'aria-label="' + (active ? 'Turn off ' : 'No active fault: ') + event.name + '" data-event="' + event.id + '" ' +
-        (active ? '' : 'disabled') + '>' +
-        '<span class="fault-switch-track"><span class="fault-switch-thumb"></span></span>' +
-      '</button>' +
-    '</div>';
+    const active = s.events.some(item => item.type === event.id);
+    return '<button class="fault-switch ' + (active ? 'is-on' : 'is-off') + '" type="button" role="switch" aria-checked="' + active + '" ' +
+      'aria-label="' + (active ? 'Flick ' : 'Inactive ') + event.name + (active ? ' switch off to repair' : ' switch; no repair needed') + '" ' +
+      'title="' + event.name + '" data-event="' + event.id + '" ' +
+      (active ? '' : 'disabled') + '>' +
+        '<span class="fault-switch-led" aria-hidden="true"></span>' +
+        '<span class="fault-switch-housing" aria-hidden="true">' +
+          '<span class="fault-switch-lever"><span class="fault-switch-cap"></span></span>' +
+        '</span>' +
+      '</button>';
   }).join('');
 
   renderDialogParticles(track.id, decay);
