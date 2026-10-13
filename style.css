@@ -1320,3 +1320,248 @@ main,
   .decay-particle { animation-duration: 12s !important; }
   .track-instrument-image, .about-button { transition: none !important; }
 }
+
+
+
+/* ─────────────────────────────────────────────────────────
+   Audio-interface track cards: give each layer its own space.
+   ───────────────────────────────────────────────────────── */
+.track-card {
+  min-height: 352px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 0;
+}
+.track-visual { z-index: 0; }
+.track-artwork-stage {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 150px;
+  flex: 0 0 150px;
+  min-width: 0;
+}
+.track-instrument-image {
+  position: relative;
+  inset: auto;
+  top: auto;
+  left: auto;
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: 142px;
+  object-fit: contain;
+  object-position: center;
+  z-index: 1;
+}
+.track-signal {
+  position: relative;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 42px;
+  flex: 0 0 42px;
+  margin: 0 0 12px;
+  padding: 0;
+}
+.signal-bars {
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+  height: 38px;
+  margin: 0;
+  padding: 0 1px 4px;
+  gap: 3px;
+  overflow: hidden;
+}
+.signal-bars span {
+  display: block;
+  min-width: 2px;
+  flex: 1 1 0;
+  height: 4px;
+  border-radius: 1px 1px 0 0;
+  transition: height .08s linear;
+}
+.track-info {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+}
+.track-info .track-name {
+  position: relative;
+  margin: 0;
+  font-size: 1.5rem;
+  line-height: 1.08;
+}
+.track-info .track-status {
+  position: relative;
+  margin: 5px 0 0;
+  line-height: 1.25;
+  min-height: 1em;
+}
+.track-info .track-meter {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 5px;
+  flex: 0 0 5px;
+  margin: 12px 0 0;
+}
+.track-info .track-event-count {
+  position: relative;
+  margin: 8px 0 0;
+  min-height: 1em;
+  font-size: .6rem;
+  line-height: 1.25;
+}
+.track-card:before { z-index: 4; }
+
+/* ─────────────────────────────────────────────────────────
+   Eight silent fault toggles: a compact guitar-switch bank.
+   Only the red LED communicates which faults need repair.
+   ───────────────────────────────────────────────────────── */
+.fault-switches {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 10px;
+}
+.fault-switch {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 13px;
+  width: 100%;
+  min-width: 0;
+  min-height: 104px;
+  padding: 12px 4px 10px;
+  border: 1px solid rgba(228,211,140,.16);
+  border-radius: 3px;
+  background: linear-gradient(145deg, rgba(255,255,255,.035), rgba(0,0,0,.22)), #100f0b;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025), 0 3px 7px rgba(0,0,0,.2);
+  cursor: pointer;
+  opacity: 1;
+  transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
+}
+.fault-switch:hover:not(:disabled) {
+  border-color: rgba(228,211,140,.4);
+  background: linear-gradient(145deg, rgba(255,255,255,.05), rgba(0,0,0,.16)), #15130e;
+}
+.fault-switch:focus-visible {
+  outline: 2px solid var(--cream);
+  outline-offset: 3px;
+}
+.fault-switch:disabled {
+  cursor: default;
+  opacity: .88;
+}
+.fault-switch-led {
+  display: block;
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-radius: 50%;
+  background: #351b18;
+  border: 1px solid #52241f;
+  box-shadow: inset 0 0 2px #080504;
+}
+.fault-switch.is-on .fault-switch-led {
+  background: #ff5549;
+  border-color: #ff8777;
+  box-shadow: 0 0 3px #ff5549, 0 0 9px rgba(255,55,43,.95), 0 0 17px rgba(255,55,43,.45);
+  animation: faultLedFlash .72s steps(2, end) infinite;
+}
+@keyframes faultLedFlash {
+  0%, 44% { opacity: 1; filter: brightness(1.18); }
+  45%, 100% { opacity: .34; filter: brightness(.7); }
+}
+.fault-switch-housing {
+  position: relative;
+  display: block;
+  width: 34px;
+  height: 42px;
+  flex: 0 0 42px;
+  border: 1px solid #655e4b;
+  border-radius: 5px;
+  background: linear-gradient(135deg, #29271f 0%, #13120e 48%, #080807 100%);
+  box-shadow: inset 0 1px 3px rgba(255,255,255,.06), inset 0 -3px 4px rgba(0,0,0,.9), 0 2px 0 #050504;
+}
+.fault-switch-lever {
+  position: absolute;
+  left: 14px;
+  bottom: 5px;
+  display: block;
+  width: 4px;
+  height: 25px;
+  border: 1px solid #77715f;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #514d40 0%, #e0d8c2 42%, #89816d 70%, #3f3b31 100%);
+  box-shadow: 0 0 3px rgba(0,0,0,.9);
+  transform: rotate(-28deg);
+  transform-origin: 50% 100%;
+  transition: transform .18s cubic-bezier(.2,.7,.25,1.35);
+}
+.fault-switch-cap {
+  position: absolute;
+  top: -5px;
+  left: -6px;
+  display: block;
+  width: 14px;
+  height: 14px;
+  border: 1px solid #6f6958;
+  border-radius: 50%;
+  background: radial-gradient(circle at 29% 23%, #f1ecdd 0, #bbb39b 31%, #716a57 66%, #29271f 100%);
+  box-shadow: 0 1px 3px rgba(0,0,0,.9), 0 0 2px rgba(255,255,255,.15);
+}
+.fault-switch:not(.is-on) .fault-switch-lever {
+  transform: rotate(28deg) translateY(1px);
+}
+.fault-switch:not(.is-on) .fault-switch-cap {
+  background: radial-gradient(circle at 29% 23%, #c9c2ae 0, #918a76 31%, #5b5547 66%, #24221b 100%);
+}
+.fault-switch.is-on {
+  border-color: rgba(185,75,66,.43);
+  background: linear-gradient(145deg, rgba(185,75,66,.07), rgba(0,0,0,.22)), #100c0a;
+}
+.fault-switch.is-on .fault-switch-housing {
+  border-color: #77604d;
+}
+@media (max-width: 680px) {
+  .track-card { min-height: 338px; }
+  .track-artwork-stage { height: 140px; flex-basis: 140px; }
+  .track-instrument-image { height: 132px; }
+  .fault-switches { gap: 7px; }
+  .fault-switch { min-height: 94px; gap: 11px; padding: 10px 2px 8px; }
+  .fault-switch-housing { transform: scale(.94); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fault-switch.is-on .fault-switch-led { animation: none; }
+}
+
+/* Larger, stronger particles share the instrument's current decay colour. */
+.decay-particle {
+  opacity: var(--particle-opacity, .7);
+  mix-blend-mode: screen;
+  box-shadow:
+    0 0 calc(var(--size) * 1.5) currentColor,
+    0 0 calc(var(--size) * 3.2) currentColor,
+    0 0 calc(var(--size) * 5) currentColor;
+  filter: drop-shadow(0 0 calc(var(--size) * 1.2) currentColor);
+}
