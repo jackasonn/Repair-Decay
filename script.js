@@ -1086,7 +1086,6 @@ document.addEventListener('DOMContentLoaded', () => {
     state.playing ? stopPlayback() : startPlayback();
   });
   document.addEventListener('keydown', handleRepairKey);
-  document.getElementById('repair-retry').addEventListener('click', restartRhythmRepair);
   els.previousSong.addEventListener('click', () => switchSong(currentSongIndex - 1));
   els.nextSong.addEventListener('click', () => switchSong(currentSongIndex + 1));
   els.closeDialog.addEventListener('click', closeTrackDialog);
