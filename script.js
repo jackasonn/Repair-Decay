@@ -108,6 +108,7 @@ function cacheElements() {
   els.songNumber = document.getElementById('song-number');
   els.songArtist = document.getElementById('song-artist');
   els.albumArt = document.getElementById('album-art');
+  els.artNoise = document.getElementById('art-noise');
   els.albumCoverImage = document.getElementById('album-cover-image');
   els.dialogInstrumentImage = document.getElementById('dialog-instrument-image');
   els.dialogArtStage = document.getElementById('dialog-art-stage');
