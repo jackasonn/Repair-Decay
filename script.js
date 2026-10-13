@@ -458,7 +458,8 @@ function makeTrackChain(id, source) {
   hp.frequency.value = s.highpass;
   lp.frequency.value = s.lowpass;
   gain.gain.value = state.soloTrack && state.soloTrack !== id ? 0.22 : 1;
-  analyser.fftSize = 64;
+  // More frequency bins give the particles a meaningful low/mid/high split.
+  analyser.fftSize = 1024;
   analyser.smoothingTimeConstant = 0.78;
 
   artifactGain.gain.value = 1;
@@ -785,7 +786,8 @@ function renderDialogParticles(trackId, decay) {
   const signature = SONGS[currentSongIndex].id + ':' + trackId;
   if (state.particleSignature !== signature) {
     const count = 20;
-    els.dialogParticles.innerHTML = Array.from({ length: count }, () => {
+    els.dialogParticles.innerHTML = Array.from({ length: count }, (_, index) => {
+      const band = ['low', 'mid', 'high'][index % 3];
       const size = 4 + Math.random() * 5;
       const x = 6 + Math.random() * 88;
       const y = 6 + Math.random() * 88;
@@ -808,7 +810,7 @@ function renderDialogParticles(trackId, decay) {
         '--shake-x' + (index + 1) + '-dir:' + point.x + ';' +
         '--shake-y' + (index + 1) + '-dir:' + point.y + ';'
       ).join('');
-      return '<span class="decay-particle" style="' +
+      return '<span class="decay-particle" data-audio-band="' + band + '" style="' +
         '--x:' + x.toFixed(1) + '%;' +
         '--y:' + y.toFixed(1) + '%;' +
         '--size:' + size.toFixed(1) + 'px;' +
@@ -1010,7 +1012,8 @@ function drawWaveform(timestamp = 0) {
 }
 function updateDialogAudioPulse(now = performance.now()) {
   if (!els.dialog || !els.dialog.open || !state.selectedTrack || !els.dialogParticles) {
-    state.particlePulse = 0;
+    state.particleBandPulses = { low: 0, mid: 0, high: 0 };
+    state.lastParticlePulseAt = 0;
     return;
   }
   if (now - (state.lastParticlePulseAt || 0) < 40) return;
@@ -1018,24 +1021,63 @@ function updateDialogAudioPulse(now = performance.now()) {
 
   const chain = state.sources[state.selectedTrack];
   const data = chain && chain.analyserData;
-  let target = 0;
-  if (state.playing && data && data.length) {
-    let total = 0, peak = 0;
-    for (let i = 0; i < data.length; i++) {
-      total += data[i];
-      if (data[i] > peak) peak = data[i];
-    }
-    const average = total / data.length / 255;
-    target = Math.min(1, average * 3 + peak / 255 * .35);
+  const bandTargets = { low: 0, mid: 0, high: 0 };
+
+  // Read the selected stem's post-effects spectrum so the particles follow the
+  // actual sound, including any EQ decay or repairs applied to that instrument.
+  if (state.playing && chain && chain.analyser && data && data.length && state.audio) {
+    chain.analyser.getByteFrequencyData(data);
+    const hzPerBin = state.audio.sampleRate / chain.analyser.fftSize;
+    const ranges = {
+      low: [35, 250],
+      mid: [250, 2000],
+      high: [2000, 12000]
+    };
+
+    Object.entries(ranges).forEach(([band, range]) => {
+      const startBin = Math.max(1, Math.ceil(range[0] / hzPerBin));
+      const endBin = Math.min(data.length - 1, Math.floor(range[1] / hzPerBin));
+      if (endBin < startBin) return;
+
+      let total = 0;
+      let peak = 0;
+      let count = 0;
+      for (let i = startBin; i <= endBin; i++) {
+        const value = data[i];
+        total += value;
+        if (value > peak) peak = value;
+        count++;
+      }
+      if (!count) return;
+
+      const average = total / count / 255;
+      const peakLevel = peak / 255;
+      // A little peak sensitivity keeps transients visible, especially in highs.
+      bandTargets[band] = Math.min(1, average * 4.5 + peakLevel * 0.48);
+    });
   }
-  state.particlePulse = (state.particlePulse || 0) * .56 + target * .44;
-  const pulse = state.particlePulse;
-  els.dialogParticles.querySelectorAll('.decay-particle').forEach((particle, index) => {
-    const localPulse = Math.min(1, pulse * (.88 + (index % 5) * .035));
-    particle.style.setProperty('--audio-scale', (0.8 + localPulse * .85).toFixed(2));
-    particle.style.setProperty('--audio-glow', (5 + localPulse * 31).toFixed(1) + 'px');
-    particle.style.setProperty('--audio-glow-wide', (12 + localPulse * 48).toFixed(1) + 'px');
-    particle.style.opacity = (0.32 + localPulse * .65).toFixed(2);
+
+  // Smooth each band independently so bass, mids and treble can pulse with
+  // different timing and intensity rather than all particles moving together.
+  if (!state.particleBandPulses) state.particleBandPulses = { low: 0, mid: 0, high: 0 };
+  Object.keys(bandTargets).forEach(band => {
+    const previous = state.particleBandPulses[band] || 0;
+    const smoothing = band === 'low' ? 0.34 : band === 'mid' ? 0.42 : 0.5;
+    state.particleBandPulses[band] = previous * (1 - smoothing) + bandTargets[band] * smoothing;
+  });
+
+  els.dialogParticles.querySelectorAll('.decay-particle').forEach(particle => {
+    const band = particle.dataset.audioBand || 'mid';
+    const pulse = Math.max(0, Math.min(1, state.particleBandPulses[band] || 0));
+    // Bass creates a fuller swell, mids add a more obvious glow, and highs
+    // create a brighter, quicker sparkle. Position and drift remain untouched.
+    const scaleGain = band === 'low' ? 1.05 : band === 'mid' ? 0.82 : 0.62;
+    const glowGain = band === 'low' ? 29 : band === 'mid' ? 37 : 44;
+    const alphaGain = band === 'high' ? 0.88 : 0.72;
+    particle.style.setProperty('--audio-scale', (0.78 + pulse * scaleGain).toFixed(2));
+    particle.style.setProperty('--audio-glow', (4 + pulse * glowGain).toFixed(1) + 'px');
+    particle.style.setProperty('--audio-glow-wide', (10 + pulse * (glowGain + 16)).toFixed(1) + 'px');
+    particle.style.opacity = (0.22 + pulse * alphaGain).toFixed(2);
   });
 }
 function updateTrackAudioVisuals() {
