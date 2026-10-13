@@ -1073,11 +1073,11 @@ function updateDialogAudioPulse(now = performance.now()) {
     // create a brighter, quicker sparkle. Position and drift remain untouched.
     const scaleGain = band === 'low' ? 1.05 : band === 'mid' ? 0.82 : 0.62;
     const glowGain = band === 'low' ? 29 : band === 'mid' ? 37 : 44;
-    const alphaGain = band === 'high' ? 0.88 : 0.72;
+    const alphaGain = band === 'high' ? 0.78 : 0.66;
     particle.style.setProperty('--audio-scale', (0.78 + pulse * scaleGain).toFixed(2));
-    particle.style.setProperty('--audio-glow', (4 + pulse * glowGain).toFixed(1) + 'px');
-    particle.style.setProperty('--audio-glow-wide', (10 + pulse * (glowGain + 16)).toFixed(1) + 'px');
-    particle.style.opacity = (0.22 + pulse * alphaGain).toFixed(2);
+    particle.style.setProperty('--audio-glow', (11 + pulse * glowGain).toFixed(1) + 'px');
+    particle.style.setProperty('--audio-glow-wide', (27 + pulse * (glowGain + 20)).toFixed(1) + 'px');
+    particle.style.opacity = Math.min(1, 0.4 + pulse * alphaGain).toFixed(2);
   });
 }
 function updateTrackAudioVisuals() {
