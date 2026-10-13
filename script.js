@@ -792,6 +792,8 @@ function renderDialogParticles(trackId, decay) {
       const drift = 10 + Math.random() * 16;
       const life = 8 + Math.random() * 5;
       const delay = -Math.random() * life;
+      const shiverDuration = 0.22 + Math.random() * 0.2;
+      const shiverDelay = -Math.random() * shiverDuration;
       const dx1 = (Math.random() * 2 - 1) * drift;
       const dy1 = (Math.random() * 2 - 1) * drift;
       const dx2 = (Math.random() * 2 - 1) * drift * 0.8;
@@ -818,6 +820,8 @@ function renderDialogParticles(trackId, decay) {
         '--dy3:' + dy3.toFixed(1) + 'px;' +
         '--life:' + life.toFixed(2) + 's;' +
         '--delay:' + delay.toFixed(2) + 's;' +
+        '--shiver-duration:' + shiverDuration.toFixed(2) + 's;' +
+        '--shiver-delay:' + shiverDelay.toFixed(2) + 's;' +
         '--particle-opacity:.7;' +
         '--shake-x1:0px;--shake-y1:0px;--shake-x2:0px;--shake-y2:0px;' +
         '--shake-x3:0px;--shake-y3:0px;--shake-x4:0px;--shake-y4:0px;' +
