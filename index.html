@@ -28,7 +28,8 @@
     </header>
     <main>
         <section class="player-section" aria-label="Song player">
-            <div class="album-art" id="album-art" role="img" aria-label="Album artwork placeholder">
+            <div class="album-art" id="album-art" role="img" aria-label="On Time cover artwork">
+                <img class="album-cover-image" id="album-cover-image" src="assets/on-time-cover.jpg" alt="" decoding="async">
                 <span class="art-label">SONG<br>IMAGE</span>
                 <span class="art-noise" id="art-noise">001</span>
             </div>
@@ -91,41 +92,40 @@
 
     <footer class="site-footer">
         <span></span>
-        <a href="about.html">ABOUT</a>
+        <a class="about-button" href="about.html"><span>ABOUT</span><span class="about-arrow" aria-hidden="true">↗</span></a>
     </footer>
 
     <dialog class="track-dialog" id="track-dialog">
-        <div class="dialog-inner">
-            <button class="close-dialog" id="close-dialog" type="button" aria-label="Close track information">×</button>
-            <div class="dialog-topline">
-                <span class="eyebrow">TRACK DIAGNOSTICS</span>
-                <span id="dialog-track-code">TRACK_01</span>
+        <div class="dialog-layout">
+            <div class="dialog-art-stage" id="dialog-art-stage" aria-hidden="true">
+                <div class="particle-field" id="dialog-particles"></div>
+                <img class="dialog-instrument-image" id="dialog-instrument-image" src="assets/drums.png" alt="" decoding="async">
             </div>
-            <h2 id="dialog-title">DRUMS</h2>
-            <p class="dialog-status" id="dialog-status">NORMAL</p>
-            <div class="diagnostic-grid">
-                <div><p class="mini-label">DECAY</p><strong id="dialog-decay">0%</strong></div>
-                <div><p class="mini-label">ACTIVE EVENTS</p><strong id="dialog-event-count">0</strong></div>
-                <div><p class="mini-label">SIGNAL</p><strong id="dialog-signal">STABLE</strong></div>
-            </div>
-            <div class="event-history">
-                <div class="mini-label">EVENT HISTORY</div>
-                <ul id="dialog-events"></ul>
-            </div>
-            <div class="repair-zone">
-                <div class="repair-copy">
-                    <p class="mini-label">MANUAL REPAIR</p>
-                    <p>Turn the control to restore this track. Full rotation clears all active decay events.</p>
+            <div class="dialog-ui">
+                <button class="close-dialog" id="close-dialog" type="button" aria-label="Close track controls">×</button>
+                <div class="dialog-title-row">
+                    <div>
+                        <h2 id="dialog-title">DRUMS</h2>
+                        <p class="dialog-status" id="dialog-status">NORMAL</p>
+                    </div>
+                    <button class="solo-button solo-compact" id="solo-button" type="button" aria-pressed="false">
+                        <span class="solo-indicator" aria-hidden="true"></span>
+                        SOLO
+                    </button>
                 </div>
-                <div class="knob-wrap">
-                    <div class="knob" id="repair-knob-visual"><span></span></div>
-                    <input id="repair-knob" class="knob-input" type="range" min="0" max="100" value="0" aria-label="Repair control">
-                    <span class="knob-label">REPAIR</span>
+                <div class="diagnostic-grid">
+                    <div><p class="mini-label">DECAY</p><strong id="dialog-decay">0%</strong></div>
+                    <div><p class="mini-label">ACTIVE EVENTS</p><strong id="dialog-event-count">0</strong></div>
+                    <div><p class="mini-label">SIGNAL</p><strong id="dialog-signal">STABLE</strong></div>
                 </div>
+                <div class="switches-heading">
+                    <span>DECAY SWITCHES</span>
+                    <span>FLIP ACTIVE SWITCHES OFF TO REPAIR</span>
+                </div>
+                <div class="fault-switches" id="fault-switches" aria-label="Decay event repair switches"></div>
             </div>
-            <button class="solo-button" id="solo-button" type="button">SOLO TRACK</button>
         </div>
-    </dialog>
+    </dialog>log>
     <script src="script.js"></script>
 </body>
 </html>
