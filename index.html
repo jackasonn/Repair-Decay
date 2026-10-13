@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0b0906">
     <title>REPAIR / DECAY — Interactive Music</title>
-    <link rel="stylesheet" href="style.css?v=20261013-5">
+    <link rel="stylesheet" href="style.css?v=20261013-6">
 </head>
 <body>
     <div class="scanlines" aria-hidden="true"></div>
@@ -27,13 +27,13 @@
         </div>
     </header>
     <main>
-        <section class="player-section" aria-label="Song player">
+        <section class="player-section" id="player-section" aria-label="Song player">
             <div class="album-art" id="album-art" role="img" aria-label="On Time cover artwork">
                 <img class="album-cover-image" id="album-cover-image" src="assets/on-time-cover.jpg" alt="" decoding="async">
                 <span class="art-label">SONG<br>IMAGE</span>
                 <span class="art-noise" id="art-noise">001</span>
             </div>
-            <div class="player-panel">
+            <div class="player-panel" id="player-panel">
                 <div class="song-heading">
                     <div>
                         <p class="eyebrow" id="song-number">SONG 01</p>
@@ -126,6 +126,6 @@
         </section>
         <div class="signal-lock-toast" id="repair-lock-toast" role="status" aria-live="polite" hidden>Signal stability must reach 100%.</div>
     </dialog>
-    <script src="script.js?v=20261013-5"></script>
+    <script src="script.js?v=20261013-6"></script>
 </body>
 </html>
