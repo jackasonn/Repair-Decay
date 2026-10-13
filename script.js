@@ -65,7 +65,7 @@ const state= {
   }
   ,offsets: {
   }
-  ,analyser:null,masterGain:null,loaded:false,loadedSongIndex:null,loading:false,loadingPromise:null,songGeneration:0,demoMode:false,noiseBuffer:null,pitchReady:false
+  ,analyser:null,masterGain:null,loaded:false,loadedSongIndex:null,loading:false,loadingPromise:null,songGeneration:0,demoMode:false,noiseBuffer:null,pitchReady:false,waveformCtx:null,waveformData:null,waveformPixelWidth:0,waveformPixelHeight:0,waveformDrawAt:0,lastTrackVisualAt:0,lastClockTextAt:0,waveformColour:'#7f9a63'
 }
 ;
 function createTrackState(tracks) {
@@ -202,6 +202,7 @@ function updateUI() {
   document.body.classList.toggle('decay-critical', state.overallDecay >= 70);
   const decayAccent = state.overallDecay >= 70 ? '#b94b42' : state.overallDecay >= 30 ? '#d7a72d' : '#7f9a63';
   document.body.style.setProperty('--decay-accent', decayAccent);
+  state.waveformColour = decayAccent;
   document.body.style.setProperty('--screen-flash-low', Math.max(0.01, state.overallDecay / 100 * 0.08).toFixed(3));
   document.body.style.setProperty('--screen-flash-high', Math.max(0.025, state.overallDecay / 100 * 0.44).toFixed(3));
   document.body.style.setProperty('--screen-flash-duration', (3.6 - state.overallDecay / 100 * 2.4).toFixed(2) + 's');
@@ -251,14 +252,30 @@ function alignAllOffsets(position) {
     state.offsets[track.id] = Math.max(0, Math.min(position, Math.max(0, duration - 0.01)));
   });
 }
-function clearSources() {
-  Object.values(state.sources).forEach(chain => {
+function disposeTrackChain(chain, stopSource = true) {
+  if (!chain) return;
+  if (chain.source) {
     try { chain.source.onended = null; } catch (_) {}
-    [chain.lfo, chain.phaseLfo, chain.warp].forEach(oscillator => {
-      try { oscillator.stop(); } catch (_) {}
-    });
-    try { chain.source.stop(); } catch (_) {}
+    if (stopSource) {
+      try { chain.source.stop(); } catch (_) {}
+    }
+  }
+  [chain.phaseLfo, chain.warp, chain.lfo].forEach(oscillator => {
+    if (!oscillator) return;
+    try { oscillator.stop(); } catch (_) {}
   });
+  [
+    chain.source, chain.pitchShift, chain.crush, chain.highpass, chain.lowpass,
+    chain.artifactGain, chain.phase, chain.gain, chain.analyser,
+    chain.lfo, chain.lfoDepth, chain.phaseLfo, chain.phaseDepth,
+    chain.warp, chain.warpDepth
+  ].forEach(node => {
+    if (!node) return;
+    try { node.disconnect(); } catch (_) {}
+  });
+}
+function clearSources() {
+  Object.values(state.sources).forEach(chain => disposeTrackChain(chain));
   state.sources = {};
 }
 function attachTrackEndHandler(trackId, chain, generation = state.songGeneration) {
@@ -271,34 +288,38 @@ function attachTrackEndHandler(trackId, chain, generation = state.songGeneration
 }
 // Create the Web Audio graph and a reusable noise buffer for crackle events.
 async function initialiseAudio() {
-  if(state.audio)return;
-  const C=window.AudioContext||window.webkitAudioContext;
-  if(!C) {
-    state.demoMode=true;
+  if (state.audio) return;
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) {
+    state.demoMode = true;
     updateUI();
-    return
+    return;
   }
-  const ctx=new C(),master=ctx.createGain(),analyser=ctx.createAnalyser();
-  master.gain.value=.9;
-  analyser.fftSize=512;
-  analyser.smoothingTimeConstant=.82;
+  const context = new AudioContextClass();
+  const master = context.createGain();
+  const analyser = context.createAnalyser();
+  master.gain.value = 0.9;
+  analyser.fftSize = 512;
+  analyser.smoothingTimeConstant = 0.82;
   master.connect(analyser);
-  analyser.connect(ctx.destination);
-  state.audio=ctx;
-  state.masterGain=master;
-  state.analyser=analyser;
-  const noise=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);
-  const data=noise.getChannelData(0);
-  for(let i=0;
-  i<data.length;
-  i++)data[i]=Math.random()*2-1;
-  state.noiseBuffer=noise;
-  if(ctx.audioWorklet) {
-    ctx.audioWorklet.addModule('pitch-shifter.js').then(()=>{
-      state.pitchReady=true
-    }).catch(e=>{
-      console.warn('Pitch shifter worklet could not load.',e)
-    })
+  analyser.connect(context.destination);
+  state.audio = context;
+  state.masterGain = master;
+  state.analyser = analyser;
+
+  const noise = context.createBuffer(1, context.sampleRate, context.sampleRate);
+  const samples = noise.getChannelData(0);
+  for (let i = 0; i < samples.length; i++) samples[i] = Math.random() * 2 - 1;
+  state.noiseBuffer = noise;
+
+  if (context.audioWorklet) {
+    try {
+      await context.audioWorklet.addModule('pitch-shifter.js');
+      state.pitchReady = true;
+    } catch (error) {
+      state.pitchReady = false;
+      console.warn('Pitch shifter worklet could not load; pitch-based decay events will be unavailable.', error);
+    }
   }
 }
 async function loadAudio() {
@@ -385,8 +406,6 @@ function makeTrackChain(id, source) {
   const lp = state.audio.createBiquadFilter();
   const gain = state.audio.createGain();
   const artifactGain = state.audio.createGain();
-  const lfo = state.audio.createOscillator();
-  const lfoDepth = state.audio.createGain();
   const phase = state.audio.createStereoPanner();
   const phaseLfo = state.audio.createOscillator();
   const phaseDepth = state.audio.createGain();
@@ -410,11 +429,6 @@ function makeTrackChain(id, source) {
   analyser.smoothingTimeConstant = 0.78;
 
   artifactGain.gain.value = 1;
-  lfo.type = 'sine';
-  lfo.frequency.value = 0.08;
-  lfoDepth.gain.value = 0;
-  lfo.start();
-
   phaseLfo.type = 'sine';
   phaseLfo.frequency.value = 0.17;
   phaseDepth.gain.value = s.phaseDepth;
@@ -449,8 +463,9 @@ function makeTrackChain(id, source) {
   analyser.connect(state.masterGain);
 
   return {
-    source, highpass: hp, lowpass: lp, gain, artifactGain, lfo, lfoDepth,
-    phase, phaseLfo, phaseDepth, warp, warpDepth, crush, pitchShift, analyser
+    source, highpass: hp, lowpass: lp, gain, artifactGain,
+    phase, phaseLfo, phaseDepth, warp, warpDepth, crush, pitchShift, analyser,
+    analyserData: new Uint8Array(analyser.frequencyBinCount)
   };
 }
 // Quantise the waveform to simulate reduced bit depth.
@@ -518,6 +533,7 @@ async function startPlayback() {
     addLog('Playback started. Drums rhythm test armed.', 'repair');
     updateUI();
     updateTrackAudioVisuals();
+    drawWaveform();
   } catch (error) {
     state.playing = false;
     console.error('Playback failed:', error);
@@ -547,6 +563,7 @@ function stopPlayback(finished = false) {
   if (!finished) addLog('Playback paused. All stems held at the same timeline position.', 'repair');
   updateUI();
   updateTrackAudioVisuals();
+  drawWaveform();
 }
 // Apply one randomly selected decay event to one stem.
 function applyEvent() {
@@ -602,11 +619,8 @@ function applyEvent() {
       }
       catch(_) {
       }
-      try {
-        old.stop(now+.01)
-      }
-      catch(_) {
-      }
+      old.onended = () => disposeTrackChain(d, false);
+      try { old.stop(now + .01); } catch (_) {}
       const ns=state.audio.createBufferSource();
       ns.buffer=state.buffers[t.id];
       const nd=makeTrackChain(t.id,ns);
@@ -616,11 +630,7 @@ function applyEvent() {
       state.sources[t.id]=nd;
       setTimeout(() => {
         if (state.playing && state.sources[t.id] === nd) {
-          try { nd.source.onended = null; } catch (_) {}
-          [nd.lfo, nd.phaseLfo, nd.warp].forEach(oscillator => {
-            try { oscillator.stop(); } catch (_) {}
-          });
-          try { nd.source.stop(); } catch (_) {}
+          disposeTrackChain(nd);
 
           // After the brief repeat, rejoin at the live master-clock position.
           const resumePosition = currentMasterOffset();
@@ -651,8 +661,9 @@ function applyEvent() {
         ng.gain.exponentialRampToValueAtTime(.001,when+.015+Math.random()*.025);
         n.connect(ng);
         ng.connect(d.artifactGain);
+        n.onended = () => { try { n.disconnect(); } catch (_) {} try { ng.disconnect(); } catch (_) {} };
         n.start(when);
-        n.stop(when+.05)
+        n.stop(when + .05)
       }
     }
   }
@@ -748,29 +759,50 @@ function toggleSolo() {
   );
   updateDialog()
 }
-// Draw the live analyser waveform.
-function drawWaveform() {
+// Draw the waveform with a reused canvas/context; do not reset its backing store on every frame.
+function drawWaveform(timestamp = 0) {
   const canvas = els.waveform;
   const rect = canvas.getBoundingClientRect();
-  const ratio = window.devicePixelRatio || 1;
-  canvas.width = Math.max(1, Math.floor(rect.width * ratio));
-  canvas.height = Math.max(1, Math.floor(rect.height * ratio));
-  const context = canvas.getContext('2d');
-  context.setTransform(ratio, 0, 0, ratio, 0, 0);
-  context.clearRect(0, 0, rect.width, rect.height);
+  const ratio = Math.min(window.devicePixelRatio || 1, 2);
+  const pixelWidth = Math.max(1, Math.floor(rect.width * ratio));
+  const pixelHeight = Math.max(1, Math.floor(rect.height * ratio));
+  const resized = canvas.width !== pixelWidth || canvas.height !== pixelHeight;
 
-  let data;
+  if (!state.waveformCtx || resized) {
+    if (resized) {
+      canvas.width = pixelWidth;
+      canvas.height = pixelHeight;
+    }
+    state.waveformCtx = canvas.getContext('2d');
+    state.waveformCtx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    state.waveformPixelWidth = pixelWidth;
+    state.waveformPixelHeight = pixelHeight;
+    state.waveformData = null;
+  }
+  if (state.playing && timestamp - state.waveformDrawAt < 33) {
+    requestAnimationFrame(drawWaveform);
+    return;
+  }
+  state.waveformDrawAt = timestamp;
+  const context = state.waveformCtx;
+  context.clearRect(0, 0, rect.width, rect.height);
+  let data = null;
   if (state.analyser && state.playing) {
-    data = new Uint8Array(state.analyser.frequencyBinCount);
+    if (!state.waveformData || state.waveformData.length !== state.analyser.frequencyBinCount) {
+      state.waveformData = new Uint8Array(state.analyser.frequencyBinCount);
+    }
+    data = state.waveformData;
     state.analyser.getByteFrequencyData(data);
   }
-  for (let i = 0; i < Math.floor(rect.width / 5); i++) {
-    const source = data ? data[Math.floor(i / (rect.width / 5) * data.length)] / 255 : 0.12 + 0.08 * Math.sin(i * 0.45);
+  const columnCount = Math.max(1, Math.floor(rect.width / 5));
+  const activeColour = state.waveformColour || '#7f9a63';
+  for (let i = 0; i < columnCount; i++) {
+    const source = data ? data[Math.floor(i / columnCount * data.length)] / 255 : 0.12 + 0.08 * Math.sin(i * 0.45);
     const height = Math.max(2, source * rect.height * 0.65);
-    context.fillStyle = state.playing ? 'rgba(127,154,99,.82)' : 'rgba(228,211,140,.24)';
+    context.fillStyle = state.playing ? activeColour : 'rgba(228,211,140,.24)';
     context.fillRect(i * 5, (rect.height - height) / 2, 2, height);
   }
-  requestAnimationFrame(drawWaveform);
+  if (state.playing) requestAnimationFrame(drawWaveform);
 }
 function updateTrackAudioVisuals() {
   TRACKS.forEach(track => {
@@ -779,23 +811,27 @@ function updateTrackAudioVisuals() {
     const chain = state.sources[track.id];
     const bars = card.querySelectorAll('.signal-bars span');
     const level = card.querySelector('[data-level="' + track.id + '"]');
-    const data = new Uint8Array(chain && chain.analyser ? chain.analyser.frequencyBinCount : 0);
-    if (chain && chain.analyser && state.playing) chain.analyser.getByteFrequencyData(data);
-
+    const data = chain ? chain.analyserData : null;
+    if (data && chain.analyser && state.playing) chain.analyser.getByteFrequencyData(data);
     bars.forEach((bar, index) => {
-      const value = data.length && state.playing ? data[Math.min(data.length - 1, Math.floor(index / bars.length * data.length))] / 255 : 0;
+      const value = data && state.playing
+        ? data[Math.min(data.length - 1, Math.floor(index / bars.length * data.length))] / 255
+        : 0;
       const height = state.playing && chain ? 4 + value * 32 : 4;
       bar.style.height = height.toFixed(1) + 'px';
     });
     card.classList.toggle('signal-playing', !!(chain && state.playing));
-    if (level) level.textContent = state.playing && chain ? 'LIVE SIGNAL' : state.loaded ? 'STANDBY' : 'OFFLINE';
+    const newLabel = state.playing && chain ? 'LIVE SIGNAL' : state.loaded ? 'STANDBY' : 'OFFLINE';
+    if (level && level.textContent !== newLabel) level.textContent = newLabel;
   });
 }
+
 function formatTime(seconds) {
   const value = Math.max(0, Math.floor(seconds || 0));
   return String(Math.floor(value / 60)).padStart(2, '0') + ':' + String(value % 60).padStart(2, '0');
 }
 function updatePlaybackClock() {
+  const now = performance.now();
   if (state.audio) {
     const position = currentMasterOffset();
     const masterTrack = TRACKS.find(t => t.id === 'drums') || TRACKS[0];
@@ -803,9 +839,22 @@ function updatePlaybackClock() {
     els.playbackTime.textContent = formatTime(position) + ' / ' + (duration ? formatTime(duration) : '--:--');
     updateRhythmRepair();
     updateTrackAudioVisuals();
+    if (now - state.lastClockTextAt >= 250) {
+      const position = currentMasterOffset();
+      const masterTrack = masterTrackForSong();
+      const duration = masterTrack && state.buffers[masterTrack.id] ? state.buffers[masterTrack.id].duration : 0;
+      els.playbackTime.textContent = formatTime(position) + ' / ' + (duration ? formatTime(duration) : '--:--');
+      state.lastClockTextAt = now;
+    }
+    if (state.playing && state.nextEventAt && now >= state.nextEventAt) applyEvent();
+    if (state.playing && now - state.lastTrackVisualAt >= 100) {
+      updateTrackAudioVisuals();
+      state.lastTrackVisualAt = now;
+    }
   }
   requestAnimationFrame(updatePlaybackClock);
 }
+
 function renderCurrentSong() {
   const song = SONGS[currentSongIndex];
   els.songTitle.textContent = song.title;
