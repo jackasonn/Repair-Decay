@@ -536,6 +536,7 @@ async function startPlayback() {
     if (state.audio.state === 'suspended') await state.audio.resume();
 
     state.playing = true;
+    if (!state.nextEventAt || state.nextEventAt <= performance.now()) scheduleNextEvent();
     startSources();
     els.play.classList.add('playing');
     els.play.setAttribute('aria-label', 'Pause song');
