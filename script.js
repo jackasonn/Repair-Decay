@@ -759,7 +759,6 @@ function repairTrack(id) {
 }
 function openTrackDialog(id) {
   state.selectedTrack = id;
-  state.particleSignature = '';
   updateDialog();
   els.dialog.showModal();
 }
@@ -781,38 +780,68 @@ function closeTrackDialog() {
   updateDialog();
 }
 function renderDialogParticles(trackId, decay) {
-  const tier = Math.floor(decay / 10);
-  const signature = trackId + ':' + tier;
-  if (state.particleSignature === signature) return;
-  state.particleSignature = signature;
+  // Rebuild only when the selected song/instrument changes. Decay updates should
+  // never recreate the particles or restart their floating animation.
+  const signature = SONGS[currentSongIndex].id + ':' + trackId;
+  if (state.particleSignature !== signature) {
+    const count = 20;
+    els.dialogParticles.innerHTML = Array.from({ length: count }, () => {
+      const size = 4 + Math.random() * 5;
+      const x = 6 + Math.random() * 88;
+      const y = 6 + Math.random() * 88;
+      const drift = 10 + Math.random() * 16;
+      const life = 8 + Math.random() * 5;
+      const delay = -Math.random() * life;
+      const dx1 = (Math.random() * 2 - 1) * drift;
+      const dy1 = (Math.random() * 2 - 1) * drift;
+      const dx2 = (Math.random() * 2 - 1) * drift * 0.8;
+      const dy2 = (Math.random() * 2 - 1) * drift * 0.8;
+      const dx3 = (Math.random() * 2 - 1) * drift * 0.65;
+      const dy3 = (Math.random() * 2 - 1) * drift * 0.65;
+      const shakeDirections = Array.from({ length: 4 }, () => ({
+        x: (Math.random() * 2 - 1).toFixed(2),
+        y: (Math.random() * 2 - 1).toFixed(2)
+      }));
+      const shakeVars = shakeDirections.map((point, index) =>
+        '--shake-x' + (index + 1) + '-dir:' + point.x + ';' +
+        '--shake-y' + (index + 1) + '-dir:' + point.y + ';'
+      ).join('');
+      return '<span class="decay-particle" style="' +
+        '--x:' + x.toFixed(1) + '%;' +
+        '--y:' + y.toFixed(1) + '%;' +
+        '--size:' + size.toFixed(1) + 'px;' +
+        '--dx1:' + dx1.toFixed(1) + 'px;' +
+        '--dy1:' + dy1.toFixed(1) + 'px;' +
+        '--dx2:' + dx2.toFixed(1) + 'px;' +
+        '--dy2:' + dy2.toFixed(1) + 'px;' +
+        '--dx3:' + dx3.toFixed(1) + 'px;' +
+        '--dy3:' + dy3.toFixed(1) + 'px;' +
+        '--life:' + life.toFixed(2) + 's;' +
+        '--delay:' + delay.toFixed(2) + 's;' +
+        '--particle-opacity:.7;' +
+        '--shake-x1:0px;--shake-y1:0px;--shake-x2:0px;--shake-y2:0px;' +
+        '--shake-x3:0px;--shake-y3:0px;--shake-x4:0px;--shake-y4:0px;' +
+        shakeVars +
+        'background:#7f9a63;color:#7f9a63"></span>';
+    }).join('');
+    state.particleSignature = signature;
+  }
 
-  const count = 12 + tier * 2;
+  // Decay affects only the particles' colour and shake amplitude. Their anchor
+  // positions, float paths, count and float speed remain unchanged.
   const colour = decay >= 70 ? '#b94b42' : decay >= 30 ? '#d7a72d' : '#7f9a63';
-  const drift = 16 + decay * .62;
-  const life = 6.5 - decay * .045;
-  const opacity = .62 + decay * .0028;
-  const shake = 2 + decay * .14;
+  const shakeAmplitude = 0.08 + Math.max(0, Math.min(100, decay)) * 0.018;
+  els.dialogParticles.querySelectorAll('.decay-particle').forEach(particle => {
+    particle.style.background = colour;
+    particle.style.color = colour;
+    for (let i = 1; i <= 4; i++) {
+      const xDirection = parseFloat(particle.style.getPropertyValue('--shake-x' + i + '-dir')) || 0;
+      const yDirection = parseFloat(particle.style.getPropertyValue('--shake-y' + i + '-dir')) || 0;
+      particle.style.setProperty('--shake-x' + i, (xDirection * shakeAmplitude).toFixed(2) + 'px');
+      particle.style.setProperty('--shake-y' + i, (yDirection * shakeAmplitude).toFixed(2) + 'px');
+    }
+  });
 
-  els.dialogParticles.innerHTML = Array.from({ length: count }, () => {
-    const size = 4 + Math.random() * (5 + decay * .05);
-    const x = 6 + Math.random() * 88;
-    const y = 6 + Math.random() * 88;
-    const dx = (Math.random() * 2 - 1) * drift;
-    const dy = (Math.random() * 2 - 1) * drift;
-    const jitter = Math.random() * shake;
-    const delay = -Math.random() * life;
-    return '<span class="decay-particle" style="' +
-      '--x:' + x.toFixed(1) + '%;' +
-      '--y:' + y.toFixed(1) + '%;' +
-      '--size:' + size.toFixed(1) + 'px;' +
-      '--dx:' + dx.toFixed(1) + 'px;' +
-      '--dy:' + dy.toFixed(1) + 'px;' +
-      '--jitter:' + jitter.toFixed(1) + 'px;' +
-      '--life:' + life.toFixed(2) + 's;' +
-      '--delay:' + delay.toFixed(2) + 's;' +
-      '--particle-opacity:' + opacity.toFixed(2) + ';' +
-      'background:' + colour + ';color:' + colour + '"></span>';
-  }).join('');
   els.dialogArtStage.style.setProperty('--instrument-decay', (decay / 100).toFixed(2));
   els.dialogArtStage.classList.toggle('instrument-warning', decay >= 30 && decay < 70);
   els.dialogArtStage.classList.toggle('instrument-critical', decay >= 70);
