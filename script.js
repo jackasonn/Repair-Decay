@@ -97,22 +97,22 @@ function cacheElements() {
   els.dialog = document.getElementById('track-dialog');
   els.closeDialog = document.getElementById('close-dialog');
   els.dialogTitle = document.getElementById('dialog-title');
-  els.dialogCode = document.getElementById('dialog-track-code');
   els.dialogStatus = document.getElementById('dialog-status');
   els.dialogDecay = document.getElementById('dialog-decay');
   els.dialogCount = document.getElementById('dialog-event-count');
   els.dialogSignal = document.getElementById('dialog-signal');
-  els.dialogEvents = document.getElementById('dialog-events');
   els.solo = document.getElementById('solo-button');
-  els.knob = document.getElementById('repair-knob');
-  els.knobVisual = document.getElementById('repair-knob-visual');
   els.previousSong = document.getElementById('previous-song');
   els.nextSong = document.getElementById('next-song');
   els.songTitle = document.getElementById('song-title');
   els.songNumber = document.getElementById('song-number');
   els.songArtist = document.getElementById('song-artist');
   els.albumArt = document.getElementById('album-art');
-  els.artNoise = document.getElementById('art-noise');
+  els.albumCoverImage = document.getElementById('album-cover-image');
+  els.dialogInstrumentImage = document.getElementById('dialog-instrument-image');
+  els.dialogArtStage = document.getElementById('dialog-art-stage');
+  els.dialogParticles = document.getElementById('dialog-particles');
+  els.faultSwitches = document.getElementById('fault-switches');
 }
 // Build the instrument cards for the selected song.
 function renderTracks() {
@@ -120,6 +120,7 @@ function renderTracks() {
     const bars = Array.from({ length: 12 }, () => '<span></span>').join('');
     return '<button class="track-card healthy" type="button" data-track="' + t.id + '" aria-label="Open ' + t.name + ' track diagnostics">' +
       '<div class="track-visual" aria-hidden="true"></div>' +
+      '<img class="track-instrument-image" src="assets/' + t.id + '.png" alt="" loading="lazy" decoding="async">' +
       '<span class="track-index">0' + (i + 1) + '</span>' +
       '<div class="track-signal" aria-hidden="true">' +
         '<div class="signal-heading"><span class="signal-label">AUDIO SIGNAL</span><span class="signal-light"></span></div>' +
@@ -424,7 +425,7 @@ function makeTrackChain(id, source) {
   lp.type = 'lowpass';
   hp.frequency.value = s.highpass;
   lp.frequency.value = s.lowpass;
-  gain.gain.value = state.soloTrack && state.soloTrack !== id ? 0 : 1;
+  gain.gain.value = state.soloTrack && state.soloTrack !== id ? 0.22 : 1;
   analyser.fftSize = 64;
   analyser.smoothingTimeConstant = 0.78;
 
@@ -505,10 +506,15 @@ function startSources() {
 function handleSongFinished(generation) {
   if (!state.playing || generation !== state.songGeneration) return;
   if (rhythm && !rhythm.finished) finishRhythmRepair();
+
+  const finishedSong = SONGS[currentSongIndex].title;
+  const nextIndex = (currentSongIndex + 1) % SONGS.length;
+  const nextSong = SONGS[nextIndex].title;
+  addLog(finishedSong + ' finished. Continuing with ' + nextSong + '.', 'repair');
+
   stopPlayback(true);
   alignAllOffsets(0);
-  els.playbackState.textContent = 'SONG COMPLETE / PLAY TO RESTART';
-
+  void switchSong(nextIndex, true);
 }
 
 async function startPlayback() {
@@ -624,7 +630,7 @@ function applyEvent() {
       const ns=state.audio.createBufferSource();
       ns.buffer=state.buffers[t.id];
       const nd=makeTrackChain(t.id,ns);
-      nd.gain.gain.value=state.soloTrack&&state.soloTrack!==t.id?0:1;
+      nd.gain.gain.value=state.soloTrack&&state.soloTrack!==t.id?0.22:1;
       ns.start(now+.01,repeatStart);
       ns.stop(now+.01+repeat);
       state.sources[t.id]=nd;
@@ -702,62 +708,170 @@ function repairTrack(id) {
   updateTrackAudioVisuals();
   if (state.selectedTrack === id) updateDialog();
 }
-// Open the diagnostic window for an instrument.
 function openTrackDialog(id) {
-  state.selectedTrack=id;
-  els.knob.value=0;
-  els.knob.disabled = id === 'drums' && !!rhythm;
-  document.querySelector('.repair-copy p:last-child').textContent = els.knob.disabled
-    ? 'Use F in the rhythm lane on the main page to repair drums.'
-    : 'Turn the control to restore this track. Full rotation clears all active decay events.';
+  state.selectedTrack = id;
+  state.particleSignature = '';
   updateDialog();
-  els.dialog.showModal()
+  els.dialog.showModal();
 }
 function closeTrackDialog() {
-  state.soloTrack=null;
-  TRACKS.forEach(t=> {
-    const d=state.sources[t.id];
-    if(d)d.gain.gain.setTargetAtTime(1,state.audio?.currentTime||0,.08)
-  }
-  );
+  state.soloTrack = null;
+  TRACKS.forEach(track => {
+    const chain = state.sources[track.id];
+    if (chain && state.audio) chain.gain.gain.setTargetAtTime(1, state.audio.currentTime, .08);
+  });
   els.dialog.close();
-  updateDialog()
+  updateDialog();
+}
+function renderDialogParticles(trackId, decay) {
+  const tier = Math.floor(decay / 10);
+  const signature = trackId + ':' + tier;
+  if (state.particleSignature === signature) return;
+  state.particleSignature = signature;
+
+  const count = 5 + tier * 3;
+  const palette = decay >= 70
+    ? ['#b94b42', '#b94b42', '#b94b42', '#d7a72d', '#d7a72d', '#7f9a63']
+    : decay >= 30
+      ? ['#d7a72d', '#d7a72d', '#7f9a63', '#7f9a63', '#b94b42']
+      : ['#7f9a63', '#7f9a63', '#7f9a63', '#d7a72d'];
+  const drift = 12 + decay * .55;
+  const life = 6.5 - decay * .05;
+  const opacity = .35 + decay * .0055;
+  const shake = 1 + decay * .12;
+
+  els.dialogParticles.innerHTML = Array.from({ length: count }, () => {
+    const colour = palette[Math.floor(Math.random() * palette.length)];
+    const size = 2 + Math.random() * (3 + decay * .04);
+    const x = 8 + Math.random() * 84;
+    const y = 8 + Math.random() * 84;
+    const dx = (Math.random() * 2 - 1) * drift;
+    const dy = (Math.random() * 2 - 1) * drift;
+    const jitter = Math.random() * shake;
+    const delay = -Math.random() * life;
+    return '<span class="decay-particle" style="' +
+      '--x:' + x.toFixed(1) + '%;' +
+      '--y:' + y.toFixed(1) + '%;' +
+      '--size:' + size.toFixed(1) + 'px;' +
+      '--dx:' + dx.toFixed(1) + 'px;' +
+      '--dy:' + dy.toFixed(1) + 'px;' +
+      '--jitter:' + jitter.toFixed(1) + 'px;' +
+      '--life:' + life.toFixed(2) + 's;' +
+      '--delay:' + delay.toFixed(2) + 's;' +
+      '--particle-opacity:' + opacity.toFixed(2) + ';' +
+      'background:' + colour + '"></span>';
+  }).join('');
+  els.dialogArtStage.style.setProperty('--instrument-decay', (decay / 100).toFixed(2));
+  els.dialogArtStage.classList.toggle('instrument-warning', decay >= 30 && decay < 70);
+  els.dialogArtStage.classList.toggle('instrument-critical', decay >= 70);
+}
+function repairEventType(typeId) {
+  const id = state.selectedTrack;
+  const s = trackState[id];
+  if (!s) return;
+  const activeEvents = s.events.filter(event => event.type === typeId);
+  if (!activeEvents.length) return;
+
+  s.events = s.events.filter(event => event.type !== typeId);
+  const chain = state.sources[id];
+  const now = state.audio ? state.audio.currentTime : 0;
+
+  switch (typeId) {
+    case 'detune':
+      s.detune = 0;
+      if (chain && chain.pitchShift) {
+        const pitchParam = chain.pitchShift.parameters.get('pitchCents');
+        if (pitchParam) pitchParam.setTargetAtTime(0, now, .12);
+      }
+      break;
+    case 'highpass':
+      s.highpass = 20;
+      if (chain) chain.highpass.frequency.setTargetAtTime(20, now, .12);
+      break;
+    case 'lowpass':
+      s.lowpass = 20000;
+      if (chain) chain.lowpass.frequency.setTargetAtTime(20000, now, .12);
+      break;
+    case 'bitcrush':
+      s.bitDepth = 16;
+      if (chain) chain.crush.curve = makeBitCurve(16);
+      break;
+    case 'phase':
+      s.phaseDepth = 0;
+      if (chain) chain.phaseDepth.gain.setTargetAtTime(0, now, .12);
+      break;
+    case 'warp':
+      s.warpDepth = 0;
+      if (chain) chain.warpDepth.gain.setTargetAtTime(0, now, .12);
+      break;
+    case 'stutter':
+      s.stutterDepth = 0;
+      break;
+    case 'crackle':
+      s.crackleDepth = 0;
+      break;
+  }
+
+  const definition = EVENT_TYPES.find(event => event.id === typeId);
+  addLog((TRACKS.find(track => track.id === id)?.name || id.toUpperCase()) +
+    ' repaired: ' + (definition ? definition.name : typeId.toUpperCase()) + '.', 'repair');
+  updateUI();
+  updateDialog();
 }
 function updateDialog() {
-  const t=TRACKS.find(x=>x.id===state.selectedTrack);
-  if(!t)return;
-  const s=trackState[t.id],d=severityFor(t.id),st=statusFor(d);
-  els.dialogTitle.textContent=t.name;
-  els.dialogCode.textContent='TRACK_'+String(TRACKS.indexOf(t)+1).padStart(2,'0');
-  els.dialogStatus.textContent=st.text;
-  els.dialogStatus.className='dialog-status '+st.className;
-  els.dialogDecay.textContent=d+'%';
-  els.dialogCount.textContent=s.events.length;
-  els.dialogSignal.textContent=s.events.length?'UNSTABLE':'STABLE';
-  els.dialogEvents.innerHTML=s.events.length?s.events.slice().reverse().map(e=>'<li><strong>'+e.name+'</strong> — '+e.description+(e.detail?' / '+e.detail:'')+'</li>').join(''):'<li class="empty">NO DECAY EVENTS RECORDED.</li>';
-  els.solo.textContent=state.soloTrack===t.id?'UNSOLO TRACK':'SOLO TRACK';
-  els.solo.classList.toggle('active',state.soloTrack===t.id)
-}
-function updateKnob() {
-  if (state.selectedTrack === 'drums' && rhythm) return;
-  const v=Number(els.knob.value),a=-135+v/100*270;
-  els.knobVisual.style.transform='rotate('+a+'deg)';
-  if(v>=100&&state.selectedTrack) {
-    repairTrack(state.selectedTrack);
-    els.knob.value=0;
-    els.knobVisual.style.transform='rotate(-135deg)'
+  const track = TRACKS.find(item => item.id === state.selectedTrack);
+  if (!track) return;
+  const s = trackState[track.id];
+  const decay = severityFor(track.id);
+  const status = statusFor(decay);
+
+  els.dialogTitle.textContent = track.name;
+  els.dialogStatus.textContent = status.text;
+  els.dialogStatus.className = 'dialog-status ' + status.className;
+  els.dialogDecay.textContent = decay + '%';
+  els.dialogCount.textContent = s.events.length;
+  els.dialogSignal.textContent = s.events.length ? 'UNSTABLE' : 'STABLE';
+
+  if (els.dialogInstrumentImage.dataset.track !== track.id) {
+    els.dialogInstrumentImage.src = 'assets/' + track.id + '.png';
+    els.dialogInstrumentImage.alt = track.name.toLowerCase() + ' instrument illustration';
+    els.dialogInstrumentImage.dataset.track = track.id;
   }
+
+  els.faultSwitches.innerHTML = EVENT_TYPES.map(event => {
+    const activeCount = s.events.filter(item => item.type === event.id).length;
+    const active = activeCount > 0;
+    const stateLabel = active ? 'ACTIVE' : 'CLEAR';
+    return '<div class="fault-switch-row ' + (active ? 'fault-active' : '') + '">' +
+      '<div class="fault-switch-copy">' +
+        '<span class="fault-switch-name">' + event.name + '</span>' +
+        '<span class="fault-switch-state">' + (active ? stateLabel + (activeCount > 1 ? ' ×' + activeCount : '') : stateLabel) + '</span>' +
+      '</div>' +
+      '<button class="fault-switch ' + (active ? 'is-on' : '') + '" type="button" role="switch" aria-checked="' + active + '" ' +
+        'aria-label="' + (active ? 'Turn off ' : 'No active fault: ') + event.name + '" data-event="' + event.id + '" ' +
+        (active ? '' : 'disabled') + '>' +
+        '<span class="fault-switch-track"><span class="fault-switch-thumb"></span></span>' +
+      '</button>' +
+    '</div>';
+  }).join('');
+
+  renderDialogParticles(track.id, decay);
+  els.solo.setAttribute('aria-pressed', state.soloTrack === track.id ? 'true' : 'false');
+  els.solo.classList.toggle('active', state.soloTrack === track.id);
+  els.solo.innerHTML = '<span class="solo-indicator" aria-hidden="true"></span>' +
+    (state.soloTrack === track.id ? 'UNSOLO' : 'SOLO');
 }
-// Solo only the currently selected instrument.
 function toggleSolo() {
-  if(!state.selectedTrack)return;
-  state.soloTrack=state.soloTrack===state.selectedTrack?null:state.selectedTrack;
-  TRACKS.forEach(t=> {
-    const d=state.sources[t.id];
-    if(d)d.gain.gain.setTargetAtTime(state.soloTrack&&state.soloTrack!==t.id?0:1,state.audio.currentTime,.08)
-  }
-  );
-  updateDialog()
+  if (!state.selectedTrack || !state.audio) return;
+  state.soloTrack = state.soloTrack === state.selectedTrack ? null : state.selectedTrack;
+  TRACKS.forEach(track => {
+    const chain = state.sources[track.id];
+    if (chain) {
+      const targetGain = state.soloTrack && state.soloTrack !== track.id ? 0.22 : 1;
+      chain.gain.gain.setTargetAtTime(targetGain, state.audio.currentTime, .08);
+    }
+  });
+  updateDialog();
 }
 // Draw the waveform with a reused canvas/context; do not reset its backing store on every frame.
 function drawWaveform(timestamp = 0) {
@@ -860,8 +974,8 @@ function renderCurrentSong() {
   els.songTitle.textContent = song.title;
   els.songNumber.textContent = 'SONG ' + String(song.number).padStart(2, '0');
   els.songArtist.textContent = song.artist;
-  els.artNoise.textContent = String(currentSongIndex + 1).padStart(3, '0');
-  els.albumArt.setAttribute('aria-label', song.title + ' artwork placeholder');
+  els.albumArt.classList.toggle('has-cover', song.id === 'on-time');
+  els.albumArt.setAttribute('aria-label', song.id === 'on-time' ? 'On Time cover artwork' : song.title + ' artwork placeholder');
   document.title = 'REPAIR / DECAY — ' + song.title;
 }
 function updateSongNavigation() {
@@ -933,15 +1047,12 @@ document.addEventListener('DOMContentLoaded', () => {
   els.nextSong.addEventListener('click', () => switchSong(currentSongIndex + 1));
   els.closeDialog.addEventListener('click', closeTrackDialog);
   els.dialog.addEventListener('click', event => {
-    if (event.target === els.dialog && !state.knobInteracting) closeTrackDialog();
+    if (event.target === els.dialog) closeTrackDialog();
   });
-  els.knob.addEventListener('pointerdown', () => { state.knobInteracting = true; });
-  const releaseKnob = () => {
-    setTimeout(() => { state.knobInteracting = false; }, 0);
-  };
-  els.knob.addEventListener('pointerup', releaseKnob);
-  els.knob.addEventListener('pointercancel', releaseKnob);
-  els.knob.addEventListener('input', updateKnob);
+  els.faultSwitches.addEventListener('click', event => {
+    const toggle = event.target.closest('[data-event]');
+    if (toggle && !toggle.disabled) repairEventType(toggle.dataset.event);
+  });
   els.solo.addEventListener('click', toggleSolo);
 });
 
