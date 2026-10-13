@@ -974,6 +974,7 @@ function renderCurrentSong() {
   els.songTitle.textContent = song.title;
   els.songNumber.textContent = 'SONG ' + String(song.number).padStart(2, '0');
   els.songArtist.textContent = song.artist;
+  els.artNoise.textContent = String(currentSongIndex + 1).padStart(3, '0');
   els.albumArt.classList.toggle('has-cover', song.id === 'on-time');
   els.albumArt.setAttribute('aria-label', song.id === 'on-time' ? 'On Time cover artwork' : song.title + ' artwork placeholder');
   document.title = 'REPAIR / DECAY — ' + song.title;
