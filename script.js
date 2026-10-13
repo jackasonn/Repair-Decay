@@ -759,7 +759,7 @@ function renderDialogParticles(trackId, decay) {
       '--life:' + life.toFixed(2) + 's;' +
       '--delay:' + delay.toFixed(2) + 's;' +
       '--particle-opacity:' + opacity.toFixed(2) + ';' +
-      'background:' + colour + '"></span>';
+      'background:' + colour + ';color:' + colour + '"></span>';
   }).join('');
   els.dialogArtStage.style.setProperty('--instrument-decay', (decay / 100).toFixed(2));
   els.dialogArtStage.classList.toggle('instrument-warning', decay >= 30 && decay < 70);
