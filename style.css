@@ -1697,9 +1697,14 @@ main,
   scale: var(--audio-scale, .9);
   opacity: var(--particle-opacity, .7);
   box-shadow:
-    0 0 var(--audio-glow, 12px) currentColor,
-    0 0 var(--audio-glow-wide, 24px) currentColor;
-  filter: drop-shadow(0 0 var(--audio-glow, 12px) currentColor);
+    0 0 calc(var(--size) * 1.6) currentColor,
+    0 0 calc(var(--size) * 3.3) currentColor,
+    0 0 calc(var(--size) * 5.5) currentColor,
+    0 0 var(--audio-glow, 18px) currentColor,
+    0 0 var(--audio-glow-wide, 36px) currentColor;
+  filter:
+    drop-shadow(0 0 calc(var(--size) * 1.7) currentColor)
+    drop-shadow(0 0 var(--audio-glow, 18px) currentColor);
   transition: scale .075s linear, opacity .075s linear, filter .075s linear;
   animation:
     instrumentParticle var(--life, 10s) ease-in-out var(--delay, 0s) infinite,
