@@ -237,6 +237,9 @@ function addLog(message,type='event') {
   state.logs=state.logs.slice(0,12);
   els.maintenance.innerHTML=state.logs.map(l=>'<div class="log-entry '+l.type+'"><span class="time">'+l.time+'</span><span>'+l.message+'</span></div>').join('')
 }
+// Exhibition pacing in milliseconds; adjust these bounds to tune decay frequency.
+const DECAY_INTERVAL_MIN_MS = 4000;
+const DECAY_INTERVAL_MAX_MS = 7000;
 function scheduleNextEvent() {
   if (state.decayTimer) clearTimeout(state.decayTimer);
   state.decayTimer = null;
@@ -248,7 +251,7 @@ function scheduleNextEvent() {
 
   // Keep decay scheduling independent from requestAnimationFrame so a visual
   // update hiccup cannot permanently stop the decay system.
-  const delay = 8000 + Math.random() * 10000;
+  const delay = DECAY_INTERVAL_MIN_MS + Math.random() * (DECAY_INTERVAL_MAX_MS - DECAY_INTERVAL_MIN_MS);
   state.nextEventAt = performance.now() + delay;
   state.decayTimer = setTimeout(() => {
     state.decayTimer = null;
