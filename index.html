@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0b0906">
     <title>REPAIR / DECAY — Interactive Music</title>
-    <link rel="stylesheet" href="style.css?v=20261020-2">
+    <link rel="stylesheet" href="style.css?v=20261020-3">
 </head>
 <body>
     <div class="scanlines" aria-hidden="true"></div>
@@ -93,14 +93,16 @@
             <div class="dialog-ui">
                 <button class="close-dialog" id="close-dialog" type="button" aria-label="Close track controls">×</button>
                 <div class="dialog-title-row">
-                    <div>
-                        <h2 id="dialog-title">DRUMS</h2>
+                    <div class="dialog-title-copy">
+                        <div class="dialog-title-main">
+                            <h2 id="dialog-title">DRUMS</h2>
+                            <button class="solo-button solo-compact" id="solo-button" type="button" aria-pressed="false">
+                                <span class="solo-indicator" aria-hidden="true"></span>
+                                SOLO
+                            </button>
+                        </div>
                         <p class="dialog-status" id="dialog-status">NORMAL</p>
                     </div>
-                    <button class="solo-button solo-compact" id="solo-button" type="button" aria-pressed="false">
-                        <span class="solo-indicator" aria-hidden="true"></span>
-                        SOLO
-                    </button>
                 </div>
                 <div class="diagnostic-grid">
                     <div><p class="mini-label">DECAY</p><strong id="dialog-decay">0%</strong></div>
