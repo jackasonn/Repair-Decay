@@ -385,8 +385,10 @@ async function loadSwitchSounds() {
     }
   })).then(entries => {
     state.switchSoundBuffers = Object.fromEntries(entries);
-    state.switchSoundAssetsLoaded = true;
-    return Object.values(state.switchSoundBuffers).some(Boolean);
+    // Only mark the set complete when every asset decoded. Failed requests
+    // can be retried by the next interaction rather than remaining silent.
+    state.switchSoundAssetsLoaded = Object.values(state.switchSoundBuffers).every(Boolean);
+    return state.switchSoundAssetsLoaded;
   }).finally(() => {
     if (state.switchSoundLoadPromise === operation) state.switchSoundLoadPromise = null;
   });
@@ -395,21 +397,44 @@ async function loadSwitchSounds() {
   return operation;
 }
 
-// Play short UI effects through the existing audio context, without interrupting music.
+// Play UI effects reliably even on the first interaction, without interrupting music.
 async function playUISound(name, volume) {
-  const context = state.audio;
-  if (!context) return;
-  if (!state.switchSoundBuffers || !state.switchSoundBuffers[name]) {
-    await loadSwitchSounds();
-  }
-  const buffer = state.switchSoundBuffers && state.switchSoundBuffers[name];
-  if (!buffer || context !== state.audio) return;
+  let context = state.audio;
+  let resumePromise = null;
 
-  const defaultVolumes = { on: 0.62, off: 0.62, button: 0.62, error: 0.72, plink: 0.5 };
-  const outputVolume = Number.isFinite(volume) ? volume : (defaultVolumes[name] ?? 0.62);
   try {
-    if (context.state !== 'running') await context.resume();
+    if (!context) {
+      // initialiseAudio creates/assigns the AudioContext before its first await,
+      // so request resume immediately during this pointer/click interaction.
+      const setupPromise = initialiseAudio();
+      context = state.audio;
+      if (context && context.state !== 'running') {
+        try { resumePromise = context.resume(); } catch (_) {}
+      }
+      await setupPromise;
+      context = state.audio;
+    } else if (context.state !== 'running') {
+      // Start resuming before waiting on any fetch/decode work.
+      try { resumePromise = context.resume(); } catch (_) {}
+    }
+
+    if (!context) return;
+    if (!state.switchSoundBuffers || !state.switchSoundBuffers[name]) {
+      await loadSwitchSounds();
+    }
+    const buffer = state.switchSoundBuffers && state.switchSoundBuffers[name];
+    if (!buffer || context !== state.audio) return;
+
+    if (resumePromise) {
+      try { await resumePromise; } catch (_) {}
+    }
+    if (context.state !== 'running') {
+      try { await context.resume(); } catch (_) {}
+    }
     if (context.state !== 'running') return;
+
+    const defaultVolumes = { on: 0.62, off: 0.62, button: 0.62, error: 0.72, plink: 0.5 };
+    const outputVolume = Number.isFinite(volume) ? volume : (defaultVolumes[name] ?? 0.62);
     const source = context.createBufferSource();
     const gain = context.createGain();
     source.buffer = buffer;
@@ -452,8 +477,8 @@ async function loadAudio() {
         return false;
       }
 
-      await loadSwitchSounds();
-      if (generation !== state.songGeneration) return false;
+      // Load UI effects in the background; they must never delay the music stems.
+      void loadSwitchSounds();
 
       els.playbackState.textContent = 'LOADING TRACKS…';
       const loadedBuffers = {};
