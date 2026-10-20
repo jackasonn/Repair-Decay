@@ -1914,3 +1914,51 @@ main,
     min-height: min(420px, calc(100vh - 48px));
   }
 }
+
+
+/* Put the SOLO control directly in line with the instrument heading. */
+.dialog-title-row {
+  display: block;
+  padding-right: 28px;
+}
+.dialog-title-copy {
+  min-width: 0;
+}
+.dialog-title-main {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  min-width: 0;
+}
+.dialog-title-row h2 {
+  margin: 0;
+  font-size: clamp(1.9rem, 3vw, 2.65rem);
+  line-height: .95;
+}
+.dialog-title-row .dialog-status {
+  margin: 8px 0 0;
+}
+.solo-button.solo-compact {
+  width: auto;
+  min-height: 42px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  margin: 0;
+  padding: 11px 17px;
+  border: 1px solid rgba(127,154,99,.58);
+  border-radius: 2px;
+  background: rgba(127,154,99,.09);
+  color: var(--cream);
+  font-size: .72rem;
+  letter-spacing: .1em;
+  white-space: nowrap;
+}
+.solo-button.solo-compact:hover,
+.solo-button.solo-compact.active {
+  border-color: var(--decay-accent, var(--cream-dim));
+  background: rgba(127,154,99,.2);
+}
