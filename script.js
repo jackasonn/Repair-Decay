@@ -65,7 +65,7 @@ const state= {
   }
   ,offsets: {
   }
-  ,analyser:null,masterGain:null,loaded:false,loadedSongIndex:null,loading:false,loadingPromise:null,songGeneration:0,demoMode:false,noiseBuffer:null,pitchReady:false,waveformCtx:null,waveformData:null,waveformPixelWidth:0,waveformPixelHeight:0,waveformDrawAt:0,lastTrackVisualAt:0,lastClockTextAt:0,waveformColour:'#7f9a63',particlePulse:0,lastParticlePulseAt:0,repairLockToastTimer:null,decayTimer:null
+  ,analyser:null,masterGain:null,loaded:false,loadedSongIndex:null,loading:false,loadingPromise:null,songGeneration:0,demoMode:false,noiseBuffer:null,pitchReady:false,waveformCtx:null,waveformData:null,waveformPixelWidth:0,waveformPixelHeight:0,waveformDrawAt:0,lastTrackVisualAt:0,lastClockTextAt:0,waveformColour:'#7f9a63',particlePulse:0,lastParticlePulseAt:0,repairLockToastTimer:null,decayTimer:null,switchSoundBuffers:{},switchSoundLoadPromise:null
 }
 ;
 function createTrackState(tracks) {
@@ -358,6 +358,64 @@ async function initialiseAudio() {
     }
   }
 }
+
+// Preload the tiny mechanical switch sounds into the existing Web Audio context.
+async function loadSwitchSounds() {
+  if (!state.audio) return false;
+  if (state.switchSoundBuffers && state.switchSoundBuffers.on && state.switchSoundBuffers.off) return true;
+  if (state.switchSoundLoadPromise) return state.switchSoundLoadPromise;
+
+  const context = state.audio;
+  const files = { on: 'assets/click-on.mp3', off: 'assets/click-off.mp3' };
+  const operation = Promise.all(Object.entries(files).map(async ([name, url]) => {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      const buffer = await context.decodeAudioData(await response.arrayBuffer());
+      return [name, buffer];
+    } catch (error) {
+      console.warn('Could not load switch sound ' + url, error);
+      return [name, null];
+    }
+  })).then(entries => {
+    state.switchSoundBuffers = Object.fromEntries(entries);
+    return Boolean(state.switchSoundBuffers.on && state.switchSoundBuffers.off);
+  }).finally(() => {
+    if (state.switchSoundLoadPromise === operation) state.switchSoundLoadPromise = null;
+  });
+
+  state.switchSoundLoadPromise = operation;
+  return operation;
+}
+
+// Play a short switch sound without interrupting the music or its timeline.
+async function playSwitchSound(direction) {
+  const context = state.audio;
+  if (!context) return;
+  if (!state.switchSoundBuffers || !state.switchSoundBuffers[direction]) {
+    await loadSwitchSounds();
+  }
+  const buffer = state.switchSoundBuffers && state.switchSoundBuffers[direction];
+  if (!buffer || context !== state.audio) return;
+
+  try {
+    if (context.state !== 'running') await context.resume();
+    if (context.state !== 'running') return;
+    const source = context.createBufferSource();
+    const gain = context.createGain();
+    source.buffer = buffer;
+    gain.gain.value = 0.62;
+    source.connect(gain);
+    gain.connect(context.destination);
+    source.onended = () => {
+      try { source.disconnect(); } catch (_) {}
+      try { gain.disconnect(); } catch (_) {}
+    };
+    source.start();
+  } catch (error) {
+    console.warn('Could not play switch sound ' + direction + '.', error);
+  }
+}
 async function loadAudio() {
   const requestedSongIndex = currentSongIndex;
   const generation = state.songGeneration;
@@ -381,6 +439,9 @@ async function loadAudio() {
         els.playbackState.textContent = 'AUDIO NOT SUPPORTED';
         return false;
       }
+
+      await loadSwitchSounds();
+      if (generation !== state.songGeneration) return false;
 
       els.playbackState.textContent = 'LOADING TRACKS…';
       const loadedBuffers = {};
@@ -632,6 +693,7 @@ function applyEvent() {
   }
   ;
   const d=state.sources[t.id];
+  const switchWasAlreadyOn = s.events.some(event => event.type === et.id);
   if(et.id==='detune') {
     const cents=Math.round((Math.random()*2-1)*(35+Math.random()*85));
     s.detune=Math.max(-120,Math.min(120,s.detune+cents));
@@ -727,6 +789,7 @@ function applyEvent() {
     }
   }
   s.events.push(e);
+  if (!switchWasAlreadyOn) playSwitchSound('on');
   addLog(t.name+': '+et.name+(e.detail?' / '+e.detail:''),'event');
   updateUI();
   scheduleNextEvent()
@@ -862,6 +925,7 @@ function repairEventType(typeId) {
   const activeEvents = s.events.filter(event => event.type === typeId);
   if (!activeEvents.length) return;
 
+  playSwitchSound('off');
   s.events = s.events.filter(event => event.type !== typeId);
   const chain = state.sources[id];
   const now = state.audio ? state.audio.currentTime : 0;
