@@ -1059,6 +1059,7 @@ function updateDialog() {
         '<span class="fault-switch-housing" aria-hidden="true">' +
           '<span class="fault-switch-lever"><span class="fault-switch-cap"></span></span>' +
         '</span>' +
+        '<span class="fault-switch-label" aria-hidden="true">' + event.name + '</span>' +
     '</button>';
   }).join('');
 
