@@ -433,7 +433,7 @@ async function playUISound(name, volume) {
     }
     if (context.state !== 'running') return;
 
-    const defaultVolumes = { on: 0.62, off: 0.62, button: 0.62, error: 0.72, plink: 0.12 };
+    const defaultVolumes = { on: 0.62, off: 0.62, button: 0.62, error: 0.72, plink: 0.05 };
     const outputVolume = Number.isFinite(volume) ? volume : (defaultVolumes[name] ?? 0.62);
     const source = context.createBufferSource();
     const gain = context.createGain();
@@ -1395,7 +1395,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const target = event.target.closest('button, a[href], [role="button"]');
     if (!target || target.matches(':disabled') || target.getAttribute('aria-disabled') === 'true') return;
     if (event.relatedTarget && target.contains(event.relatedTarget)) return;
-    void playUISound('plink', 0.12);
+    void playUISound('plink', 0.05);
   }, true);
 });
 
