@@ -1763,3 +1763,141 @@ main,
     translate: 0 0 !important;
   }
 }
+
+
+/* Desktop drum diagnostics: keep the switch bank and calibration visible together. */
+.fault-switch-label {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  color: var(--muted);
+  font-size: .49rem;
+  line-height: 1.1;
+  letter-spacing: .035em;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+@media (min-width: 681px) {
+  .track-dialog {
+    overflow: visible;
+  }
+  .dialog-layout {
+    min-height: 0;
+    align-items: stretch;
+  }
+  .dialog-art-stage {
+    min-height: min(560px, calc(100vh - 64px));
+    overflow: visible;
+    z-index: 2;
+  }
+  .dialog-instrument-image {
+    width: 112%;
+    height: 110%;
+    max-width: none;
+    max-height: none;
+    padding: 0;
+    transform: translate(-5%, -3%) scale(1.03);
+  }
+  .dialog-ui {
+    z-index: 3;
+    max-height: none;
+    overflow: visible;
+    padding: 32px 20px 10px;
+  }
+  .dialog-title-row h2 {
+    font-size: clamp(1.9rem, 3vw, 2.65rem);
+  }
+  .diagnostic-grid {
+    margin-top: 12px;
+  }
+  .diagnostic-grid > div {
+    padding: 7px 6px;
+  }
+  .switches-heading {
+    gap: 3px;
+    margin-top: 12px;
+    margin-bottom: 6px;
+    font-size: .6rem;
+  }
+  .switches-heading span:last-child {
+    font-size: .49rem;
+  }
+  .fault-switches {
+    gap: 6px;
+  }
+  .fault-switch {
+    min-height: 76px;
+    gap: 5px;
+    padding: 5px 2px;
+  }
+  .fault-switch-housing {
+    width: 30px;
+    height: 30px;
+    flex-basis: 30px;
+  }
+  .fault-switch-lever {
+    left: 12px;
+    bottom: 4px;
+    height: 18px;
+  }
+  .fault-switch-cap {
+    top: -4px;
+    left: -5px;
+    width: 11px;
+    height: 11px;
+  }
+  #rhythm-panel {
+    width: auto;
+    margin: 10px 0 0;
+    padding: 8px 10px;
+  }
+  #rhythm-panel .panel-heading {
+    padding-bottom: 5px;
+    font-size: .57rem;
+  }
+  #rhythm-panel p {
+    margin: 4px 0;
+    font-size: .61rem;
+    line-height: 1.25;
+  }
+  #rhythm-panel kbd {
+    padding: 0 4px;
+  }
+  #repair-signal {
+    height: 54px;
+  }
+  #repair-feedback {
+    min-height: 1.2em;
+    margin: 4px 0;
+  }
+  #rhythm-panel label {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 4px 0 2px;
+    font-size: .61rem;
+    line-height: 1.2;
+  }
+  #repair-stability {
+    display: block;
+    height: 8px;
+    margin: 3px 0 4px;
+  }
+  #repair-progress {
+    margin: 4px 0;
+  }
+  #repair-retry.solo-button {
+    min-height: 32px;
+    margin-top: 5px;
+    padding: 7px 10px;
+    font-size: .59rem;
+  }
+}
+@media (max-width: 680px) {
+  .fault-switch-label {
+    font-size: .46rem;
+  }
+  #rhythm-panel {
+    margin: 14px 0 0;
+  }
+}
