@@ -1965,9 +1965,9 @@ main,
 
 /* Image-based song navigation */
 .song-arrow {
-  width: 380px;
-  height: 560px;
-  min-height: 560px;
+  width: 95px;
+  height: 140px;
+  min-height: 140px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -1982,5 +1982,5 @@ main,
 .song-arrow-left .nav-button-image { transform: scaleX(-1); }
 .song-arrow .nav-label { display: none; }
 .song-arrow:hover:not(:disabled) { background: transparent; border-color: transparent; }
-@media (max-width: 1100px) { .song-arrow { width: 270px; height: 420px; min-height: 420px; } }
-@media (max-width: 600px) { .song-arrow { width: 215px; height: 290px; min-height: 290px; padding: 0; background: transparent; } }
+@media (max-width: 1100px) { .song-arrow { width: 67.5px; height: 105px; min-height: 105px; } }
+@media (max-width: 600px) { .song-arrow { width: 53.75px; height: 72.5px; min-height: 72.5px; padding: 0; background: transparent; } }
