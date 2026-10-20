@@ -49,7 +49,7 @@ const EVENT_TYPES=[ {
   id:'warp',name:'WARP',description:'Tiny fluctuations in pitch without changing playback speed',severity:[8,18]
 }
 , {
-  id:'stutter',name:'STUTTER',description:'Small sections repeating or catching',severity:[8,22]
+  id:'delay',name:'DELAY',description:'Three progressively quieter echoes after the original signal',severity:[8,22]
 }
 , {
   id:'crackle',name:'CRACKLE',description:'Increasing digital/vinyl artefacts',severity:[6,18]
@@ -71,7 +71,7 @@ const state= {
 function createTrackState(tracks) {
   return Object.fromEntries(tracks.map(t => [t.id, {
     events: [], detune: 0, highpass: 20, lowpass: 20000, bitDepth: 16,
-    phaseDepth: 0, warpDepth: 0, stutterDepth: 0, crackleDepth: 0
+    phaseDepth: 0, warpDepth: 0, delayDepth: 0, crackleDepth: 0
   }]));
 }
 const songTrackStates = Object.fromEntries(SONGS.map(song => [song.id, createTrackState(song.tracks)]));
@@ -304,7 +304,9 @@ function disposeTrackChain(chain, stopSource = true) {
     chain.source, chain.pitchShift, chain.crush, chain.highpass, chain.lowpass,
     chain.artifactGain, chain.phase, chain.gain, chain.analyser,
     chain.lfo, chain.lfoDepth, chain.phaseLfo, chain.phaseDepth,
-    chain.warp, chain.warpDepth
+    chain.warp, chain.warpDepth,
+    chain.delayOne, chain.delayTwo, chain.delayThree,
+    chain.delayGainOne, chain.delayGainTwo, chain.delayGainThree
   ].forEach(node => {
     if (!node) return;
     try { node.disconnect(); } catch (_) {}
@@ -545,6 +547,12 @@ function makeTrackChain(id, source) {
   const phaseDepth = state.audio.createGain();
   const warp = state.audio.createOscillator();
   const warpDepth = state.audio.createGain();
+  const delayOne = state.audio.createDelay(1.5);
+  const delayTwo = state.audio.createDelay(1.5);
+  const delayThree = state.audio.createDelay(1.5);
+  const delayGainOne = state.audio.createGain();
+  const delayGainTwo = state.audio.createGain();
+  const delayGainThree = state.audio.createGain();
   const crush = state.audio.createWaveShaper();
   const analyser = state.audio.createAnalyser();
   const pitchShift = state.pitchReady
@@ -559,6 +567,14 @@ function makeTrackChain(id, source) {
   hp.frequency.value = s.highpass;
   lp.frequency.value = s.lowpass;
   gain.gain.value = state.soloTrack && state.soloTrack !== id ? 0.22 : 1;
+  // Three discrete taps create exactly three echoes, each quieter than the last.
+  delayOne.delayTime.value = 0.32;
+  delayTwo.delayTime.value = 0.32;
+  delayThree.delayTime.value = 0.32;
+  const delayActive = s.delayDepth > 0;
+  delayGainOne.gain.value = delayActive ? 0.2 + Math.min(1, s.delayDepth) * 0.5 : 0;
+  delayGainTwo.gain.value = delayActive ? 0.55 : 0;
+  delayGainThree.gain.value = delayActive ? 0.55 : 0;
   // More frequency bins give the particles a meaningful low/mid/high split.
   analyser.fftSize = 1024;
   analyser.smoothingTimeConstant = 0.78;
@@ -593,16 +609,43 @@ function makeTrackChain(id, source) {
   hp.connect(lp);
   artifactGain.connect(hp);
   lp.connect(phase);
+  // Dry signal plus three decaying, 320 ms-spaced repeats.
   phase.connect(gain);
+  phase.connect(delayOne);
+  delayOne.connect(delayGainOne);
+  delayGainOne.connect(gain);
+  delayGainOne.connect(delayTwo);
+  delayTwo.connect(delayGainTwo);
+  delayGainTwo.connect(gain);
+  delayGainTwo.connect(delayThree);
+  delayThree.connect(delayGainThree);
+  delayGainThree.connect(gain);
   gain.connect(analyser);
   analyser.connect(state.masterGain);
 
   return {
     source, highpass: hp, lowpass: lp, gain, artifactGain,
-    phase, phaseLfo, phaseDepth, warp, warpDepth, crush, pitchShift, analyser,
+    phase, phaseLfo, phaseDepth, warp, warpDepth,
+    delayOne, delayTwo, delayThree, delayGainOne, delayGainTwo, delayGainThree,
+    crush, pitchShift, analyser,
     analyserData: new Uint8Array(analyser.frequencyBinCount)
   };
 }
+// Enable or clear the delay's three progressively quieter repeat taps.
+function setDelayEffect(chain, depth, when = state.audio.currentTime) {
+  if (!chain) return;
+  const amount = Math.max(0, Math.min(1, Number(depth) || 0));
+  const enabled = amount > 0;
+  const levels = [
+    [chain.delayGainOne, enabled ? 0.2 + amount * 0.5 : 0],
+    [chain.delayGainTwo, enabled ? 0.55 : 0],
+    [chain.delayGainThree, enabled ? 0.55 : 0]
+  ];
+  levels.forEach(([node, level]) => {
+    if (node) node.gain.setTargetAtTime(level, when, 0.06);
+  });
+}
+
 // Quantise the waveform to simulate reduced bit depth.
 function makeBitCurve(bits) {
   const n=65536,steps=Math.max(2,Math.pow(2,bits));
@@ -777,42 +820,11 @@ function applyEvent() {
     e.detail='±'+Math.round(s.warpDepth*1000)+' CENTS PITCH';
     if(d)d.warpDepth.gain.setTargetAtTime(s.warpDepth*1000,state.audio.currentTime,.15)
   }
-  if(et.id==='stutter') {
-    s.stutterDepth=Math.min(1,s.stutterDepth+.22+Math.random()*.18);
-    e.detail='CATCH / REPEAT';
-    if(d) {
-      const now=state.audio.currentTime,duration=state.buffers[t.id]?.duration||1,offset=Math.min(duration-.05,Math.max(.05,currentMasterOffset()%(duration))),repeat=.055+s.stutterDepth*.07,repeatStart=Math.max(0,offset-repeat),old=d.source;
-      try {
-        old.onended=null
-      }
-      catch(_) {
-      }
-      old.onended = () => disposeTrackChain(d, false);
-      try { old.stop(now + .01); } catch (_) {}
-      const ns=state.audio.createBufferSource();
-      ns.buffer=state.buffers[t.id];
-      const nd=makeTrackChain(t.id,ns);
-      nd.gain.gain.value=state.soloTrack&&state.soloTrack!==t.id?0.22:1;
-      ns.start(now+.01,repeatStart);
-      ns.stop(now+.01+repeat);
-      state.sources[t.id]=nd;
-      setTimeout(() => {
-        if (state.playing && state.sources[t.id] === nd) {
-          disposeTrackChain(nd);
-
-          // After the brief repeat, rejoin at the live master-clock position.
-          const resumePosition = currentMasterOffset();
-          const cs = state.audio.createBufferSource();
-          cs.buffer = state.buffers[t.id];
-          const cd = makeTrackChain(t.id, cs);
-          state.sources[t.id] = cd;
-          attachTrackEndHandler(t.id, cd, state.songGeneration);
-          const resumeAt = state.audio.currentTime + 0.015;
-          const resumeOffset = Math.max(0, Math.min(resumePosition, Math.max(0, duration - 0.01)));
-          cs.start(resumeAt, resumeOffset);
-        }
-      }, Math.round((repeat + .02) * 1000))
-    }
+  if(et.id==='delay') {
+    s.delayDepth = Math.min(1, s.delayDepth + .22 + Math.random() * .18);
+    const firstEchoLevel = 0.2 + s.delayDepth * 0.5;
+    e.detail = '3 REPEATS / FIRST ECHO ' + Math.round(firstEchoLevel * 100) + '%';
+    if (d) setDelayEffect(d, s.delayDepth);
   }
   if(et.id==='crackle') {
     s.crackleDepth=Math.min(.7,s.crackleDepth+.12+Math.random()*.12);
@@ -855,7 +867,7 @@ function repairTrack(id) {
   s.bitDepth = 16;
   s.phaseDepth = 0;
   s.warpDepth = 0;
-  s.stutterDepth = 0;
+  s.delayDepth = 0;
   s.crackleDepth = 0;
 
   alignAllOffsets(sharedPosition);
@@ -1007,8 +1019,9 @@ function repairEventType(typeId) {
       s.warpDepth = 0;
       if (chain) chain.warpDepth.gain.setTargetAtTime(0, now, .12);
       break;
-    case 'stutter':
-      s.stutterDepth = 0;
+    case 'delay':
+      s.delayDepth = 0;
+      if (chain) setDelayEffect(chain, 0, now);
       break;
     case 'crackle':
       s.crackleDepth = 0;
