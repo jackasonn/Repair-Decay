@@ -1962,3 +1962,24 @@ main,
   border-color: var(--decay-accent, var(--cream-dim));
   background: rgba(127,154,99,.2);
 }
+
+/* Image-based song navigation */
+.song-arrow {
+  width: 76px;
+  min-height: 76px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  backdrop-filter: none;
+}
+.nav-button-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+.song-arrow-left .nav-button-image { transform: scaleX(-1); }
+.song-arrow .nav-label { display: none; }
+.song-arrow:hover:not(:disabled) { background: transparent; border-color: transparent; }
+@media (max-width: 1100px) { .song-arrow { width: 54px; min-height: 54px; } }
+@media (max-width: 600px) { .song-arrow { width: 43px; min-height: 43px; padding: 0; background: transparent; } }
