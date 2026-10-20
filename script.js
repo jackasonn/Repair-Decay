@@ -65,7 +65,7 @@ const state= {
   }
   ,offsets: {
   }
-  ,analyser:null,masterGain:null,loaded:false,loadedSongIndex:null,loading:false,loadingPromise:null,songGeneration:0,demoMode:false,noiseBuffer:null,pitchReady:false,waveformCtx:null,waveformData:null,waveformPixelWidth:0,waveformPixelHeight:0,waveformDrawAt:0,lastTrackVisualAt:0,lastClockTextAt:0,waveformColour:'#7f9a63',particlePulse:0,lastParticlePulseAt:0,repairLockToastTimer:null,decayTimer:null,switchSoundBuffers:{},switchSoundLoadPromise:null
+  ,analyser:null,masterGain:null,loaded:false,loadedSongIndex:null,loading:false,loadingPromise:null,songGeneration:0,demoMode:false,noiseBuffer:null,pitchReady:false,waveformCtx:null,waveformData:null,waveformPixelWidth:0,waveformPixelHeight:0,waveformDrawAt:0,lastTrackVisualAt:0,lastClockTextAt:0,waveformColour:'#7f9a63',particlePulse:0,lastParticlePulseAt:0,repairLockToastTimer:null,decayTimer:null,switchSoundBuffers:{},switchSoundLoadPromise:null,switchSoundAssetsLoaded:false
 }
 ;
 function createTrackState(tracks) {
@@ -362,11 +362,17 @@ async function initialiseAudio() {
 // Preload the tiny mechanical switch sounds into the existing Web Audio context.
 async function loadSwitchSounds() {
   if (!state.audio) return false;
-  if (state.switchSoundBuffers && state.switchSoundBuffers.on && state.switchSoundBuffers.off) return true;
+  if (state.switchSoundAssetsLoaded) return true;
   if (state.switchSoundLoadPromise) return state.switchSoundLoadPromise;
 
   const context = state.audio;
-  const files = { on: 'assets/click-on.mp3', off: 'assets/click-off.mp3' };
+  const files = {
+    on: 'assets/click-on.mp3',
+    off: 'assets/click-off.mp3',
+    button: 'assets/button-press.mp3',
+    error: 'assets/error.mp3',
+    plink: 'assets/plink.mp3'
+  };
   const operation = Promise.all(Object.entries(files).map(async ([name, url]) => {
     try {
       const response = await fetch(url);
@@ -379,7 +385,8 @@ async function loadSwitchSounds() {
     }
   })).then(entries => {
     state.switchSoundBuffers = Object.fromEntries(entries);
-    return Boolean(state.switchSoundBuffers.on && state.switchSoundBuffers.off);
+    state.switchSoundAssetsLoaded = true;
+    return Object.values(state.switchSoundBuffers).some(Boolean);
   }).finally(() => {
     if (state.switchSoundLoadPromise === operation) state.switchSoundLoadPromise = null;
   });
@@ -388,23 +395,25 @@ async function loadSwitchSounds() {
   return operation;
 }
 
-// Play a short switch sound without interrupting the music or its timeline.
-async function playSwitchSound(direction) {
+// Play short UI effects through the existing audio context, without interrupting music.
+async function playUISound(name, volume) {
   const context = state.audio;
   if (!context) return;
-  if (!state.switchSoundBuffers || !state.switchSoundBuffers[direction]) {
+  if (!state.switchSoundBuffers || !state.switchSoundBuffers[name]) {
     await loadSwitchSounds();
   }
-  const buffer = state.switchSoundBuffers && state.switchSoundBuffers[direction];
+  const buffer = state.switchSoundBuffers && state.switchSoundBuffers[name];
   if (!buffer || context !== state.audio) return;
 
+  const defaultVolumes = { on: 0.62, off: 0.62, button: 0.62, error: 0.72, plink: 0.5 };
+  const outputVolume = Number.isFinite(volume) ? volume : (defaultVolumes[name] ?? 0.62);
   try {
     if (context.state !== 'running') await context.resume();
     if (context.state !== 'running') return;
     const source = context.createBufferSource();
     const gain = context.createGain();
     source.buffer = buffer;
-    gain.gain.value = 0.62;
+    gain.gain.value = Math.max(0, Math.min(1, outputVolume));
     source.connect(gain);
     gain.connect(context.destination);
     source.onended = () => {
@@ -413,8 +422,11 @@ async function playSwitchSound(direction) {
     };
     source.start();
   } catch (error) {
-    console.warn('Could not play switch sound ' + direction + '.', error);
+    console.warn('Could not play UI sound ' + name + '.', error);
   }
+}
+function playSwitchSound(direction) {
+  return playUISound(direction, 0.62);
 }
 async function loadAudio() {
   const requestedSongIndex = currentSongIndex;
@@ -614,8 +626,8 @@ function handleSongFinished(generation) {
   void switchSong(nextIndex, true);
 }
 
-async function startPlayback() {
-  if (state.starting || state.playing) return;
+async function startPlayback(fromUserAction = false) {
+  if (state.starting || state.playing) return false;
   state.starting = true;
   const generation = state.songGeneration;
 
@@ -630,10 +642,16 @@ async function startPlayback() {
   try {
     if (!state.loaded || state.loadedSongIndex !== currentSongIndex) {
       const ready = await loadAudio();
-      if (!ready || state.loadedSongIndex !== currentSongIndex) return;
+      if (!ready || state.loadedSongIndex !== currentSongIndex) {
+        if (fromUserAction) void playUISound('error');
+        return false;
+      }
     }
     await initialiseAudio();
-    if (!state.audio || generation !== state.songGeneration) return;
+    if (!state.audio || generation !== state.songGeneration) {
+      if (fromUserAction && generation === state.songGeneration) void playUISound('error');
+      return false;
+    }
     if (state.audio.state === 'suspended') {
       if (gestureResumePromise) await gestureResumePromise;
       if (state.audio.state === 'suspended') await state.audio.resume();
@@ -652,6 +670,8 @@ async function startPlayback() {
     updateUI();
     updateTrackAudioVisuals();
     drawWaveform();
+    if (fromUserAction) void playUISound('button');
+    return true;
   } catch (error) {
     state.playing = false;
     console.error('Playback failed:', error);
@@ -660,6 +680,8 @@ async function startPlayback() {
     els.playbackState.textContent = 'PLAYBACK ERROR — SEE CONSOLE';
     addLog('Playback failed: ' + (error && error.message ? error.message : error), 'event');
     updateUI();
+    if (fromUserAction) void playUISound('error');
+    return false;
   } finally {
     state.starting = false;
   }
@@ -828,8 +850,10 @@ function openTrackDialog(id) {
   state.selectedTrack = id;
   updateDialog();
   els.dialog.showModal();
+  void playUISound('button');
 }
-function closeTrackDialog() {
+function closeTrackDialog(fromUserAction = false) {
+  if (fromUserAction) void playUISound('button');
   state.soloTrack = null;
   if (rhythm && rhythm.active) {
     rhythm.active = false;
@@ -926,6 +950,7 @@ function repairEventType(typeId) {
   if (!activeEvents.length) return;
 
   playSwitchSound('off');
+  void playUISound('button', 0.42);
   s.events = s.events.filter(event => event.type !== typeId);
   const chain = state.sources[id];
   const now = state.audio ? state.audio.currentTime : 0;
@@ -1021,7 +1046,10 @@ function updateDialog() {
     (state.soloTrack === track.id ? 'UNSOLO' : 'SOLO');
 }
 function toggleSolo() {
-  if (!state.selectedTrack || !state.audio) return;
+  if (!state.selectedTrack || !state.audio) {
+    void playUISound('error');
+    return;
+  }
   state.soloTrack = state.soloTrack === state.selectedTrack ? null : state.selectedTrack;
   TRACKS.forEach(track => {
     const chain = state.sources[track.id];
@@ -1031,6 +1059,7 @@ function toggleSolo() {
     }
   });
   updateDialog();
+  void playUISound('button');
 }
 // Draw the waveform with a reused canvas/context; do not reset its backing store on every frame.
 function drawWaveform(timestamp = 0) {
@@ -1214,8 +1243,12 @@ function updateSongNavigation() {
   els.previousSong.setAttribute('aria-label', currentSongIndex > 0 ? 'Previous song: ' + SONGS[currentSongIndex - 1].title : 'No previous song');
   els.nextSong.setAttribute('aria-label', currentSongIndex < SONGS.length - 1 ? 'Next song: ' + SONGS[currentSongIndex + 1].title : 'No next song');
 }
-async function switchSong(nextIndex, finishedNaturally = false) {
-  if (nextIndex < 0 || nextIndex >= SONGS.length || nextIndex === currentSongIndex) return;
+async function switchSong(nextIndex, finishedNaturally = false, fromUserAction = false) {
+  if (nextIndex < 0 || nextIndex >= SONGS.length || nextIndex === currentSongIndex) {
+    if (fromUserAction) void playUISound('error');
+    return;
+  }
+  if (fromUserAction) void playUISound('button');
 
   if (els.dialog && els.dialog.open) closeTrackDialog();
   if (state.playing) stopPlayback(finishedNaturally);
@@ -1299,25 +1332,47 @@ document.addEventListener('DOMContentLoaded', () => {
   loadAudio();
 
   els.play.addEventListener('click', () => {
-    state.playing ? stopPlayback() : startPlayback();
+    if (state.starting) {
+      void playUISound('error');
+    } else if (state.playing) {
+      stopPlayback();
+      void playUISound('button');
+    } else {
+      void startPlayback(true);
+    }
   });
   document.addEventListener('keydown', handleRepairKey);
-  els.previousSong.addEventListener('click', () => switchSong(currentSongIndex - 1));
-  els.nextSong.addEventListener('click', () => switchSong(currentSongIndex + 1));
-  els.closeDialog.addEventListener('click', closeTrackDialog);
+  els.previousSong.addEventListener('click', () => switchSong(currentSongIndex - 1, false, true));
+  els.nextSong.addEventListener('click', () => switchSong(currentSongIndex + 1, false, true));
+  els.closeDialog.addEventListener('click', () => closeTrackDialog(true));
   els.dialog.addEventListener('click', event => {
     if (event.target === els.dialog) closeTrackDialog();
   });
   els.faultSwitches.addEventListener('click', event => {
     const toggle = event.target.closest('[data-event]');
+    if (!toggle) return;
     if (state.selectedTrack === 'drums' && (!rhythm || rhythm.stability < 100)) {
       showRepairLockToast(event.clientX, event.clientY);
+      void playUISound('error');
       return;
     }
-    if (toggle && !toggle.disabled) repairEventType(toggle.dataset.event);
+    if (!toggle.disabled) {
+      repairEventType(toggle.dataset.event);
+    } else {
+      void playUISound('error');
+    }
   });
   els.solo.addEventListener('click', toggleSolo);
-  els.rhythmStart.addEventListener('click', restartRhythmRepair);
+  els.rhythmStart.addEventListener('click', () => restartRhythmRepair(true));
+
+  // Soft plink on mouse hover for enabled buttons and link-style buttons.
+  document.addEventListener('pointerover', event => {
+    if (event.pointerType !== 'mouse') return;
+    const target = event.target.closest('button, a[href], [role="button"]');
+    if (!target || target.matches(':disabled') || target.getAttribute('aria-disabled') === 'true') return;
+    if (event.relatedTarget && target.contains(event.relatedTarget)) return;
+    void playUISound('plink', 0.5);
+  }, true);
 });
 
 // MVP: one fixed drum target; onset cues are derived from the decoded stem.
@@ -1446,29 +1501,40 @@ function finishRhythmRepair() {
   updateRhythmPanel();
   updateDialog();
 }
-async function restartRhythmRepair() {
-  if (!els.dialog?.open || state.selectedTrack !== 'drums') return;
+async function restartRhythmRepair(fromUserAction = false) {
+  if (!els.dialog?.open || state.selectedTrack !== 'drums') {
+    if (fromUserAction) void playUISound('error');
+    return;
+  }
   if (!state.loaded || state.loadedSongIndex !== currentSongIndex) {
     const ready = await loadAudio();
     if (!ready || !state.buffers.drums) {
       setRepairFeedback('AUDIO STEMS NOT READY — PLEASE TRY AGAIN');
+      if (fromUserAction) void playUISound('error');
       return;
     }
   }
   if (!state.buffers.drums) {
     setRepairFeedback('DRUM STEM NOT READY — CANNOT CALIBRATE');
+    if (fromUserAction) void playUISound('error');
     return;
   }
 
   if (state.playing) stopPlayback();
   alignAllOffsets(0);
   const prepared = prepareRhythmRepair();
-  if (!prepared) return;
+  if (!prepared) {
+    if (fromUserAction) void playUISound('error');
+    return;
+  }
   await startPlayback();
   if (!state.playing && rhythm) {
     rhythm.active = false;
     setRepairFeedback('PLAYBACK DID NOT START — TRY CALIBRATION AGAIN');
     updateRhythmPanel();
+    if (fromUserAction) void playUISound('error');
+  } else if (state.playing && fromUserAction) {
+    void playUISound('button');
   }
 }
 function showRepairLockToast(x, y) {
