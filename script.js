@@ -1412,13 +1412,15 @@ function drumRepairBeats(buffer) {
     energies.push(energy / hop);
   }
   const peaks = [];
-  for (let i = 500; i < Math.min(2000, energies.length - 1); i++) {
+  // Keep the same short intro exclusion, but find cues across the whole song
+  // so calibration can begin wherever the listener currently is.
+  for (let i = 500; i < energies.length - 1; i++) {
     const baseline = energies.slice(i - 12, i).reduce((a, b) => a + b, 0) / 12;
     if (energies[i] > Math.max(.00001, baseline * 2) && energies[i] >= energies[i-1] && energies[i] > energies[i+1]) {
       if (!peaks.length || i * .01 - peaks[peaks.length - 1] > .4) peaks.push(i * .01);
     }
   }
-  return peaks.slice(0, 16);
+  return peaks;
 }
 function prepareRhythmRepair() {
   const drumBuffer = state.buffers.drums;
@@ -1429,7 +1431,12 @@ function prepareRhythmRepair() {
     return false;
   }
 
-  const beats = drumRepairBeats(drumBuffer);
+  // Use only beat cues that are still ahead of the current playback position.
+  // This lets calibration run without resetting the song to its beginning.
+  const currentPosition = currentMasterOffset();
+  const beats = drumRepairBeats(drumBuffer)
+    .filter(beat => beat > currentPosition + REPAIR_WINDOW * 1.5)
+    .slice(0, 16);
   rhythm = { beats, judged: new Set(), hits: 0, stability: 50, active: false, finished: false };
   if (!beats.length) {
     rhythm.finished = true;
@@ -1544,20 +1551,28 @@ async function restartRhythmRepair(fromUserAction = false) {
     return;
   }
 
-  if (state.playing) stopPlayback();
-  alignAllOffsets(0);
+  // Leave an already-playing song alone. If playback is paused, resume from
+  // its saved offset rather than forcing every stem back to the beginning.
+  const wasPlaying = state.playing;
   const prepared = prepareRhythmRepair();
   if (!prepared) {
     if (fromUserAction) void playUISound('error');
     return;
   }
-  await startPlayback();
-  if (!state.playing && rhythm) {
-    rhythm.active = false;
-    setRepairFeedback('PLAYBACK DID NOT START — TRY CALIBRATION AGAIN');
-    updateRhythmPanel();
-    if (fromUserAction) void playUISound('error');
-  } else if (state.playing && fromUserAction) {
+
+  if (!wasPlaying) {
+    const started = await startPlayback();
+    if (!started || !state.playing) {
+      if (rhythm) {
+        rhythm.active = false;
+        setRepairFeedback('PLAYBACK COULD NOT RESUME — TRY CALIBRATION AGAIN');
+        updateRhythmPanel();
+      }
+      if (fromUserAction) void playUISound('error');
+      return;
+    }
+  }
+  if (state.playing && fromUserAction) {
     void playUISound('button');
   }
 }
