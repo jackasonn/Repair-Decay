@@ -1214,7 +1214,7 @@ main,
 .fault-switch-row.fault-active .fault-switch-state { color: var(--yellow); }
 .fault-switch-row.fault-active:has([data-event="detune"]),
 .fault-switch-row.fault-active:has([data-event="bitcrush"]),
-.fault-switch-row.fault-active:has([data-event="stutter"]),
+.fault-switch-row.fault-active:has([data-event="delay"]),
 .fault-switch-row.fault-active:has([data-event="crackle"]) { border-left-color: var(--red); }
 .fault-switch {
   flex: 0 0 auto;
