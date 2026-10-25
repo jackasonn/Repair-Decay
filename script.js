@@ -339,7 +339,16 @@ function attachTrackEndHandler(trackId, chain, generation = state.songGeneration
 }
 // Create the Web Audio graph and a reusable noise buffer for crackle events.
 async function initialiseAudio() {
-  if (state.audio) return;
+  if (state.audio && state.audio.state !== 'closed') return;
+  if (state.audio && state.audio.state === 'closed') {
+    state.audio = null;
+    state.masterGain = null;
+    state.analyser = null;
+    state.pitchReady = false;
+    state.switchSoundBuffers = {};
+    state.switchSoundLoadPromise = null;
+    state.switchSoundAssetsLoaded = false;
+  }
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
   if (!AudioContextClass) {
     state.demoMode = true;
@@ -371,6 +380,33 @@ async function initialiseAudio() {
       state.pitchReady = false;
       console.warn('Pitch shifter worklet could not load; pitch-based decay events will be unavailable.', error);
     }
+  }
+}
+
+// Resume the audio engine directly from the first user gesture. Some browsers
+// suspend contexts created during page load and need this immediate gesture-bound call.
+function unlockAudioFromGesture() {
+  try {
+    if (!state.audio || state.audio.state === 'closed') {
+      const setupPromise = initialiseAudio();
+      const createdContext = state.audio;
+      if (createdContext && createdContext.state !== 'running') {
+        const resumePromise = createdContext.resume();
+        if (resumePromise && typeof resumePromise.catch === 'function') {
+          resumePromise.catch(() => {});
+        }
+      }
+      void setupPromise.catch(error => console.warn('Audio engine could not initialise.', error));
+      return;
+    }
+    if (state.audio.state !== 'running') {
+      const resumePromise = state.audio.resume();
+      if (resumePromise && typeof resumePromise.catch === 'function') {
+        resumePromise.catch(() => {});
+      }
+    }
+  } catch (error) {
+    console.warn('Audio engine could not resume from user interaction.', error);
   }
 }
 
@@ -582,12 +618,13 @@ function makeTrackChain(id, source) {
   gain.gain.value = state.soloTrack && state.soloTrack !== id ? 0.22 : 1;
   // Three discrete taps create exactly three echoes, each quieter than the last.
   delayOne.delayTime.value = 0.32;
-  delayTwo.delayTime.value = 0.32;
-  delayThree.delayTime.value = 0.32;
+  delayTwo.delayTime.value = 0.64;
+  delayThree.delayTime.value = 0.96;
   const delayActive = s.delayDepth > 0;
-  delayGainOne.gain.value = delayActive ? 0.2 + Math.min(1, s.delayDepth) * 0.5 : 0;
-  delayGainTwo.gain.value = delayActive ? 0.55 : 0;
-  delayGainThree.gain.value = delayActive ? 0.55 : 0;
+  const delayLevel = delayActive ? 0.24 + Math.min(1, s.delayDepth) * 0.35 : 0;
+  delayGainOne.gain.value = delayLevel;
+  delayGainTwo.gain.value = delayLevel * 0.55;
+  delayGainThree.gain.value = delayLevel * 0.3;
   // More frequency bins give the particles a meaningful low/mid/high split.
   analyser.fftSize = 1024;
   analyser.smoothingTimeConstant = 0.78;
@@ -622,15 +659,16 @@ function makeTrackChain(id, source) {
   hp.connect(lp);
   artifactGain.connect(hp);
   lp.connect(phase);
-  // Dry signal plus three decaying, 320 ms-spaced repeats.
+  // Keep the dry signal independent. Three parallel taps add distinct echoes
+  // at 320 ms, 640 ms and 960 ms, each quieter than the previous repeat.
   phase.connect(gain);
   phase.connect(delayOne);
   delayOne.connect(delayGainOne);
   delayGainOne.connect(gain);
-  delayGainOne.connect(delayTwo);
+  phase.connect(delayTwo);
   delayTwo.connect(delayGainTwo);
   delayGainTwo.connect(gain);
-  delayGainTwo.connect(delayThree);
+  phase.connect(delayThree);
   delayThree.connect(delayGainThree);
   delayGainThree.connect(gain);
   gain.connect(analyser);
@@ -649,10 +687,11 @@ function setDelayEffect(chain, depth, when = state.audio.currentTime) {
   if (!chain) return;
   const amount = Math.max(0, Math.min(1, Number(depth) || 0));
   const enabled = amount > 0;
+  const firstEcho = enabled ? 0.24 + amount * 0.35 : 0;
   const levels = [
-    [chain.delayGainOne, enabled ? 0.2 + amount * 0.5 : 0],
-    [chain.delayGainTwo, enabled ? 0.55 : 0],
-    [chain.delayGainThree, enabled ? 0.55 : 0]
+    [chain.delayGainOne, firstEcho],
+    [chain.delayGainTwo, firstEcho * 0.55],
+    [chain.delayGainThree, firstEcho * 0.3]
   ];
   levels.forEach(([node, level]) => {
     if (node) node.gain.setTargetAtTime(level, when, 0.06);
@@ -716,7 +755,7 @@ async function startPlayback(fromUserAction = false) {
   // running in the user's play-button gesture. Waiting for stem loading first
   // can lose Safari's transient user activation and leave playback silent.
   let gestureResumePromise = null;
-  if (state.audio && state.audio.state === 'suspended') {
+  if (state.audio && state.audio.state !== 'running' && state.audio.state !== 'closed') {
     try { gestureResumePromise = state.audio.resume(); } catch (_) {}
   }
 
@@ -1370,6 +1409,8 @@ function setupAlbumCoverSizing() {
 
 // Initialise the interface and audio system.
 document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('pointerdown', unlockAudioFromGesture, true);
+  document.addEventListener('keydown', unlockAudioFromGesture, true);
   cacheElements();
   renderCurrentSong();
   setupAlbumCoverSizing();
