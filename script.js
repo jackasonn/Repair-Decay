@@ -26,6 +26,19 @@ const SONGS = [
       { id: 'guitars', name: 'GUITARS', file: 'assets/reconcile-guitars.mp3' },
       { id: 'keys', name: 'KEYS', file: 'assets/reconcile-keys.mp3' }
     ]
+  },
+  {
+    id: 'rainy-night',
+    title: 'RAINY NIGHT',
+    number: 3,
+    artist: 'TAYLA KANE',
+    tracks: [
+      { id: 'drums', name: 'DRUMS', file: 'assets/rainy-night-drums.mp3' },
+      { id: 'bass', name: 'BASS', file: 'assets/rainy-night-bass.mp3' },
+      { id: 'guitars', name: 'GUITARS', file: 'assets/rainy-night-guitars.mp3' },
+      { id: 'keys', name: 'KEYS', file: 'assets/rainy-night-keys.mp3' },
+      { id: 'vocals', name: 'VOCALS', file: 'assets/rainy-night-vocals.mp3' }
+    ]
   }
 ];
 let currentSongIndex = 0;
