@@ -6,10 +6,9 @@ controls, UI sounds, delay effects, playback safeguards and dialog layout.
 Future changes for this project are requested directly on main.
 
 Open a decaying Drum track and select **START RHYTHM REPAIR**. Each round
-contains exactly 8 upcoming real drum transients. Press F for every cue. Only
-after the final cue's timing window ends, and all 8 cues have been hit, does
-`repairTrack('drums')` clear the events and reset the audio effects. Missing a
-cue leaves the Drum damaged; finish the round, then select **RETRY RHYTHM
+contains exactly 8 upcoming real drum transients. Press F for each cue. Only
+after the final cue's timing window ends, and at least 6 cues have been hit, does
+`repairTrack('drums')` clear the events and reset the audio effects. Missing up to 2 cues is allowed. With fewer than 6 hits, the Drum stays damaged; finish the round, then select **RETRY RHYTHM
 REPAIR** to start a fresh round at the current song position. Extra or repeated
 presses cannot count the same cue twice. The inclusive window remains ±240 ms.
 Fewer than 8 upcoming cues cannot start a round; the panel requests replay.
@@ -44,7 +43,7 @@ an exhibition-device listening check; automated analysis is not a listening test
 ## Verification
 
 Run `node --check script.js`, `node tests/rhythm-repair.cjs`, and
-`git diff --check`. Tests cover full 8-cue completion and dialog auto-close, inclusive timing boundaries,
+`git diff --check`. Tests cover 6-of-8 success after the full round and dialog auto-close, inclusive timing boundaries,
 missed-round retry, duplicate/held input, pause/dialog/track gates, late starts,
 stereo-only transients, worklet latency, effect resets, shared offset rebuilding,
 other-instrument state and unchanged 4000–7000 ms decay constants.
@@ -57,6 +56,18 @@ the first five are approximately 0.651, 1.303, 2.621, 3.267 and 3.929 seconds.
 Browser decoding can differ slightly in MP3 priming; production always analyses
 its own decoded buffer, so cues share the actual source's sample origin.
 
-Automated regression checks verify full-round completion, no early repair,
+All four songs (On Time, Reconcile, Rainy Night and There Is Love) share the
+same Drum repair code. Each attempt analyses the currently loaded song's own
+decoded Drum buffer; timestamps are never copied from On Time. Song switching
+clears the current attempt and loads that song's independent decay state.
+
+Automated regression checks verify 6-of-8 full-round completion, no early repair,
 missed-round retry, and automatic dialog closing after the final repair only.
 Exhibition-device listening alignment remains a manual check.
+
+All four real Drum MP3s were decoded and checked against their energy rises:
+On Time: 154 cues / 118.15 s; Reconcile: 211 / 329.17 s; Rainy Night: 113 /
+98.88 s; There Is Love: 249 / 233.31 s. Quiet intros can delay the first cue;
+no artificial beats are added during silence. Tests exercise 6 hits with two
+misses, 7 and 8 hits passing, 5 hits failing, and no early close at the sixth
+hit, with separate song buffers and decay state for all four songs.

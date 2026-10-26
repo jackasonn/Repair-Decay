@@ -72,14 +72,30 @@ assert.equal(run('state.playing'),true,'closing does not pause song');
 assert.match(elements.get('repair-feedback').textContent,/RHYTHM REPAIR COMPLETE.*DRUM SIGNAL RESTORED/);
 run('finishRhythmRepair();press();');
 assert.equal(run('sourceRestarts'),1,'completion is idempotent');
+// Six early hits meet the target but MUST wait for both remaining cues.
 run(`session();trackState.drums.events=[{type:'lowpass',severity:20}];
-for (const time of [5,6,7,9,10,11,12]) {position=time;press();}
-position=12.25;updateRhythmRepair();`);
-assert.equal(run('rhythm.hits'),7);
-assert.equal(run('rhythm.active'),false);
+for (const time of [5,6,7,8,9,10]) {position=time;press();}
+finishRhythmRepair();updateRhythmRepair();`);
+assert.equal(run('rhythm.hits'),6);
 assert.equal(run('rhythm.finished'),false);
-assert.equal(run('trackState.drums.events.length'),1,'missed round cannot repair');
 assert.equal(run('els.dialog.open'),true);
+assert.equal(run('trackState.drums.events.length'),1);
+assert.match(elements.get('repair-feedback').textContent,/TARGET REACHED/);
+run('position=12.25;updateRhythmRepair()');
+assert.equal(run('rhythm.finished'),true);
+assert.equal(run('els.dialog.open'),false);
+assert.equal(run('trackState.drums.events.length'),0,'two misses allowed after full round');
+// Seven hits also pass; five hits must fail and expose retry.
+for (const hits of [7,5]) {
+  run(`session();trackState.drums.events=[{type:'lowpass',severity:20}];
+  for(let i=0;i<${hits};i++){position=5+i;press();}
+  position=12.25;updateRhythmRepair();`);
+  assert.equal(run('rhythm.hits'),hits);
+  assert.equal(run('rhythm.finished'),hits>=6);
+  assert.equal(run('els.dialog.open'),hits<6);
+  assert.equal(run('trackState.drums.events.length'),hits<6?1:0);
+}
+assert.equal(run('rhythm.active'),false);
 assert.equal(run('els.rhythmStart.hidden'),false);
 assert.match(elements.get('repair-feedback').textContent,/ROUND INCOMPLETE/);
 run('session();position=5.241;press();');
@@ -127,7 +143,37 @@ run('state.audio.getOutputTimestamp=undefined');
 assert.ok(Math.abs(run('actualClock()')-(4+9.98-2-2944/48000))<1e-9);
 assert.equal(run('DECAY_INTERVAL_MIN_MS'),4000);
 assert.equal(run('DECAY_INTERVAL_MAX_MS'),7000);
-console.log('PASS: full 8-cue round, no early repair, missed-round retry, automatic closing on final repair only, global repair, input gates, timing and unchanged decay');
+console.log('PASS: 6-of-8 success after full round, no early repair, missed-round retry, automatic closing on final repair only, global repair, input gates, timing and unchanged decay');
+// The same game must use the selected song's own buffer and decay state.
+assert.equal(run('SONGS.length'),4);
+for(let songIndex=0;songIndex<4;songIndex++) {
+  run(`
+  currentSongIndex=${songIndex};TRACKS=SONGS[currentSongIndex].tracks;
+  trackState=songTrackStates[SONGS[currentSongIndex].id];
+  state.sources={};state.audio=null;position=0;session();
+  var uniqueSamples=new Float32Array(48000*20);
+  for(let i=0;i<10;i++) {
+    const start=Math.round((2+${songIndex}*.1+i)*48000);
+    for(let j=0;j<480;j++) uniqueSamples[start+j]=.6*Math.exp(-j/140);
+  }
+  var songBuffer={sampleRate:48000,length:uniqueSamples.length,duration:20,numberOfChannels:1,getChannelData:()=>uniqueSamples};
+  state.buffers=Object.fromEntries(TRACKS.map(t=>[t.id,songBuffer]));
+  trackState.drums.events=[{type:'lowpass',severity:20}];trackState.drums.lowpass=400;
+  trackState.bass.events=[{type:'crackle',severity:20}];
+  prepareRhythmRepair();
+  `);
+  assert.equal(run('rhythm.beats.length'),8);
+  assert.ok(Math.abs(run('rhythm.beats[0]')-(2+songIndex*.1))<.006,'use this song buffer, not On Time cues');
+  run('for(let i=0;i<6;i++){position=rhythm.beats[i];press();}finishRhythmRepair();');
+  assert.equal(run('rhythm.finished'),false);
+  assert.equal(run('trackState.drums.events.length'),1);
+  run('position=rhythm.beats[7]+.25;updateRhythmRepair();');
+  assert.equal(run('rhythm.finished'),true);
+  assert.equal(run('trackState.drums.events.length'),0);
+  assert.equal(run('trackState.bass.events.length'),1);
+  assert.equal(run('els.dialog.open'),false);
+}
+console.log('PASS: all four songs use their own Drum cues and 6-of-8 full-round repair');
 // Validate the worklet delay against its actual neutral processing, not a guess.
 let Processor;
 const audioVM=vm.createContext({AudioWorkletProcessor:class {},Float32Array,Math,registerProcessor:(_,p)=>{Processor=p;}});
@@ -151,7 +197,7 @@ if(process.env.DRUM_PCM) {
   const right=Float32Array.from({length:left.length},(_,i)=>pcm[i*2+1]);
   context.realBuffer={sampleRate:44100,length:left.length,numberOfChannels:2,getChannelData:i=>i?right:left};
   const cues=Array.from(run('drumRepairBeats(realBuffer)'));
-  assert.ok(cues.length>=3);
+  assert.ok(cues.length>=8);
   assert.ok(cues.some(t=>t>30));
   const hop=Math.round(44100*.005);
   const energy=start=>{
@@ -164,5 +210,5 @@ if(process.env.DRUM_PCM) {
     const baseline=Array.from({length:Math.min(frame,20)},(_,j)=>energy((frame-j-1)*hop)).reduce((a,b)=>a+b,0)/Math.min(frame,20);
     assert.ok(energy(frame*hop)>=baseline*3,'every selected cue is a real leading energy rise');
   }
-  console.log('PASS: actual On Time drum PCM: '+cues.length+' real transient cues across '+(left.length/44100).toFixed(2)+'s; first cues '+cues.slice(0,5).map(t=>t.toFixed(3)).join(', '));
+  console.log('PASS: actual drum PCM ('+process.env.DRUM_PCM+'): '+cues.length+' real transient cues across '+(left.length/44100).toFixed(2)+'s; first cues '+cues.slice(0,5).map(t=>t.toFixed(3)).join(', '));
 }
