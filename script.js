@@ -1127,13 +1127,7 @@ function repairEventType(typeId) {
   updateUI();
   updateDialog();
 }
-function repairGlobalEventType(typeId, x, y) {
-  if (state.overallDecay < 70) {
-    showRepairLockToast(x, y, 'Global repairs unlock when the overall decay level reaches the red zone (70% or higher).');
-    void playUISound('error');
-    return;
-  }
-
+function repairGlobalEventType(typeId) {
   const affectedTracks = TRACKS.filter(track =>
     trackState[track.id].events.some(event => event.type === typeId)
   );
@@ -1178,14 +1172,13 @@ function updateOverallDecayDialog() {
   const decay = state.overallDecay;
   const status = statusFor(decay);
   const eventCount = TRACKS.reduce((total, track) => total + trackState[track.id].events.length, 0);
-  const locked = decay < 70;
 
   els.dialogTitle.textContent = 'DECAY LEVEL';
   els.dialogStatus.textContent = status.text;
   els.dialogStatus.className = 'dialog-status ' + status.className;
   els.dialogDecay.textContent = decay + '%';
   els.dialogCount.textContent = eventCount;
-  els.dialogSignal.textContent = locked ? 'GLOBAL LOCKED' : 'REPAIR READY';
+  els.dialogSignal.textContent = eventCount ? 'GLOBAL REPAIR READY' : 'NO ACTIVE EVENTS';
 
   els.dialogArtStage.classList.add('system-decay-art-stage');
   els.dialogArtStage.classList.toggle('system-decay-critical', decay >= 70);
@@ -1197,26 +1190,22 @@ function updateOverallDecayDialog() {
   els.dialogOverallPercent.textContent = decay + '%';
   els.dialogOverallMeter.style.width = decay + '%';
   els.dialogOverallMeter.className = status.className;
-  els.dialogOverallSummary.textContent = decay >= 70
-    ? 'GLOBAL REPAIR UNLOCKED — CRITICAL DECAY'
-    : decay >= 30
-      ? 'GLOBAL REPAIR LOCKED — WAIT FOR RED'
-      : 'GLOBAL REPAIR LOCKED — SYSTEM STABLE';
+  els.dialogOverallSummary.textContent = eventCount
+    ? 'SELECT AN ACTIVE SWITCH TO REPAIR THAT EVENT GLOBALLY'
+    : 'NO ACTIVE DECAY EVENTS TO REPAIR';
   els.solo.hidden = true;
   els.rhythmPanel.hidden = true;
   els.switchesHeadingTitle.textContent = 'GLOBAL REPAIR SWITCHES';
-  els.switchesHeadingHelp.textContent = locked
-    ? 'LOCKED UNTIL OVERALL DECAY REACHES 70% / RED'
-    : 'FLIP AN ACTIVE SWITCH TO REPAIR THAT EVENT ON EVERY INSTRUMENT';
+  els.switchesHeadingHelp.textContent = 'FLIP AN ACTIVE SWITCH TO REPAIR THAT EVENT ON EVERY INSTRUMENT';
 
   els.faultSwitches.innerHTML = EVENT_TYPES.map(event => {
     const active = TRACKS.some(track =>
       trackState[track.id].events.some(item => item.type === event.id)
     );
-    // Keep every switch clickable while locked so attempts can show a warning.
-    // Once unlocked, only event types that actually exist can be repaired.
-    const disabled = !active && !locked;
-    return renderFaultSwitch(event, active, disabled, locked, true);
+    // Global repairs are available at every decay level; only events currently
+    // active on at least one instrument can be selected for repair.
+    const disabled = !active;
+    return renderFaultSwitch(event, active, disabled, false, true);
   }).join('');
 }
 function updateDialog() {
@@ -1584,14 +1573,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const toggle = event.target.closest('[data-event]');
     if (!toggle) return;
     if (state.overallDialog) {
-      if (state.overallDecay < 70) {
-        showRepairLockToast(event.clientX, event.clientY,
-          'Global repairs unlock only when the overall decay level reaches the red zone (70% or higher).');
-        void playUISound('error');
-        return;
-      }
       if (!toggle.disabled) {
-        repairGlobalEventType(toggle.dataset.event, event.clientX, event.clientY);
+        repairGlobalEventType(toggle.dataset.event);
       } else {
         void playUISound('error');
       }
