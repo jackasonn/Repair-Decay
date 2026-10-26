@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0b0906">
     <title>REPAIR / DECAY — Interactive Music</title>
-    <link rel="stylesheet" href="style.css?v=20261027-six-of-eight">
+    <link rel="stylesheet" href="style.css?v=20261027-guitar-repair">
 </head>
 <body>
     <div class="scanlines" aria-hidden="true"></div>
@@ -120,6 +120,20 @@
                     <span id="dialog-switches-heading-help">FLIP ACTIVE SWITCHES OFF TO REPAIR</span>
                 </div>
                 <div class="fault-switches" id="fault-switches" aria-label="Decay event repair switches"></div>
+                <section class="guitar-panel" id="guitar-panel" aria-label="Guitar string repair" hidden>
+                    <div class="panel-heading"><span>GUITAR REPAIR</span><span id="guitar-time">18s</span></div>
+                    <p>Click the red dots on all six strings to turn them green. New dots appear every 2–3 seconds. Repair all 8 dots to restore the guitar.</p>
+                    <div class="guitar-soundboard" aria-label="Six guitar strings over a sound hole">
+                        <div class="guitar-soundhole" aria-hidden="true"></div>
+                        <div class="guitar-bridge" aria-hidden="true"></div>
+                        <div class="guitar-strings" aria-hidden="true">
+                            <span></span><span></span><span></span><span></span><span></span><span></span>
+                        </div>
+                        <div id="guitar-targets" class="guitar-targets"></div>
+                    </div>
+                    <p id="guitar-feedback" role="status">CLICK EACH RED DOT TO TURN IT GREEN</p>
+                    <p id="guitar-progress" aria-live="polite">0 / 8 REPAIRED</p>
+                </section>
                 <section class="rhythm-panel" id="rhythm-panel" aria-label="Drums rhythm repair" hidden>
                     <div class="panel-heading"><span>RHYTHM REPAIR</span><span>KEY: F</span></div>
                     <p>Press <kbd>F</kbd> as each moving drum hit reaches the centre. Hit at least 6 of the 8 beats to restore the drums. Play through all 8 cues; repair completes at the end of the round.</p>
@@ -134,6 +148,6 @@
         </div>
         <div class="signal-lock-toast" id="repair-lock-toast" role="status" aria-live="polite" hidden>Hit 6 of 8 rhythm beats and finish the round to restore the drums.</div>
     </dialog>
-    <script src="script.js?v=20261027-six-of-eight"></script>
+    <script src="script.js?v=20261027-guitar-repair"></script>
 </body>
 </html>

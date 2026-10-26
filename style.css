@@ -2089,3 +2089,27 @@ main,
 
 /* Drum repair replaces manual switches; author display rules must respect hidden. */
 #fault-switches[hidden], #decay-switches-heading[hidden] { display: none; }
+
+/* Pointer-based Guitar repair; scoped to the existing instrument dialog. */
+.guitar-panel[hidden] { display: none; }
+.guitar-panel { margin-top: 18px; padding: 16px; border: 1px solid var(--line); background: rgba(8,7,4,.5); }
+.guitar-panel p { color: var(--cream-dim); font-size: .74rem; line-height: 1.6; }
+.guitar-soundboard { position: relative; width: 100%; height: clamp(230px, 28vw, 340px); overflow: hidden; border: 1px solid #7e663b; border-radius: 5px;
+  background: repeating-linear-gradient(2deg, transparent 0 4px, rgba(63,38,13,.09) 5px 6px), linear-gradient(110deg,#a67f40,#d2b16c 45%,#a67b3e); }
+.guitar-soundhole { position: absolute; left: 22%; top: 50%; width: 53%; aspect-ratio: 1; transform: translateY(-50%); border-radius: 50%; border: 7px solid #352a19; outline: 3px solid #c3a366;
+  box-shadow: 0 0 0 7px #76562e, 0 0 0 11px #cfad68, inset 0 7px 22px #000; background: radial-gradient(ellipse at 50% 65%,#282016,#080806 80%); }
+.guitar-bridge { position:absolute; right:4%; top:4%; height:92%; width:7%; background:linear-gradient(90deg,#312518,#63472a,#21190f); border-right:4px solid #c6bea0; }
+.guitar-strings { position:absolute; inset:0; pointer-events:none; }
+.guitar-strings span { position:absolute; left:0; width:100%; top:12%; height:5px; background:linear-gradient(#ead697,#877043); box-shadow:0 3px 4px #181007aa; }
+.guitar-strings span:nth-child(2) { top:27%; height:4px; }
+.guitar-strings span:nth-child(3) { top:42%; height:3px; }
+.guitar-strings span:nth-child(4) { top:57%; height:3px; background:#ddd7b5; }
+.guitar-strings span:nth-child(5) { top:72%; height:2px; background:#e6e2cb; }
+.guitar-strings span:nth-child(6) { top:87%; height:2px; background:#ece9d8; }
+.guitar-targets { position:absolute; inset:0; }
+.guitar-dot { position:absolute; left:var(--dot-x); top:var(--dot-y); transform:translate(-50%,-50%); width:40px; height:40px; border:3px solid #ffd5c6; border-radius:50%; cursor:pointer; background:#c33c32; box-shadow:0 0 15px #e64c3199; color:#eff5d6; font-size:20px; line-height:1; padding:0; touch-action:manipulation; }
+.guitar-dot:hover { background:#ef5946; }
+.guitar-dot:focus-visible { outline:3px solid #fff3bc; outline-offset:4px; }
+.guitar-dot.is-repaired { background:#4d814b; border-color:#c2df9b; box-shadow:0 0 12px #83bd5b66; cursor:default; opacity:1; }
+#guitar-feedback, #guitar-progress { color:var(--green); }
+@media (max-width:600px) { .guitar-panel { padding:10px; } .guitar-dot { width:36px; height:36px; } }

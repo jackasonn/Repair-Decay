@@ -150,6 +150,8 @@ function cacheElements() {
   els.dialogParticles = document.getElementById('dialog-particles');
   els.faultSwitches = document.getElementById('fault-switches');
   els.rhythmPanel = document.getElementById('rhythm-panel');
+  els.guitarPanel = document.getElementById('guitar-panel');
+  els.guitarTargets = document.getElementById('guitar-targets');
   els.rhythmStart = document.getElementById('repair-retry');
   els.repairLockToast = document.getElementById('repair-lock-toast');
 }
@@ -974,9 +976,11 @@ function openTrackDialog(id) {
   state.selectedTrack = id;
   updateDialog();
   els.dialog.showModal();
+  if (id === 'guitars') startGuitarRepair();
   void playUISound('button');
 }
 function closeTrackDialog(fromUserAction = false) {
+  guitarRepair = null;
   const wasOverallDialog = state.overallDialog;
   if (fromUserAction) void playUISound('button');
   state.soloTrack = null;
@@ -1207,6 +1211,7 @@ function updateOverallDecayDialog() {
     : 'NO ACTIVE DECAY EVENTS TO REPAIR';
   els.solo.hidden = true;
   els.rhythmPanel.hidden = true;
+  els.guitarPanel.hidden = true;
   els.switchesHeadingTitle.textContent = 'GLOBAL REPAIR SWITCHES';
   els.switchesHeadingHelp.textContent = 'FLIP AN ACTIVE SWITCH TO REPAIR THAT EVENT ON EVERY INSTRUMENT';
 
@@ -1232,9 +1237,11 @@ function updateDialog() {
   const decay = severityFor(track.id);
   const status = statusFor(decay);
   const isDrums = track.id === 'drums';
-  const rhythmLocked = isDrums;
-  els.faultSwitches.hidden = isDrums;
-  document.getElementById('decay-switches-heading').hidden = isDrums;
+  const isGuitar = track.id === 'guitars';
+  const rhythmLocked = isDrums || isGuitar;
+  els.faultSwitches.hidden = rhythmLocked;
+  document.getElementById('decay-switches-heading').hidden = rhythmLocked;
+  els.guitarPanel.hidden = !isGuitar;
 
   els.dialogArtStage.classList.remove('system-decay-art-stage', 'system-decay-critical', 'system-decay-warning');
   els.dialogInstrumentImage.hidden = false;
@@ -1449,6 +1456,7 @@ function updatePlaybackClock() {
       state.lastTrackVisualAt = now;
     }
   }
+  updateGuitarRepair(now);
   requestAnimationFrame(updatePlaybackClock);
 }
 
@@ -1593,6 +1601,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       return;
     }
+    if (state.selectedTrack === 'guitars') return;
     if (state.selectedTrack === 'drums') {
       showRepairLockToast(event.clientX, event.clientY);
       void playUISound('error');
@@ -1604,6 +1613,8 @@ document.addEventListener('DOMContentLoaded', () => {
       void playUISound('error');
     }
   });
+  els.guitarTargets.addEventListener('click', handleGuitarTarget);
+  els.dialog.addEventListener('close', () => { guitarRepair = null; });
   els.solo.addEventListener('click', toggleSolo);
   els.rhythmStart.addEventListener('click', () => restartRhythmRepair(true));
 
@@ -1798,4 +1809,94 @@ function drawRepairSignal(position) {
   const cue = state.playing && !rhythm.finished && rhythm.beats.some(beat => Math.abs(position - beat) <= REPAIR_WINDOW);
   ctx.strokeStyle = cue ? '#e4d38c' : '#7f9a63';
   ctx.lineWidth = cue ? 4 : 2; ctx.beginPath(); ctx.moveTo(centre, 0); ctx.lineTo(centre, 120); ctx.stroke();
+}
+
+
+// All songs share this pointer repair. Targets persist until clicked; elapsed
+// time only schedules new dots, never treats a missed target as repaired.
+const GUITAR_TARGET_COUNT = 8;
+const GUITAR_ROUND_MS = 18000;
+let guitarRepair = null;
+function guitarTargetSequence() {
+  const strings = [0, 1, 2, 3, 4, 5];
+  for (let i = strings.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [strings[i], strings[j]] = [strings[j], strings[i]];
+  }
+  let at = 0;
+  const previousX = new Map();
+  return Array.from({length:GUITAR_TARGET_COUNT}, (_, i) => {
+    if (i) at += 2200 + Math.random() * 300;
+    const string = i < 6 ? strings[i] : Math.floor(Math.random() * 6);
+    const occupied = previousX.get(string) || [];
+    const positions = [18, 50, 82].filter(x => occupied.every(previous => Math.abs(x - previous) >= 24));
+    const x = positions[Math.floor(Math.random() * positions.length)] + Math.random() * 4 - 2;
+    previousX.set(string, [...occupied, x]);
+    return {string, x, at, hit:false};
+  });
+}
+function startGuitarRepair() {
+  guitarRepair = null;
+  els.guitarTargets.innerHTML = '';
+  document.getElementById('guitar-progress').textContent = '0 / 8 REPAIRED';
+  document.getElementById('guitar-time').textContent = '18s';
+  if (!trackState.guitars?.events.length) {
+    document.getElementById('guitar-feedback').textContent = 'GUITAR SIGNAL RESTORED — NO REPAIR NEEDED';
+    return;
+  }
+  guitarRepair = {generation:state.songGeneration, song:currentSongIndex,
+    startedAt:performance.now(), targets:guitarTargetSequence(), visible:0, finished:false};
+  document.getElementById('guitar-feedback').textContent = 'CLICK EACH RED DOT TO TURN IT GREEN';
+  updateGuitarRepair();
+}
+function currentGuitarRepair() {
+  return guitarRepair && !guitarRepair.finished && els.dialog?.open &&
+    !state.overallDialog && state.selectedTrack === 'guitars' &&
+    guitarRepair.generation === state.songGeneration && guitarRepair.song === currentSongIndex;
+}
+function renderGuitarTargets() {
+  const game = guitarRepair;
+  els.guitarTargets.innerHTML = game.targets.slice(0, game.visible).map((target, i) =>
+    '<button type="button" class="guitar-dot' + (target.hit ? ' is-repaired' : '') +
+    '" data-guitar-target="' + i + '" style="--dot-x:' + target.x + '%;--dot-y:' +
+    (12 + target.string * 15) + '%" aria-label="' + (target.hit ? 'Repaired' : 'Repair') +
+    ' target ' + (i + 1) + ', string ' + (target.string + 1) + '" aria-pressed="' + target.hit +
+    '"' + (target.hit ? ' disabled' : '') + '>' + (target.hit ? '✓' : '') + '</button>'
+  ).join('');
+}
+function updateGuitarRepair(now = performance.now()) {
+  if (!currentGuitarRepair()) return;
+  const game = guitarRepair;
+  const elapsed = Math.max(0, now - game.startedAt);
+  const visible = game.targets.filter(target => target.at <= elapsed).length;
+  if (visible !== game.visible) {
+    game.visible = visible;
+    renderGuitarTargets();
+  }
+  const hits = game.targets.filter(target => target.hit).length;
+  document.getElementById('guitar-progress').textContent = hits + ' / 8 REPAIRED';
+  document.getElementById('guitar-time').textContent = elapsed < GUITAR_ROUND_MS
+    ? Math.ceil((GUITAR_ROUND_MS - elapsed) / 1000) + 's' : 'ALL TARGETS SHOWN';
+  if (elapsed >= GUITAR_ROUND_MS && hits === GUITAR_TARGET_COUNT) {
+    game.finished = true;
+    document.getElementById('guitar-feedback').textContent = 'GUITAR REPAIR COMPLETE — SIGNAL RESTORED';
+    repairTrack('guitars');
+  } else if (elapsed >= GUITAR_ROUND_MS) {
+    document.getElementById('guitar-feedback').textContent = 'CLICK THE REMAINING RED DOTS — NO TIME PENALTY';
+  }
+}
+function handleGuitarTarget(event) {
+  if (!currentGuitarRepair()) return;
+  // Bring spawned targets up to date before accepting input after a frame gap.
+  updateGuitarRepair();
+  if (!currentGuitarRepair()) return;
+  const button = event.target.closest('[data-guitar-target]');
+  if (!button || !els.guitarTargets.contains(button)) return;
+  const index = Number(button.dataset.guitarTarget);
+  if (!Number.isInteger(index) || index < 0 || index >= guitarRepair.visible) return;
+  const target = guitarRepair.targets[index];
+  if (target.hit) return;
+  target.hit = true;
+  renderGuitarTargets();
+  updateGuitarRepair();
 }
