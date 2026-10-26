@@ -151,6 +151,8 @@ function cacheElements() {
   els.faultSwitches = document.getElementById('fault-switches');
   els.rhythmPanel = document.getElementById('rhythm-panel');
   els.guitarPanel = document.getElementById('guitar-panel');
+  els.keysPanel = document.getElementById('keys-panel');
+  els.keysRetry = document.getElementById('keys-retry');
   els.guitarTargets = document.getElementById('guitar-targets');
   els.rhythmStart = document.getElementById('repair-retry');
   els.repairLockToast = document.getElementById('repair-lock-toast');
@@ -977,10 +979,12 @@ function openTrackDialog(id) {
   updateDialog();
   els.dialog.showModal();
   if (id === 'guitars') startGuitarRepair();
+  if (id === 'keys') startKeysRepair();
   void playUISound('button');
 }
 function closeTrackDialog(fromUserAction = false) {
   guitarRepair = null;
+  keysRepair = null;
   const wasOverallDialog = state.overallDialog;
   if (fromUserAction) void playUISound('button');
   state.soloTrack = null;
@@ -1212,6 +1216,7 @@ function updateOverallDecayDialog() {
   els.solo.hidden = true;
   els.rhythmPanel.hidden = true;
   els.guitarPanel.hidden = true;
+  els.keysPanel.hidden = true;
   els.switchesHeadingTitle.textContent = 'GLOBAL REPAIR SWITCHES';
   els.switchesHeadingHelp.textContent = 'FLIP AN ACTIVE SWITCH TO REPAIR THAT EVENT ON EVERY INSTRUMENT';
 
@@ -1238,10 +1243,12 @@ function updateDialog() {
   const status = statusFor(decay);
   const isDrums = track.id === 'drums';
   const isGuitar = track.id === 'guitars';
-  const rhythmLocked = isDrums || isGuitar;
+  const isKeys = track.id === 'keys';
+  const rhythmLocked = isDrums || isGuitar || isKeys;
   els.faultSwitches.hidden = rhythmLocked;
   document.getElementById('decay-switches-heading').hidden = rhythmLocked;
   els.guitarPanel.hidden = !isGuitar;
+  els.keysPanel.hidden = !isKeys;
 
   els.dialogArtStage.classList.remove('system-decay-art-stage', 'system-decay-critical', 'system-decay-warning');
   els.dialogInstrumentImage.hidden = false;
@@ -1457,6 +1464,7 @@ function updatePlaybackClock() {
     }
   }
   updateGuitarRepair(now);
+  updateKeysRepair(now);
   requestAnimationFrame(updatePlaybackClock);
 }
 
@@ -1584,6 +1592,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   document.addEventListener('keydown', handleRepairKey);
+  document.addEventListener('keydown', handleKeysRepairKey);
   els.previousSong.addEventListener('click', () => switchSong(currentSongIndex - 1, false, true));
   els.nextSong.addEventListener('click', () => switchSong(currentSongIndex + 1, false, true));
   els.closeDialog.addEventListener('click', () => closeTrackDialog(true));
@@ -1601,7 +1610,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       return;
     }
-    if (state.selectedTrack === 'guitars') return;
+    if (state.selectedTrack === 'guitars' || state.selectedTrack === 'keys') return;
     if (state.selectedTrack === 'drums') {
       showRepairLockToast(event.clientX, event.clientY);
       void playUISound('error');
@@ -1614,7 +1623,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   els.guitarTargets.addEventListener('click', handleGuitarTarget);
-  els.dialog.addEventListener('close', () => { guitarRepair = null; });
+  els.dialog.addEventListener('close', () => { guitarRepair = null; keysRepair = null; });
+  els.keysRetry.addEventListener('click', () => {
+    if (els.dialog.open && !state.overallDialog && state.selectedTrack === 'keys') startKeysRepair();
+  });
   els.solo.addEventListener('click', toggleSolo);
   els.rhythmStart.addEventListener('click', () => restartRhythmRepair(true));
 
@@ -1908,4 +1920,135 @@ function handleGuitarTarget(event) {
   target.hitAt = performance.now();
   renderGuitarTargets();
   updateGuitarRepair();
+}
+
+
+// Four-lane Keys repair: arrows rise to fixed receptors over an 18-second round.
+const KEYS_ROUND_MS = 18000;
+const KEYS_WINDOW_MS = 280;
+const KEYS_TRAVEL_MS = 1800;
+const KEYS_HITS_REQUIRED = 6;
+const KEYS_CODES = ['ArrowLeft', 'ArrowDown', 'ArrowUp', 'ArrowRight'];
+const KEYS_COLOURS = ['#e69bd5', '#67dce6', '#9fda72', '#ed8c7e'];
+let keysRepair = null;
+function keysRepairSequence() {
+  const lanes = [0, 1, 2, 3, 0, 1, 2, 3];
+  for (let i = lanes.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [lanes[i], lanes[j]] = [lanes[j], lanes[i]];
+  }
+  return lanes.map((lane, i) => ({lane, at:2500 + i * 2000, judged:false, hit:false}));
+}
+function currentKeysRepair() {
+  return keysRepair && !keysRepair.finished && els.dialog?.open && !state.overallDialog &&
+    state.selectedTrack === 'keys' && keysRepair.song === currentSongIndex &&
+    keysRepair.generation === state.songGeneration;
+}
+function startKeysRepair() {
+  keysRepair = null;
+  els.keysRetry.hidden = true;
+  document.getElementById('keys-progress').textContent = '0 / 8 HITS · 6 NEEDED';
+  document.getElementById('keys-time').textContent = '18s';
+  if (!trackState.keys?.events.length) {
+    document.getElementById('keys-feedback').textContent = 'KEYS SIGNAL RESTORED — NO REPAIR NEEDED';
+    drawKeysRepair(0);
+    return;
+  }
+  keysRepair = {song:currentSongIndex, generation:state.songGeneration, startedAt:performance.now(),
+    notes:keysRepairSequence(), hits:0, finished:false, bursts:[]};
+  document.getElementById('keys-feedback').textContent = 'PRESS THE MATCHING ARROW KEY AS THE ARROWS MEET';
+  updateKeysRepair();
+}
+function updateKeysRepair(now = performance.now()) {
+  if (!currentKeysRepair()) return;
+  const game = keysRepair;
+  const elapsed = Math.max(0, now - game.startedAt);
+  game.notes.forEach(note => {
+    if (!note.judged && elapsed > note.at + KEYS_WINDOW_MS) {
+      note.judged = true;
+      document.getElementById('keys-feedback').textContent = 'MISSED ARROW — KEEP GOING; 6 OF 8 IS ENOUGH';
+    }
+  });
+  game.bursts = game.bursts.filter(burst => elapsed - burst.at < 500);
+  document.getElementById('keys-progress').textContent = game.hits + ' / 8 HITS · 6 NEEDED';
+  document.getElementById('keys-time').textContent = Math.max(0, Math.ceil((KEYS_ROUND_MS - elapsed) / 1000)) + 's';
+  drawKeysRepair(elapsed);
+  if (elapsed >= KEYS_ROUND_MS) {
+    game.finished = true;
+    if (game.hits >= KEYS_HITS_REQUIRED) {
+      document.getElementById('keys-feedback').textContent = 'KEYS REPAIR COMPLETE — SIGNAL RESTORED';
+      repairTrack('keys');
+    } else {
+      document.getElementById('keys-feedback').textContent = 'ROUND INCOMPLETE — TRY AGAIN FOR 6 OF 8 HITS';
+      els.keysRetry.hidden = false;
+    }
+  }
+}
+function handleKeysRepairKey(event) {
+  const lane = KEYS_CODES.indexOf(event.code);
+  if (lane < 0 || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
+  if (!els.dialog?.open || state.overallDialog || state.selectedTrack !== 'keys') return;
+  if (/INPUT|TEXTAREA|SELECT/.test(event.target.tagName) || event.target.isContentEditable) return;
+  event.preventDefault();
+  if (!currentKeysRepair()) return;
+  const now = performance.now();
+  updateKeysRepair(now);
+  if (!currentKeysRepair()) return;
+  const elapsed = now - keysRepair.startedAt;
+  const note = keysRepair.notes.find(note => !note.judged && note.lane === lane &&
+    Math.abs(elapsed - note.at) <= KEYS_WINDOW_MS);
+  if (!note) {
+    document.getElementById('keys-feedback').textContent = 'MATCH THE DIRECTION AND WAIT FOR THE TOP ARROW';
+    return;
+  }
+  note.judged = true;
+  note.hit = true;
+  keysRepair.hits++;
+  keysRepair.bursts.push({lane, at:elapsed});
+  document.getElementById('keys-feedback').textContent = keysRepair.hits >= KEYS_HITS_REQUIRED
+    ? 'TARGET REACHED — FINISH THE FULL ROUND' : 'ON TIME — NICE HIT';
+  updateKeysRepair(now);
+}
+function drawKeysRepair(elapsed) {
+  const canvas = document.getElementById('keys-signal');
+  const width = Math.max(1, canvas.getBoundingClientRect().width), height = 300;
+  const ratio = window.devicePixelRatio || 1;
+  canvas.width = Math.round(width * ratio); canvas.height = height * ratio;
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  const receptorY = 44, size = Math.min(28, width / 11);
+  const turns = [-Math.PI / 2, Math.PI, 0, Math.PI / 2];
+  function arrow(lane, y, colour, filled, shake = 0) {
+    const x = width * (lane + .5) / 4;
+    ctx.save(); ctx.translate(x + Math.sin(elapsed * .08) * shake, y);
+    ctx.rotate(turns[lane]); ctx.beginPath();
+    [[0,-size], [size,-2], [size*.4,-2], [size*.4,size], [-size*.4,size], [-size*.4,-2], [-size,-2]]
+      .forEach(([px,py], i) => i ? ctx.lineTo(px,py) : ctx.moveTo(px,py));
+    ctx.closePath(); ctx.lineWidth = 2.5; ctx.strokeStyle = colour;
+    if (filled) { ctx.fillStyle = colour; ctx.shadowColor = colour; ctx.shadowBlur = 13; ctx.fill(); }
+    ctx.stroke(); ctx.restore();
+  }
+  for (let lane = 0; lane < 4; lane++) {
+    ctx.fillStyle = lane % 2 ? 'rgba(228,211,140,.025)' : 'rgba(228,211,140,.055)';
+    ctx.fillRect(width * lane / 4, 0, width / 4, height);
+    const flash = keysRepair?.bursts.some(burst => burst.lane === lane && elapsed - burst.at < 260);
+    arrow(lane, receptorY, flash ? KEYS_COLOURS[lane] : '#8e917f', flash, flash ? 4 : 0);
+  }
+  if (!keysRepair) return;
+  keysRepair.notes.forEach(note => {
+    const until = note.at - elapsed;
+    if (note.judged || until > KEYS_TRAVEL_MS || until < -KEYS_WINDOW_MS) return;
+    arrow(note.lane, receptorY + until / KEYS_TRAVEL_MS * (height - receptorY - 15), KEYS_COLOURS[note.lane], true);
+  });
+  keysRepair.bursts.forEach(burst => {
+    const age = Math.max(0, elapsed - burst.at) / 500;
+    const x = width * (burst.lane + .5) / 4;
+    ctx.globalAlpha = 1 - age;
+    ctx.fillStyle = KEYS_COLOURS[burst.lane];
+    for (let i = 0; i < 12; i++) {
+      const angle = i * Math.PI / 6, distance = 15 + age * 45;
+      ctx.beginPath(); ctx.arc(x + Math.cos(angle) * distance, receptorY + Math.sin(angle) * distance, 3 * (1 - age) + 1, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  });
 }
