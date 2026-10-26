@@ -727,6 +727,10 @@ function applyEvent() {
     }
   }
   s.events.push(e);
+  if (t.id === 'drums' && rhythm?.finished) {
+    rhythm = null;
+    setRepairFeedback('DRUM DECAY DETECTED — START RHYTHM REPAIR');
+  }
   addLog(t.name+': '+et.name+(e.detail?' / '+e.detail:''),'event');
   updateUI();
   scheduleNextEvent()
@@ -770,11 +774,7 @@ function closeTrackDialog() {
   state.soloTrack = null;
   if (rhythm && rhythm.active) {
     rhythm.active = false;
-    if (rhythm.stability >= 100) {
-      setRepairFeedback('100% STABILITY — DRUM REPAIR SWITCHES UNLOCKED');
-    } else {
-      setRepairFeedback('CALIBRATION PAUSED — RESTART TO CONTINUE');
-    }
+    setRepairFeedback('REPAIR PAUSED — START AGAIN TO CONTINUE');
   }
   TRACKS.forEach(track => {
     const chain = state.sources[track.id];
@@ -915,8 +915,9 @@ function updateDialog() {
   const decay = severityFor(track.id);
   const status = statusFor(decay);
   const isDrums = track.id === 'drums';
-  const stability = rhythm ? rhythm.stability : 50;
-  const rhythmLocked = isDrums && stability < 100;
+  const rhythmLocked = isDrums;
+  els.faultSwitches.hidden = isDrums;
+  document.getElementById('decay-switches-heading').hidden = isDrums;
 
   els.dialogTitle.textContent = track.name;
   els.dialogStatus.textContent = status.text;
@@ -1246,7 +1247,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   els.faultSwitches.addEventListener('click', event => {
     const toggle = event.target.closest('[data-event]');
-    if (state.selectedTrack === 'drums' && (!rhythm || rhythm.stability < 100)) {
+    if (state.selectedTrack === 'drums') {
       showRepairLockToast(event.clientX, event.clientY);
       return;
     }
@@ -1256,94 +1257,98 @@ document.addEventListener('DOMContentLoaded', () => {
   els.rhythmStart.addEventListener('click', restartRhythmRepair);
 });
 
-// MVP: one fixed drum target; onset cues are derived from the decoded stem.
-// All timing uses the shared Web Audio song clock, including pause/resume.
-const REPAIR_WINDOW = 0.14;
+// Drum cues come only from transients in the decoded stem, never a guessed BPM.
+const REPAIR_WINDOW = 0.24;
+const REPAIR_HITS_REQUIRED = 3;
+const drumBeatCache = new WeakMap();
 let rhythm = null;
 function drumRepairBeats(buffer) {
-  const samples = buffer.getChannelData(0), hop = Math.floor(buffer.sampleRate * .01);
+  if (drumBeatCache.has(buffer)) return drumBeatCache.get(buffer);
+  const hop = Math.max(1, Math.round(buffer.sampleRate * .005));
+  const channels = Array.from({length: buffer.numberOfChannels}, (_, i) => buffer.getChannelData(i));
   const energies = [];
-  for (let i = 0; i < samples.length; i += hop) {
+  for (let start = 0; start < buffer.length; start += hop) {
     let energy = 0;
-    for (let j = i; j < Math.min(i + hop, samples.length); j++) energy += samples[j] ** 2;
-    energies.push(energy / hop);
+    const end = Math.min(start + hop, buffer.length);
+    for (const samples of channels) {
+      for (let j = start; j < end; j++) energy += samples[j] * samples[j];
+    }
+    energies.push(energy / ((end - start) * channels.length));
   }
   const peaks = [];
-  for (let i = 500; i < Math.min(2000, energies.length - 1); i++) {
-    const baseline = energies.slice(i - 12, i).reduce((a, b) => a + b, 0) / 12;
-    if (energies[i] > Math.max(.00001, baseline * 2) && energies[i] >= energies[i-1] && energies[i] > energies[i+1]) {
-      if (!peaks.length || i * .01 - peaks[peaks.length - 1] > .4) peaks.push(i * .01);
-    }
+  const floor = Math.max(1e-7, energies.reduce((peak, energy) => Math.max(peak, energy), 0) * .003);
+  for (let i = 4; i < energies.length - 1; i++) {
+    const baseline = energies.slice(Math.max(0, i - 20), i).reduce((a, b) => a + b, 0) / Math.min(i, 20);
+    // Detect the leading energy rise, rather than the later ringing maximum.
+    if (energies[i] < Math.max(floor, baseline * 3) || energies[i] <= energies[i - 1] * 1.4) continue;
+    const time = i * hop / buffer.sampleRate;
+    // Sparse real transients give visitors time to react; never invent a grid.
+    if (!peaks.length || time - peaks[peaks.length - 1] >= .6) peaks.push(time);
   }
-  return peaks.slice(0, 16);
+  drumBeatCache.set(buffer, peaks);
+  return peaks;
+}
+// The source clock runs ahead of the speaker. Use output timestamps when
+// available, plus the existing pitch worklet's fixed neutral-path delay.
+function repairSongPosition() {
+  if (!state.playing || !state.audio) return currentMasterOffset();
+  const audio = state.audio;
+  let outputTime = audio.currentTime - (audio.outputLatency || audio.baseLatency || 0);
+  const stamp = audio.getOutputTimestamp?.();
+  if (stamp && stamp.contextTime > 0 && stamp.performanceTime > 0) {
+    outputTime = Math.min(audio.currentTime, stamp.contextTime + Math.max(0, performance.now() - stamp.performanceTime) / 1000);
+  }
+  // pitch-shifter.js buffers 3072 samples and writes one 128-frame quantum
+  // before its first output, so the neutral path is delayed by 2944 samples.
+  const workletDelay = state.sources.drums?.pitchShift ? 2944 / audio.sampleRate : 0;
+  return Math.max(0, (state.offsets.drums || 0) + outputTime - state.startedAt - workletDelay);
 }
 function prepareRhythmRepair() {
-  const drumBuffer = state.buffers.drums;
-  if (!drumBuffer) {
-    rhythm = { beats: [], judged: new Set(), hits: 0, stability: 50, active: false, finished: true };
-    setRepairFeedback('DRUM STEM NOT READY — CANNOT CALIBRATE');
+  const buffer = state.buffers.drums;
+  const position = repairSongPosition();
+  const beats = buffer ? drumRepairBeats(buffer).filter(time => time >= position + 1.2) : [];
+  rhythm = {beats, judged:new Set(), hits:0, active:beats.length >= REPAIR_HITS_REQUIRED, finished:false};
+  if (!rhythm.active) {
+    setRepairFeedback('NOT ENOUGH DRUM HITS AHEAD — REPLAY SONG TO REPAIR');
     updateRhythmPanel();
     return false;
   }
-
-  const beats = drumRepairBeats(drumBuffer);
-  rhythm = { beats, judged: new Set(), hits: 0, stability: 50, active: false, finished: false };
-  if (!beats.length) {
-    rhythm.finished = true;
-    setRepairFeedback('NO USABLE BEAT CUES FOUND — TRY AGAIN');
-    updateRhythmPanel();
-    return false;
-  }
-
-  rhythm.active = true;
-  setRepairFeedback('CALIBRATING — PRESS F ON EACH CENTRE HIT');
-  renderRepairState();
-  updateDialog();
+  setRepairFeedback('PRESS F AT THE CENTRE — 3 HITS RESTORE THE DRUMS');
+  updateRhythmPanel();
   return true;
 }
 function setRepairFeedback(message) {
   document.getElementById('repair-feedback').textContent = message;
 }
-function renderRepairState() {
-  if (!rhythm) return;
-  document.getElementById('repair-stability').value = rhythm.stability;
-  document.getElementById('repair-stability-text').textContent = Math.round(rhythm.stability) + '%';
-  document.getElementById('repair-progress').textContent = rhythm.hits + ' / ' + rhythm.beats.length + ' hits landed';
-  updateRhythmPanel();
-}
+function renderRepairState() { updateRhythmPanel(); }
 function updateRhythmPanel() {
   if (!els.rhythmPanel || !els.rhythmStart) return;
-  const stability = rhythm ? rhythm.stability : 50;
-  const playingGame = !!(rhythm && rhythm.active && !rhythm.finished);
-  document.getElementById('repair-stability').value = stability;
-  document.getElementById('repair-stability-text').textContent = Math.round(stability) + '%';
-  document.getElementById('repair-progress').textContent = rhythm
-    ? rhythm.hits + ' / ' + rhythm.beats.length + ' hits landed'
-    : '0 / 0 hits landed';
-
-  if (stability >= 100) {
-    setRepairFeedback('100% STABILITY — DRUM REPAIR SWITCHES UNLOCKED');
-    els.rhythmStart.hidden = true;
-  } else if (playingGame) {
-    els.rhythmStart.hidden = true;
-  } else {
-    els.rhythmStart.hidden = false;
-    els.rhythmStart.textContent = rhythm ? 'RETRY RHYTHM CALIBRATION' : 'START RHYTHM CALIBRATION';
-  }
+  const hits = rhythm ? rhythm.hits : 0;
+  const progress = hits + ' / ' + REPAIR_HITS_REQUIRED + ' HITS';
+  document.getElementById('repair-stability').value = hits;
+  document.getElementById('repair-stability-text').textContent = progress;
+  document.getElementById('repair-progress').textContent = progress;
+  const damaged = !!trackState.drums?.events.length;
+  els.rhythmStart.hidden = !!rhythm?.active || !damaged;
+  els.rhythmStart.textContent = 'START RHYTHM REPAIR';
+  if (!damaged && !rhythm?.finished) setRepairFeedback('DRUM SIGNAL RESTORED — NO REPAIR NEEDED');
+  else if (damaged && !rhythm) setRepairFeedback('DRUM DECAY DETECTED — START RHYTHM REPAIR');
 }
 function updateRhythmRepair() {
-  if (!rhythm || !els.dialog?.open || state.selectedTrack !== 'drums' || !rhythm.active) return;
-  const position = currentMasterOffset();
-  if (state.playing && !rhythm.finished) {
+  if (!rhythm || !els.dialog?.open || state.selectedTrack !== 'drums') return;
+  const position = repairSongPosition();
+  if (state.playing && rhythm.active && !rhythm.finished) {
     rhythm.beats.forEach((beat, i) => {
       if (!rhythm.judged.has(i) && position > beat + REPAIR_WINDOW) {
         rhythm.judged.add(i);
-        rhythm.stability = Math.max(0, rhythm.stability - 10);
-        setRepairFeedback('MISSED HIT — KEEP THE SIGNAL STEADY');
-        renderRepairState();
+        setRepairFeedback('KEEP GOING — YOUR SUCCESSFUL HITS ARE SAVED');
       }
     });
-    if (rhythm.beats.length && position > rhythm.beats[rhythm.beats.length - 1] + .5) finishRhythmRepair();
+    if (position > rhythm.beats[rhythm.beats.length - 1] + REPAIR_WINDOW) {
+      rhythm.active = false;
+      setRepairFeedback('NO MORE CUES — REPLAY SONG TO TRY AGAIN');
+      updateRhythmPanel();
+    }
   }
   drawRepairSignal(position);
 }
@@ -1352,73 +1357,46 @@ function handleRepairKey(event) {
   if (!els.dialog?.open || state.selectedTrack !== 'drums' || !rhythm?.active || rhythm.finished || !state.playing) return;
   if (/INPUT|TEXTAREA|SELECT/.test(event.target.tagName) || event.target.isContentEditable) return;
   event.preventDefault();
-  updateRhythmRepair();
-  if (rhythm.finished) return;
-  const position = currentMasterOffset();
-  const index = rhythm.beats.findIndex((beat, i) => !rhythm.judged.has(i) && Math.abs(position - beat) <= REPAIR_WINDOW);
+  const position = repairSongPosition();
+  const index = rhythm.beats.findIndex((beat, i) => !rhythm.judged.has(i) && Math.abs(position - beat) <= REPAIR_WINDOW + 1e-9);
   if (index >= 0) {
     rhythm.judged.add(index);
     rhythm.hits++;
-    rhythm.stability = Math.min(100, rhythm.stability + 8);
-    setRepairFeedback(rhythm.stability >= 100
-      ? '100% STABILITY — DRUM REPAIR SWITCHES UNLOCKED'
-      : 'CORRECT HIT — SIGNAL STABILISING');
+    setRepairFeedback('ON TIME — ' + rhythm.hits + ' / ' + REPAIR_HITS_REQUIRED + ' HITS');
+    if (rhythm.hits >= REPAIR_HITS_REQUIRED) finishRhythmRepair();
   } else {
-    rhythm.stability = Math.max(0, rhythm.stability - 10);
-    setRepairFeedback('MISS — OUTSIDE REPAIR WINDOW');
+    setRepairFeedback('TRY THE NEXT BEAT — YOUR HITS ARE SAVED');
   }
   renderRepairState();
-  updateDialog();
-  if (rhythm.stability >= 100) finishRhythmRepair();
 }
 function finishRhythmRepair() {
-  if (!rhythm || rhythm.finished) return;
+  if (!rhythm || rhythm.finished || rhythm.hits < REPAIR_HITS_REQUIRED) return;
   rhythm.finished = true;
   rhythm.active = false;
-  const unlocked = rhythm.stability >= 100;
-  setRepairFeedback(unlocked
-    ? '100% STABILITY — DRUM REPAIR SWITCHES UNLOCKED'
-    : 'CALIBRATION ENDED — REACH 100% TO UNLOCK THE SWITCHES');
+  repairTrack('drums');
+  setRepairFeedback('RHYTHM REPAIR COMPLETE — DRUM SIGNAL RESTORED');
   updateRhythmPanel();
   updateDialog();
 }
 async function restartRhythmRepair() {
-  if (!els.dialog?.open || state.selectedTrack !== 'drums') return;
+  if (!els.dialog?.open || state.selectedTrack !== 'drums' || !trackState.drums.events.length) return;
+  const generation = state.songGeneration;
   if (!state.loaded || state.loadedSongIndex !== currentSongIndex) {
-    const ready = await loadAudio();
-    if (!ready || !state.buffers.drums) {
-      setRepairFeedback('AUDIO STEMS NOT READY — PLEASE TRY AGAIN');
-      return;
-    }
+    if (!await loadAudio()) return;
   }
-  if (!state.buffers.drums) {
-    setRepairFeedback('DRUM STEM NOT READY — CANNOT CALIBRATE');
-    return;
-  }
-
-  if (state.playing) stopPlayback();
-  alignAllOffsets(0);
-  const prepared = prepareRhythmRepair();
-  if (!prepared) return;
-  await startPlayback();
-  if (!state.playing && rhythm) {
-    rhythm.active = false;
-    setRepairFeedback('PLAYBACK DID NOT START — TRY CALIBRATION AGAIN');
-    updateRhythmPanel();
-  }
+  if (generation !== state.songGeneration || !els.dialog?.open || state.selectedTrack !== 'drums') return;
+  if (!state.playing) await startPlayback();
+  if (generation !== state.songGeneration || !els.dialog?.open || state.selectedTrack !== 'drums' || !state.playing) return;
+  prepareRhythmRepair();
 }
 function showRepairLockToast(x, y) {
   if (!els.repairLockToast) return;
-  els.repairLockToast.textContent = 'Signal stability must reach 100% to repair drums.';
+  els.repairLockToast.textContent = 'Complete 3 rhythm hits to restore the drums automatically.';
   els.repairLockToast.hidden = false;
-  const maxX = Math.max(12, window.innerWidth - 292);
-  const maxY = Math.max(12, window.innerHeight - 72);
-  els.repairLockToast.style.left = Math.max(12, Math.min((x || 0) + 14, maxX)) + 'px';
-  els.repairLockToast.style.top = Math.max(12, Math.min((y || 0) + 14, maxY)) + 'px';
+  els.repairLockToast.style.left = Math.max(12, Math.min((x || 0) + 14, window.innerWidth - 292)) + 'px';
+  els.repairLockToast.style.top = Math.max(12, Math.min((y || 0) + 14, window.innerHeight - 72)) + 'px';
   clearTimeout(state.repairLockToastTimer);
-  state.repairLockToastTimer = setTimeout(() => {
-    els.repairLockToast.hidden = true;
-  }, 1850);
+  state.repairLockToastTimer = setTimeout(() => { els.repairLockToast.hidden = true; }, 1850);
 }
 function drawRepairSignal(position) {
   const canvas = document.getElementById('repair-signal'), rect = canvas.getBoundingClientRect();

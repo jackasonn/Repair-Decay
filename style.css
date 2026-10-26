@@ -1763,3 +1763,6 @@ main,
     translate: 0 0 !important;
   }
 }
+
+/* Drum repair replaces manual switches; author display rules must respect hidden. */
+#fault-switches[hidden], #decay-switches-heading[hidden] { display: none; }

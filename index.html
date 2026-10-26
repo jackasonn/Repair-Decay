@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0b0906">
     <title>REPAIR / DECAY — Interactive Music</title>
-    <link rel="stylesheet" href="style.css?v=20261013-10">
+    <link rel="stylesheet" href="style.css?v=20261026-drum-repair">
 </head>
 <body>
     <div class="scanlines" aria-hidden="true"></div>
@@ -107,25 +107,25 @@
                     <div><p class="mini-label">ACTIVE EVENTS</p><strong id="dialog-event-count">0</strong></div>
                     <div><p class="mini-label">SIGNAL</p><strong id="dialog-signal">STABLE</strong></div>
                 </div>
-                <div class="switches-heading">
+                <div class="switches-heading" id="decay-switches-heading">
                     <span>DECAY SWITCHES</span>
                     <span>FLIP ACTIVE SWITCHES OFF TO REPAIR</span>
                 </div>
                 <div class="fault-switches" id="fault-switches" aria-label="Decay event repair switches"></div>
             </div>
         </div>
-        <section class="rhythm-panel" id="rhythm-panel" aria-label="Drums rhythm calibration" hidden>
-            <div class="panel-heading"><span>RHYTHM CALIBRATION</span><span>KEY: F</span></div>
-            <p>Follow the moving drum hits and press <kbd>F</kbd> as each one reaches the centre marker. Reach 100% signal stability to unlock the drum repair switches.</p>
-            <canvas id="repair-signal" aria-label="Drum signal and approaching calibration beats"></canvas>
-            <p id="repair-feedback" role="status">CALIBRATION REQUIRED — START WHEN READY</p>
-            <label for="repair-stability">SIGNAL STABILITY <span id="repair-stability-text">50%</span></label>
-            <progress id="repair-stability" max="100" value="50"></progress>
-            <p id="repair-progress">0 / 0 beats calibrated</p>
-            <button class="solo-button rhythm-start-button" id="repair-retry" type="button">START RHYTHM CALIBRATION</button>
+        <section class="rhythm-panel" id="rhythm-panel" aria-label="Drums rhythm repair" hidden>
+            <div class="panel-heading"><span>RHYTHM REPAIR</span><span>KEY: F</span></div>
+            <p>Follow the moving drum hits and press <kbd>F</kbd> as each one reaches the centre marker. Land 3 hits to restore the drums automatically. Misses do not remove your progress.</p>
+            <canvas id="repair-signal" aria-label="Drum signal and approaching repair beats"></canvas>
+            <p id="repair-feedback" role="status">REPAIR REQUIRED — START WHEN READY</p>
+            <label for="repair-stability">SUCCESSFUL HITS <span id="repair-stability-text">0 / 3 HITS</span></label>
+            <progress id="repair-stability" max="3" value="0"></progress>
+            <p id="repair-progress">0 / 3 HITS</p>
+            <button class="solo-button rhythm-start-button" id="repair-retry" type="button">START RHYTHM REPAIR</button>
         </section>
-        <div class="signal-lock-toast" id="repair-lock-toast" role="status" aria-live="polite" hidden>Signal stability must reach 100%.</div>
+        <div class="signal-lock-toast" id="repair-lock-toast" role="status" aria-live="polite" hidden>Land 3 rhythm hits to restore the drums.</div>
     </dialog>
-    <script src="script.js?v=20261013-10"></script>
+    <script src="script.js?v=20261026-drum-repair"></script>
 </body>
 </html>
