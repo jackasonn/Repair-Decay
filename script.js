@@ -39,6 +39,19 @@ const SONGS = [
       { id: 'keys', name: 'KEYS', file: 'assets/rainy-night-keys.mp3' },
       { id: 'vocals', name: 'VOCALS', file: 'assets/rainy-night-vocals.mp3' }
     ]
+  },
+  {
+    id: 'there-is-love',
+    title: 'THERE IS LOVE',
+    number: 4,
+    artist: 'JACKSON MOORE',
+    tracks: [
+      { id: 'drums', name: 'DRUMS', file: 'assets/there-is-love-drums.mp3' },
+      { id: 'bass', name: 'BASS', file: 'assets/there-is-love-bass.mp3' },
+      { id: 'guitars', name: 'GUITARS', file: 'assets/there-is-love-guitars.mp3' },
+      { id: 'keys', name: 'KEYS', file: 'assets/there-is-love-keys.mp3' },
+      { id: 'vocals', name: 'VOCALS', file: 'assets/there-is-love-vocals.mp3' }
+    ]
   }
 ];
 let currentSongIndex = 0;
