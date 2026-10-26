@@ -1984,3 +1984,105 @@ main,
 .song-arrow:hover:not(:disabled) { background: transparent; border-color: transparent; }
 @media (max-width: 1100px) { .song-arrow { width: 120px; height: 105px; min-height: 105px; } }
 @media (max-width: 600px) { .song-arrow { width: 83px; height: 72.5px; min-height: 72.5px; padding: 0; background: transparent; } }
+
+/* Overall decay panel opens the global repair console. */
+.decay-panel[role="button"] {
+  cursor: pointer;
+  transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
+}
+.decay-panel[role="button"]:hover,
+.decay-panel[role="button"]:focus-visible {
+  border-color: rgba(228,211,140,.48);
+  background: linear-gradient(145deg, rgba(228,211,140,.035), transparent 70%), #100e09;
+}
+.decay-panel[role="button"]:focus-visible {
+  outline: 2px solid var(--cream-dim);
+  outline-offset: 3px;
+}
+.decay-panel.decay-panel-critical {
+  border-color: rgba(185,75,66,.55);
+}
+.decay-panel.decay-panel-critical .panel-code {
+  color: var(--red);
+}
+
+/* The system-level dialog shares the instrument dialog and mechanical switches. */
+.dialog-art-stage.system-decay-art-stage {
+  padding: 28px;
+  background: radial-gradient(circle at 50% 45%, rgba(127,154,99,.13), transparent 66%), linear-gradient(150deg, rgba(255,255,255,.025), transparent 65%);
+}
+.dialog-art-stage.system-decay-art-stage.system-decay-warning {
+  background: radial-gradient(circle at 50% 45%, rgba(215,167,45,.14), transparent 66%), linear-gradient(150deg, rgba(255,255,255,.025), transparent 65%);
+}
+.dialog-art-stage.system-decay-art-stage.system-decay-critical {
+  background: radial-gradient(circle at 50% 45%, rgba(185,75,66,.22), transparent 66%), linear-gradient(150deg, rgba(255,255,255,.025), transparent 65%);
+}
+.dialog-overall-art {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  width: min(100%, 410px);
+  padding: 24px 16px;
+  text-align: center;
+}
+.dialog-overall-art[hidden] { display: none !important; }
+.dialog-overall-art > .mini-label {
+  margin: 0;
+  font-size: .68rem;
+  letter-spacing: .2em;
+}
+.dialog-overall-art > strong {
+  display: block;
+  color: var(--green);
+  font-family: 'VT323', monospace;
+  font-size: clamp(6rem, 13vw, 10rem);
+  font-weight: 400;
+  line-height: .72;
+  letter-spacing: -.025em;
+  text-shadow: 0 0 20px rgba(127,154,99,.18);
+}
+.dialog-overall-art.warning > strong {
+  color: var(--yellow);
+  text-shadow: 0 0 24px rgba(215,167,45,.22);
+}
+.dialog-overall-art.danger > strong {
+  color: var(--red);
+  text-shadow: 0 0 26px rgba(185,75,66,.34);
+}
+.dialog-overall-meter {
+  width: 100%;
+  max-width: 340px;
+  height: 9px;
+  overflow: hidden;
+  border: 1px solid rgba(228,211,140,.16);
+  background: rgba(0,0,0,.45);
+}
+.dialog-overall-meter span {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: var(--green);
+  transition: width .35s ease, background .2s ease;
+}
+.dialog-overall-meter span.warning { background: var(--yellow); }
+.dialog-overall-meter span.danger { background: var(--red); }
+.dialog-overall-art > p {
+  max-width: 310px;
+  margin: 0;
+  color: var(--muted);
+  font-size: .62rem;
+  line-height: 1.7;
+  letter-spacing: .095em;
+}
+.dialog-art-stage.system-decay-art-stage .particle-field,
+.dialog-art-stage.system-decay-art-stage .dialog-instrument-image {
+  display: none !important;
+}
+.decay-panel .decay-caption {
+  transition: color .2s ease;
+}
+
