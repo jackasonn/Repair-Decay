@@ -67,7 +67,7 @@
                 </div>
                 <div class="log-list" id="maintenance-log" aria-live="polite"></div>
             </div>
-            <div class="log-panel decay-panel">
+            <div class="log-panel decay-panel" id="decay-panel" role="button" tabindex="0" aria-haspopup="dialog" aria-controls="track-dialog" aria-label="Open overall decay repair controls">
                 <div class="panel-heading">
                     <span>DECAY LEVEL</span>
                     <span class="panel-code" id="decay-code">000</span>
@@ -89,6 +89,12 @@
             <div class="dialog-art-stage" id="dialog-art-stage" aria-hidden="true">
                 <div class="particle-field" id="dialog-particles"></div>
                 <img class="dialog-instrument-image" id="dialog-instrument-image" src="assets/drums.png" alt="" decoding="async">
+                <div class="dialog-overall-art" id="dialog-overall-art" hidden>
+                    <span class="mini-label">OVERALL DECAY</span>
+                    <strong id="dialog-overall-percent">0%</strong>
+                    <div class="dialog-overall-meter"><span id="dialog-overall-meter"></span></div>
+                    <p id="dialog-overall-summary">GLOBAL REPAIR LOCKED — SYSTEM STABLE</p>
+                </div>
             </div>
             <div class="dialog-ui">
                 <button class="close-dialog" id="close-dialog" type="button" aria-label="Close track controls">×</button>
@@ -110,8 +116,8 @@
                     <div><p class="mini-label">SIGNAL</p><strong id="dialog-signal">STABLE</strong></div>
                 </div>
                 <div class="switches-heading">
-                    <span>DECAY SWITCHES</span>
-                    <span>FLIP ACTIVE SWITCHES OFF TO REPAIR</span>
+                    <span id="dialog-switches-heading-title">DECAY SWITCHES</span>
+                    <span id="dialog-switches-heading-help">FLIP ACTIVE SWITCHES OFF TO REPAIR</span>
                 </div>
                 <div class="fault-switches" id="fault-switches" aria-label="Decay event repair switches"></div>
                 <section class="rhythm-panel" id="rhythm-panel" aria-label="Drums rhythm calibration" hidden>
