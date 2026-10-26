@@ -2086,3 +2086,6 @@ main,
   transition: color .2s ease;
 }
 
+
+/* Drum repair replaces manual switches; author display rules must respect hidden. */
+#fault-switches[hidden], #decay-switches-heading[hidden] { display: none; }
