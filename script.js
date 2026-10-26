@@ -85,7 +85,7 @@ const EVENT_TYPES=[ {
 // GLOBAL AUDIO / UI STATE
 // ───────────────────────────────────────────────
 const state= {
-  playing:false,startedAt:0,nextEventAt:0,selectedTrack:null,soloTrack:null,knobInteracting:false,overallDecay:0,logs:[],audio:null,buffers: {
+  playing:false,startedAt:0,nextEventAt:0,selectedTrack:null,overallDialog:false,soloTrack:null,knobInteracting:false,overallDecay:0,logs:[],audio:null,buffers: {
   }
   ,sources: {
   }
@@ -120,6 +120,13 @@ function cacheElements() {
   els.decayMeter = document.getElementById('overall-decay-meter');
   els.decayCode = document.getElementById('decay-code');
   els.decayCaption = document.getElementById('decay-caption');
+  els.decayPanel = document.getElementById('decay-panel');
+  els.dialogOverallArt = document.getElementById('dialog-overall-art');
+  els.dialogOverallPercent = document.getElementById('dialog-overall-percent');
+  els.dialogOverallMeter = document.getElementById('dialog-overall-meter');
+  els.dialogOverallSummary = document.getElementById('dialog-overall-summary');
+  els.switchesHeadingTitle = document.getElementById('dialog-switches-heading-title');
+  els.switchesHeadingHelp = document.getElementById('dialog-switches-heading-help');
   els.systemDot = document.getElementById('system-dot');
   els.systemStatus = document.getElementById('system-status');
   els.dialog = document.getElementById('track-dialog');
@@ -249,7 +256,9 @@ function updateUI() {
         ? 'SYSTEM UNSTABLE'
         : state.playing ? 'SYSTEM ACTIVE' : 'SYSTEM READY';
 
-  if (state.selectedTrack && els.dialog && els.dialog.open) updateDialog();
+  els.decayPanel.classList.toggle('decay-panel-critical', state.overallDecay >= 70);
+  els.decayPanel.setAttribute('aria-label', 'Open overall decay repair controls. Current decay level ' + state.overallDecay + '%.');
+  if (els.dialog && els.dialog.open && (state.selectedTrack || state.overallDialog)) updateDialog();
 }
 function addLog(message,type='event') {
   const now=new Date(),time=now.toLocaleTimeString([], {
@@ -949,12 +958,14 @@ function repairTrack(id) {
   if (state.selectedTrack === id) updateDialog();
 }
 function openTrackDialog(id) {
+  state.overallDialog = false;
   state.selectedTrack = id;
   updateDialog();
   els.dialog.showModal();
   void playUISound('button');
 }
 function closeTrackDialog(fromUserAction = false) {
+  const wasOverallDialog = state.overallDialog;
   if (fromUserAction) void playUISound('button');
   state.soloTrack = null;
   if (rhythm && rhythm.active) {
@@ -970,7 +981,18 @@ function closeTrackDialog(fromUserAction = false) {
     if (chain && state.audio) chain.gain.gain.setTargetAtTime(1, state.audio.currentTime, .08);
   });
   els.dialog.close();
+  state.overallDialog = false;
+  if (wasOverallDialog) state.selectedTrack = null;
   updateDialog();
+}
+function openOverallDecayDialog() {
+  if (els.dialog.open) return;
+  state.overallDialog = true;
+  state.selectedTrack = null;
+  state.soloTrack = null;
+  updateDialog();
+  els.dialog.showModal();
+  void playUISound('button');
 }
 function renderDialogParticles(trackId, decay) {
   // Rebuild only when the selected song/instrument changes. Decay updates should
@@ -1044,16 +1066,14 @@ function renderDialogParticles(trackId, decay) {
   els.dialogArtStage.classList.toggle('instrument-warning', decay >= 30 && decay < 70);
   els.dialogArtStage.classList.toggle('instrument-critical', decay >= 70);
 }
-function repairEventType(typeId) {
-  const id = state.selectedTrack;
-  const s = trackState[id];
-  if (!s) return;
+function repairTrackEventType(trackId, typeId) {
+  const s = trackState[trackId];
+  if (!s) return 0;
   const activeEvents = s.events.filter(event => event.type === typeId);
-  if (!activeEvents.length) return;
+  if (!activeEvents.length) return 0;
 
-  playSwitchSound('off');
   s.events = s.events.filter(event => event.type !== typeId);
-  const chain = state.sources[id];
+  const chain = state.sources[trackId];
   const now = state.audio ? state.audio.currentTime : 0;
 
   switch (typeId) {
@@ -1092,14 +1112,119 @@ function repairEventType(typeId) {
       s.crackleDepth = 0;
       break;
   }
+  return activeEvents.length;
+}
+function repairEventType(typeId) {
+  const id = state.selectedTrack;
+  if (!id) return;
+  const repairedCount = repairTrackEventType(id, typeId);
+  if (!repairedCount) return;
 
+  playSwitchSound('off');
   const definition = EVENT_TYPES.find(event => event.id === typeId);
   addLog((TRACKS.find(track => track.id === id)?.name || id.toUpperCase()) +
     ' repaired: ' + (definition ? definition.name : typeId.toUpperCase()) + '.', 'repair');
   updateUI();
   updateDialog();
 }
+function repairGlobalEventType(typeId, x, y) {
+  if (state.overallDecay < 70) {
+    showRepairLockToast(x, y, 'Global repairs unlock when the overall decay level reaches the red zone (70% or higher).');
+    void playUISound('error');
+    return;
+  }
+
+  const affectedTracks = TRACKS.filter(track =>
+    trackState[track.id].events.some(event => event.type === typeId)
+  );
+  if (!affectedTracks.length) {
+    void playUISound('error');
+    return;
+  }
+
+  let repairedEvents = 0;
+  affectedTracks.forEach(track => {
+    repairedEvents += repairTrackEventType(track.id, typeId);
+  });
+  playSwitchSound('off');
+  const definition = EVENT_TYPES.find(event => event.id === typeId);
+  addLog('GLOBAL REPAIR: ' + (definition ? definition.name : typeId.toUpperCase()) +
+    ' cleared from ' + affectedTracks.length + ' instrument' +
+    (affectedTracks.length === 1 ? '' : 's') + ' (' + repairedEvents + ' event' +
+    (repairedEvents === 1 ? '' : 's') + ').', 'repair');
+  updateUI();
+  updateDialog();
+}
+function renderFaultSwitch(event, active, disabled, locked, isGlobal) {
+  const classes = 'fault-switch ' + (active ? 'is-on' : 'is-off') +
+    (locked ? ' is-locked' : '');
+  const ariaLabel = isGlobal
+    ? 'Repair ' + event.name + ' across all instruments'
+    : active
+      ? 'Flick ' + event.name + ' switch off to repair'
+      : 'Inactive ' + event.name + ' switch; no repair needed';
+  return '<button class="' + classes + '" type="button" role="switch" aria-checked="' + active + '" ' +
+    'aria-disabled="' + (disabled || locked) + '" aria-label="' + ariaLabel + '" ' +
+    'title="' + event.name + '" data-event="' + event.id + '" ' +
+    (disabled ? 'disabled' : '') + '>' +
+      '<span class="fault-switch-led" aria-hidden="true"></span>' +
+      '<span class="fault-switch-housing" aria-hidden="true">' +
+        '<span class="fault-switch-lever"><span class="fault-switch-cap"></span></span>' +
+      '</span>' +
+      '<span class="fault-switch-label" aria-hidden="true">' + event.name + '</span>' +
+  '</button>';
+}
+function updateOverallDecayDialog() {
+  const decay = state.overallDecay;
+  const status = statusFor(decay);
+  const eventCount = TRACKS.reduce((total, track) => total + trackState[track.id].events.length, 0);
+  const locked = decay < 70;
+
+  els.dialogTitle.textContent = 'DECAY LEVEL';
+  els.dialogStatus.textContent = status.text;
+  els.dialogStatus.className = 'dialog-status ' + status.className;
+  els.dialogDecay.textContent = decay + '%';
+  els.dialogCount.textContent = eventCount;
+  els.dialogSignal.textContent = locked ? 'GLOBAL LOCKED' : 'REPAIR READY';
+
+  els.dialogArtStage.classList.add('system-decay-art-stage');
+  els.dialogArtStage.classList.toggle('system-decay-critical', decay >= 70);
+  els.dialogArtStage.classList.toggle('system-decay-warning', decay >= 30 && decay < 70);
+  els.dialogInstrumentImage.hidden = true;
+  els.dialogParticles.hidden = true;
+  els.dialogOverallArt.hidden = false;
+  els.dialogOverallArt.className = 'dialog-overall-art ' + status.className;
+  els.dialogOverallPercent.textContent = decay + '%';
+  els.dialogOverallMeter.style.width = decay + '%';
+  els.dialogOverallMeter.className = status.className;
+  els.dialogOverallSummary.textContent = decay >= 70
+    ? 'GLOBAL REPAIR UNLOCKED — CRITICAL DECAY'
+    : decay >= 30
+      ? 'GLOBAL REPAIR LOCKED — WAIT FOR RED'
+      : 'GLOBAL REPAIR LOCKED — SYSTEM STABLE';
+  els.solo.hidden = true;
+  els.rhythmPanel.hidden = true;
+  els.switchesHeadingTitle.textContent = 'GLOBAL REPAIR SWITCHES';
+  els.switchesHeadingHelp.textContent = locked
+    ? 'LOCKED UNTIL OVERALL DECAY REACHES 70% / RED'
+    : 'FLIP AN ACTIVE SWITCH TO REPAIR THAT EVENT ON EVERY INSTRUMENT';
+
+  els.faultSwitches.innerHTML = EVENT_TYPES.map(event => {
+    const active = TRACKS.some(track =>
+      trackState[track.id].events.some(item => item.type === event.id)
+    );
+    // Keep every switch clickable while locked so attempts can show a warning.
+    // Once unlocked, only event types that actually exist can be repaired.
+    const disabled = !active && !locked;
+    return renderFaultSwitch(event, active, disabled, locked, true);
+  }).join('');
+}
 function updateDialog() {
+  if (state.overallDialog) {
+    updateOverallDecayDialog();
+    return;
+  }
+
   const track = TRACKS.find(item => item.id === state.selectedTrack);
   if (!track) return;
   const s = trackState[track.id];
@@ -1109,6 +1234,11 @@ function updateDialog() {
   const stability = rhythm ? rhythm.stability : 50;
   const rhythmLocked = isDrums && stability < 100;
 
+  els.dialogArtStage.classList.remove('system-decay-art-stage', 'system-decay-critical', 'system-decay-warning');
+  els.dialogInstrumentImage.hidden = false;
+  els.dialogParticles.hidden = false;
+  els.dialogOverallArt.hidden = true;
+  els.solo.hidden = false;
   els.dialogTitle.textContent = track.name;
   els.dialogStatus.textContent = status.text;
   els.dialogStatus.className = 'dialog-status ' + status.className;
@@ -1116,6 +1246,8 @@ function updateDialog() {
   els.dialogCount.textContent = s.events.length;
   els.dialogSignal.textContent = s.events.length ? 'UNSTABLE' : 'STABLE';
   els.rhythmPanel.hidden = !isDrums;
+  els.switchesHeadingTitle.textContent = 'DECAY SWITCHES';
+  els.switchesHeadingHelp.textContent = 'FLIP ACTIVE SWITCHES OFF TO REPAIR';
 
   if (els.dialogInstrumentImage.dataset.track !== track.id) {
     els.dialogInstrumentImage.src = 'assets/' + track.id + '.png';
@@ -1126,19 +1258,7 @@ function updateDialog() {
   els.faultSwitches.innerHTML = EVENT_TYPES.map(event => {
     const active = s.events.some(item => item.type === event.id);
     const disabled = !active && !rhythmLocked;
-    const classes = 'fault-switch ' + (active ? 'is-on' : 'is-off') +
-      (rhythmLocked ? ' is-locked' : '');
-    return '<button class="' + classes + '" type="button" role="switch" aria-checked="' + active + '" ' +
-      'aria-disabled="' + (disabled || rhythmLocked) + '" ' +
-      'aria-label="' + (active ? 'Flick ' : 'Inactive ') + event.name + (active ? ' switch off to repair' : ' switch; no repair needed') + '" ' +
-      'title="' + event.name + '" data-event="' + event.id + '" ' +
-      (disabled ? 'disabled' : '') + '>' +
-        '<span class="fault-switch-led" aria-hidden="true"></span>' +
-        '<span class="fault-switch-housing" aria-hidden="true">' +
-          '<span class="fault-switch-lever"><span class="fault-switch-cap"></span></span>' +
-        '</span>' +
-        '<span class="fault-switch-label" aria-hidden="true">' + event.name + '</span>' +
-    '</button>';
+    return renderFaultSwitch(event, active, disabled, rhythmLocked, false);
   }).join('');
 
   renderDialogParticles(track.id, decay);
@@ -1436,6 +1556,13 @@ document.addEventListener('DOMContentLoaded', () => {
   updatePlaybackClock();
   loadAudio();
 
+  els.decayPanel.addEventListener('click', () => openOverallDecayDialog());
+  els.decayPanel.addEventListener('keydown', event => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    openOverallDecayDialog();
+  });
+
   els.play.addEventListener('click', () => {
     if (state.starting) {
       void playUISound('error');
@@ -1456,6 +1583,20 @@ document.addEventListener('DOMContentLoaded', () => {
   els.faultSwitches.addEventListener('click', event => {
     const toggle = event.target.closest('[data-event]');
     if (!toggle) return;
+    if (state.overallDialog) {
+      if (state.overallDecay < 70) {
+        showRepairLockToast(event.clientX, event.clientY,
+          'Global repairs unlock only when the overall decay level reaches the red zone (70% or higher).');
+        void playUISound('error');
+        return;
+      }
+      if (!toggle.disabled) {
+        repairGlobalEventType(toggle.dataset.event, event.clientX, event.clientY);
+      } else {
+        void playUISound('error');
+      }
+      return;
+    }
     if (state.selectedTrack === 'drums' && (!rhythm || rhythm.stability < 100)) {
       showRepairLockToast(event.clientX, event.clientY);
       void playUISound('error');
@@ -1657,12 +1798,12 @@ async function restartRhythmRepair(fromUserAction = false) {
     void playUISound('button');
   }
 }
-function showRepairLockToast(x, y) {
+function showRepairLockToast(x, y, message = 'Signal stability must reach 100% to repair drums.') {
   if (!els.repairLockToast) return;
-  els.repairLockToast.textContent = 'Signal stability must reach 100% to repair drums.';
+  els.repairLockToast.textContent = message;
   els.repairLockToast.hidden = false;
   const maxX = Math.max(12, window.innerWidth - 292);
-  const maxY = Math.max(12, window.innerHeight - 72);
+  const maxY = Math.max(12, window.innerHeight - 100);
   els.repairLockToast.style.left = Math.max(12, Math.min((x || 0) + 14, maxX)) + 'px';
   els.repairLockToast.style.top = Math.max(12, Math.min((y || 0) + 14, maxY)) + 'px';
   clearTimeout(state.repairLockToastTimer);
