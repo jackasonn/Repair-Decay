@@ -9,8 +9,9 @@ No image asset or external dependency is added.
 A round contains 8 targets. The first 6 cover all six strings in shuffled order;
 the final 2 choose random strings. Positions vary along each string, with spacing
 to avoid targets overlapping. A red target appears immediately, then subsequent
-targets appear 2.2–2.5 seconds apart. Clicking a target changes it to green with a
-check mark. Targets do not expire. The round lasts at least 18 seconds; all eight
+targets appear 2.2–2.5 seconds apart. Clicking a target briefly changes it to green with a
+check mark, then removes it after 220 ms. Its repair credit remains in the round
+state, so it cannot reappear or be counted twice. Unclicked red targets do not expire. The round lasts at least 18 seconds; all eight
 targets must be green before Guitar decay is cleared. If any remain red at 18
 seconds, visitors may finish them without a time penalty. Success uses the same
 repairTrack('guitars') audio reset and automatic dialog close as other repairs.

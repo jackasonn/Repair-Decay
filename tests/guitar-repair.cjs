@@ -40,9 +40,16 @@ for(let song=0;song<4;song++){
   assert.equal(run('guitarRepair.targets.filter(t=>t.hit).length'),0,'hidden/outside targets rejected');
   run('clickDot(0);clickDot(0);');
   assert.equal(run('guitarRepair.targets.filter(t=>t.hit).length'),1,'duplicate click cannot score twice');
-  assert.match(run('els.guitarTargets.innerHTML'),/is-repaired/,'hit turns dot green');
+  assert.match(run('els.guitarTargets.innerHTML'),/is-repaired/,'hit briefly turns dot green');
+  now=219;run('updateGuitarRepair()');
+  assert.match(run('els.guitarTargets.innerHTML'),/data-guitar-target="0"/);
+  now=220;run('updateGuitarRepair()');
+  assert.doesNotMatch(run('els.guitarTargets.innerHTML'),/data-guitar-target="0"/,'green dot removed after feedback');
+  assert.equal(run('guitarRepair.targets.filter(t=>t.hit).length'),1,'removal retains repair credit');
+
   for(let i=1;i<7;i++) {now=times[i];run(`updateGuitarRepair();clickDot(${i});`);}
   now=18000;run('updateGuitarRepair()');
+  assert.doesNotMatch(run('els.guitarTargets.innerHTML'),/is-repaired/,'cleared dots never reappear on later spawns');
   assert.equal(run('guitarRepair.visible'),8,'all targets appear by round end');
   assert.equal(run('els.dialog.open'),true,'remaining red target cannot timeout into success');
   assert.equal(run('trackState.guitars.events.length'),2);

@@ -1816,6 +1816,7 @@ function drawRepairSignal(position) {
 // time only schedules new dots, never treats a missed target as repaired.
 const GUITAR_TARGET_COUNT = 8;
 const GUITAR_ROUND_MS = 18000;
+const GUITAR_HIT_FEEDBACK_MS = 220;
 let guitarRepair = null;
 function guitarTargetSequence() {
   const strings = [0, 1, 2, 3, 4, 5];
@@ -1856,7 +1857,7 @@ function currentGuitarRepair() {
 }
 function renderGuitarTargets() {
   const game = guitarRepair;
-  els.guitarTargets.innerHTML = game.targets.slice(0, game.visible).map((target, i) =>
+  els.guitarTargets.innerHTML = game.targets.slice(0, game.visible).map((target, i) => target.cleared ? '' :
     '<button type="button" class="guitar-dot' + (target.hit ? ' is-repaired' : '') +
     '" data-guitar-target="' + i + '" style="--dot-x:' + target.x + '%;--dot-y:' +
     (12 + target.string * 15) + '%" aria-label="' + (target.hit ? 'Repaired' : 'Repair') +
@@ -1869,7 +1870,14 @@ function updateGuitarRepair(now = performance.now()) {
   const game = guitarRepair;
   const elapsed = Math.max(0, now - game.startedAt);
   const visible = game.targets.filter(target => target.at <= elapsed).length;
-  if (visible !== game.visible) {
+  let cleared = false;
+  game.targets.forEach(target => {
+    if (target.hit && !target.cleared && now - target.hitAt >= GUITAR_HIT_FEEDBACK_MS) {
+      target.cleared = true;
+      cleared = true;
+    }
+  });
+  if (visible !== game.visible || cleared) {
     game.visible = visible;
     renderGuitarTargets();
   }
@@ -1897,6 +1905,7 @@ function handleGuitarTarget(event) {
   const target = guitarRepair.targets[index];
   if (target.hit) return;
   target.hit = true;
+  target.hitAt = performance.now();
   renderGuitarTargets();
   updateGuitarRepair();
 }
