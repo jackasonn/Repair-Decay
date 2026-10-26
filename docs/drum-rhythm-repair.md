@@ -5,17 +5,20 @@ latest main as the starting point, preserving its audio assets, global repair
 controls, UI sounds, delay effects, playback safeguards and dialog layout.
 Future changes for this project are requested directly on main.
 
-Open a decaying Drum track and select **START RHYTHM REPAIR**. Press F as a
-moving marker crosses the centre. Three successful hits immediately call
-`repairTrack('drums')`: all Drum events and effect parameters reset, sources
-rebuild at one shared song position, diagnostics refresh, and the panel displays
-**RHYTHM REPAIR COMPLETE — DRUM SIGNAL RESTORED**. Drum switches are hidden.
-Other instruments retain their existing switches. Misses never remove hits.
-The inclusive input window is ±240 ms; held/repeated F and modified or editable
-field input are ignored. Closing the dialog ends the attempt without repairing.
-Starting another attempt uses upcoming cues without rewinding playback. If fewer
-than three cues remain, the panel requests replay rather than starting an
-unwinnable attempt. A later Drum decay enables another repair.
+Open a decaying Drum track and select **START RHYTHM REPAIR**. Each round
+contains exactly 8 upcoming real drum transients. Press F for every cue. Only
+after the final cue's timing window ends, and all 8 cues have been hit, does
+`repairTrack('drums')` clear the events and reset the audio effects. Missing a
+cue leaves the Drum damaged; finish the round, then select **RETRY RHYTHM
+REPAIR** to start a fresh round at the current song position. Extra or repeated
+presses cannot count the same cue twice. The inclusive window remains ±240 ms.
+Fewer than 8 upcoming cues cannot start a round; the panel requests replay.
+
+After any repair action, a shared check closes the dialog only when the selected
+instrument has no active decay events. Partial repairs keep the dialog open.
+The global repair dialog closes only when every instrument has no events.
+Closing restores normal solo gains and leaves playback running. No delayed
+close callback can accidentally dismiss another instrument's newly opened panel.
 
 ## Timing
 
@@ -41,8 +44,8 @@ an exhibition-device listening check; automated analysis is not a listening test
 ## Verification
 
 Run `node --check script.js`, `node tests/rhythm-repair.cjs`, and
-`git diff --check`. Tests cover 3-hit completion, inclusive timing boundaries,
-miss recovery, duplicate/held input, pause/dialog/track gates, late starts,
+`git diff --check`. Tests cover full 8-cue completion and dialog auto-close, inclusive timing boundaries,
+missed-round retry, duplicate/held input, pause/dialog/track gates, late starts,
 stereo-only transients, worklet latency, effect resets, shared offset rebuilding,
 other-instrument state and unchanged 4000–7000 ms decay constants.
 
@@ -54,8 +57,6 @@ the first five are approximately 0.651, 1.303, 2.621, 3.267 and 3.929 seconds.
 Browser decoding can differ slightly in MP3 priming; production always analyses
 its own decoded buffer, so cues share the actual source's sample origin.
 
-Browser verification observed On Time playing with natural random Drum decay,
-the Drum repair panel without switches, and the completed state with 3/3 hits,
-0 active Drum events, 0% decay, STABLE, and the restoration message. The completed
-panel was captured locally. This confirms browser state/feedback; an audible
-speaker/listening comparison on the intended exhibition device remains manual.
+Automated regression checks verify full-round completion, no early repair,
+missed-round retry, and automatic dialog closing after the final repair only.
+Exhibition-device listening alignment remains a manual check.

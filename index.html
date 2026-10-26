@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0b0906">
     <title>REPAIR / DECAY — Interactive Music</title>
-    <link rel="stylesheet" href="style.css?v=20261026-drum-repair-main">
+    <link rel="stylesheet" href="style.css?v=20261026-full-round">
 </head>
 <body>
     <div class="scanlines" aria-hidden="true"></div>
@@ -122,18 +122,18 @@
                 <div class="fault-switches" id="fault-switches" aria-label="Decay event repair switches"></div>
                 <section class="rhythm-panel" id="rhythm-panel" aria-label="Drums rhythm repair" hidden>
                     <div class="panel-heading"><span>RHYTHM REPAIR</span><span>KEY: F</span></div>
-                    <p>Press <kbd>F</kbd> as each moving drum hit reaches the centre. Land 3 hits to restore the drums automatically. Misses do not remove your progress.</p>
+                    <p>Press <kbd>F</kbd> as each moving drum hit reaches the centre. Complete all 8 beats in this round to restore the drums. Missed a beat? Finish the round, then retry.</p>
                     <canvas id="repair-signal" aria-label="Drum signal and approaching repair beats"></canvas>
                     <p id="repair-feedback" role="status">REPAIR REQUIRED — START WHEN READY</p>
-                    <label for="repair-stability">SUCCESSFUL HITS <span id="repair-stability-text">0 / 3 HITS</span></label>
-                    <progress id="repair-stability" max="3" value="0"></progress>
-                    <p id="repair-progress">0 / 3 HITS</p>
+                    <label for="repair-stability">SUCCESSFUL HITS <span id="repair-stability-text">0 / 8 HITS</span></label>
+                    <progress id="repair-stability" max="8" value="0"></progress>
+                    <p id="repair-progress">0 / 8 HITS</p>
                     <button class="solo-button rhythm-start-button" id="repair-retry" type="button">START RHYTHM REPAIR</button>
                 </section>
             </div>
         </div>
-        <div class="signal-lock-toast" id="repair-lock-toast" role="status" aria-live="polite" hidden>Land 3 rhythm hits to restore the drums.</div>
+        <div class="signal-lock-toast" id="repair-lock-toast" role="status" aria-live="polite" hidden>Complete all 8 rhythm beats to restore the drums.</div>
     </dialog>
-    <script src="script.js?v=20261026-drum-repair-main"></script>
+    <script src="script.js?v=20261026-full-round"></script>
 </body>
 </html>
