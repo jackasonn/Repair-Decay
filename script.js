@@ -1830,102 +1830,180 @@ function drawRepairSignal(position) {
 }
 
 
-// All songs share this pointer repair. Targets persist until clicked; elapsed
-// time only schedules new dots, never treats a missed target as repaired.
-const GUITAR_TARGET_COUNT = 8;
-const GUITAR_ROUND_MS = 18000;
-const GUITAR_HIT_FEEDBACK_MS = 220;
+// Guitar targets represent real active decay-effect types on the guitar track.
+const GUITAR_HIT_VISUAL_MS = 760;
+const GUITAR_TARGET_SPACING_MS = 460;
+const GUITAR_TARGET_COLOURS = ['#e69bd5', '#67dce6', '#9fda72', '#ed8c7e'];
 let guitarRepair = null;
-function guitarTargetSequence() {
-  const strings = [0, 1, 2, 3, 4, 5];
-  for (let i = strings.length - 1; i > 0; i--) {
+function shuffleGuitarValues(values) {
+  const shuffled = values.slice();
+  for (let i = shuffled.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [strings[i], strings[j]] = [strings[j], strings[i]];
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
-  let at = 0;
-  const previousX = new Map();
-  return Array.from({length:GUITAR_TARGET_COUNT}, (_, i) => {
-    if (i) at += 2200 + Math.random() * 300;
-    const string = i < 6 ? strings[i] : Math.floor(Math.random() * 6);
-    const occupied = previousX.get(string) || [];
-    const positions = [18, 50, 82].filter(x => occupied.every(previous => Math.abs(x - previous) >= 24));
-    const x = positions[Math.floor(Math.random() * positions.length)] + Math.random() * 4 - 2;
-    previousX.set(string, [...occupied, x]);
-    return {string, x, at, hit:false};
-  });
+  return shuffled;
+}
+function guitarTargetColour(typeId) {
+  const typeIndex = Math.max(0, EVENT_TYPES.findIndex(event => event.id === typeId));
+  return GUITAR_TARGET_COLOURS[typeIndex % GUITAR_TARGET_COLOURS.length];
+}
+function guitarTargetPosition(game) {
+  const index = game.targetCounter++;
+  const string = index < game.stringOrder.length
+    ? game.stringOrder[index]
+    : Math.floor(Math.random() * 6);
+  const occupied = game.targets
+    .filter(target => target.status !== 'cleared' && target.string === string)
+    .map(target => target.x);
+  const positions = [18, 50, 82].filter(x => occupied.every(previous => Math.abs(x - previous) >= 24));
+  const x = positions.length
+    ? positions[Math.floor(Math.random() * positions.length)] + (Math.random() * 2 - 1)
+    : 15 + Math.random() * 70;
+  return {string, x};
 }
 function startGuitarRepair() {
-  guitarRepair = null;
+  guitarRepair = {
+    generation: state.songGeneration,
+    song: currentSongIndex,
+    targets: [],
+    repairedCount: 0,
+    targetCounter: 0,
+    nextTargetId: 0,
+    nextTargetAt: performance.now() + 100,
+    stringOrder: shuffleGuitarValues([0, 1, 2, 3, 4, 5])
+  };
   els.guitarTargets.innerHTML = '';
-  document.getElementById('guitar-progress').textContent = '0 / 8 REPAIRED';
-  document.getElementById('guitar-time').textContent = '18s';
-  if (!trackState.guitars?.events.length) {
-    document.getElementById('guitar-feedback').textContent = 'GUITAR SIGNAL RESTORED — NO REPAIR NEEDED';
-    return;
-  }
-  guitarRepair = {generation:state.songGeneration, song:currentSongIndex,
-    startedAt:performance.now(), targets:guitarTargetSequence(), visible:0, finished:false};
-  document.getElementById('guitar-feedback').textContent = 'CLICK EACH RED DOT TO TURN IT GREEN';
+  document.getElementById('guitar-progress').textContent = '0 REPAIRED';
+  document.getElementById('guitar-active-count').textContent = '0 ACTIVE';
+  document.getElementById('guitar-feedback').textContent = trackState.guitars?.events.length
+    ? 'CLICK A GLOWING TARGET TO REPAIR ITS EFFECT'
+    : 'GUITAR SIGNAL RESTORED — WAITING FOR DECAY';
   updateGuitarRepair();
 }
 function currentGuitarRepair() {
-  return guitarRepair && !guitarRepair.finished && els.dialog?.open &&
-    !state.overallDialog && state.selectedTrack === 'guitars' &&
-    guitarRepair.generation === state.songGeneration && guitarRepair.song === currentSongIndex;
+  return guitarRepair && els.dialog?.open && !state.overallDialog &&
+    state.selectedTrack === 'guitars' &&
+    guitarRepair.generation === state.songGeneration &&
+    guitarRepair.song === currentSongIndex;
 }
 function renderGuitarTargets() {
   const game = guitarRepair;
-  els.guitarTargets.innerHTML = game.targets.slice(0, game.visible).map((target, i) => target.cleared ? '' :
-    '<button type="button" class="guitar-dot' + (target.hit ? ' is-repaired' : '') +
-    '" data-guitar-target="' + i + '" style="--dot-x:' + target.x + '%;--dot-y:' +
-    (12 + target.string * 15) + '%" aria-label="' + (target.hit ? 'Repaired' : 'Repair') +
-    ' target ' + (i + 1) + ', string ' + (target.string + 1) + '" aria-pressed="' + target.hit +
-    '"' + (target.hit ? ' disabled' : '') + '>' + (target.hit ? '✓' : '') + '</button>'
+  if (!game) {
+    els.guitarTargets.innerHTML = '';
+    return;
+  }
+  const sparks = angles => angles.map(angle =>
+    '<i style="--spark-angle:' + angle + 'deg"></i>'
   ).join('');
+  els.guitarTargets.innerHTML = game.targets
+    .filter(target => target.visible && target.status !== 'cleared')
+    .map(target => {
+      const hit = target.status === 'hit';
+      const colour = guitarTargetColour(target.type);
+      return '<span class="guitar-target-wrap" style="--dot-x:' + target.x +
+        '%;--dot-y:' + (12 + target.string * 15) + '%;--target-colour:' + colour + '">' +
+        '<button type="button" class="guitar-dot' + (hit ? ' is-exploding' : '') +
+        '" data-guitar-target="' + target.id + '" aria-label="' +
+        (hit ? target.name + ' repaired' : 'Repair ' + target.name) +
+        ', string ' + (target.string + 1) + '"' + (hit ? ' disabled' : '') + '>' +
+        (hit ? '✓' : '') + '</button>' +
+        (hit
+          ? '<span class="guitar-explosion" aria-hidden="true">' +
+              sparks(Array.from({length:12}, (_, i) => i * 30)) +
+            '</span><span class="guitar-hit-label" aria-hidden="true">' +
+              target.name + ' REPAIRED</span>'
+          : '') +
+        '</span>';
+    }).join('');
+}
+function syncGuitarTargets(now) {
+  const game = guitarRepair;
+  const activeDefinitions = EVENT_TYPES.filter(definition =>
+    trackState.guitars?.events.some(event => event.type === definition.id)
+  );
+  const activeTypes = new Set(activeDefinitions.map(definition => definition.id));
+  let changed = false;
+  activeDefinitions.forEach(definition => {
+    const alreadyHasActiveTarget = game.targets.some(target =>
+      target.type === definition.id && target.status === 'active'
+    );
+    if (alreadyHasActiveTarget) return;
+    const position = guitarTargetPosition(game);
+    const at = Math.max(now + 100, game.nextTargetAt);
+    game.targets.push({
+      id: game.nextTargetId++, type: definition.id, name: definition.name,
+      string: position.string, x: position.x, at, visible: false,
+      status: 'active', hitAt: 0
+    });
+    game.nextTargetAt = at + GUITAR_TARGET_SPACING_MS;
+    changed = true;
+  });
+  game.targets.forEach(target => {
+    if (target.status === 'active' && !activeTypes.has(target.type)) {
+      target.status = 'cleared';
+      changed = true;
+    } else if (target.status === 'active' && !target.visible && now >= target.at) {
+      target.visible = true;
+      changed = true;
+    } else if (target.status === 'hit' && now - target.hitAt >= GUITAR_HIT_VISUAL_MS) {
+      target.status = 'cleared';
+      changed = true;
+    }
+  });
+  return {changed, activeCount: activeTypes.size};
 }
 function updateGuitarRepair(now = performance.now()) {
   if (!currentGuitarRepair()) return;
   const game = guitarRepair;
-  const elapsed = Math.max(0, now - game.startedAt);
-  const visible = game.targets.filter(target => target.at <= elapsed).length;
-  let cleared = false;
-  game.targets.forEach(target => {
-    if (target.hit && !target.cleared && now - target.hitAt >= GUITAR_HIT_FEEDBACK_MS) {
-      target.cleared = true;
-      cleared = true;
-    }
-  });
-  if (visible !== game.visible || cleared) {
-    game.visible = visible;
-    renderGuitarTargets();
+  const result = syncGuitarTargets(now);
+  if (result.changed) renderGuitarTargets();
+  document.getElementById('guitar-active-count').textContent = result.activeCount + ' ACTIVE';
+  document.getElementById('guitar-progress').textContent = game.repairedCount + ' REPAIRED';
+  if (result.activeCount === 0 && game.repairedCount === 0) {
+    document.getElementById('guitar-feedback').textContent =
+      'GUITAR SIGNAL RESTORED — WAITING FOR DECAY';
   }
-  const hits = game.targets.filter(target => target.hit).length;
-  document.getElementById('guitar-progress').textContent = hits + ' / 8 REPAIRED';
-  document.getElementById('guitar-time').textContent = elapsed < GUITAR_ROUND_MS
-    ? Math.ceil((GUITAR_ROUND_MS - elapsed) / 1000) + 's' : 'ALL TARGETS SHOWN';
-  if (elapsed >= GUITAR_ROUND_MS && hits === GUITAR_TARGET_COUNT) {
-    game.finished = true;
-    document.getElementById('guitar-feedback').textContent = 'GUITAR REPAIR COMPLETE — SIGNAL RESTORED';
-    repairTrack('guitars');
-  } else if (elapsed >= GUITAR_ROUND_MS) {
-    document.getElementById('guitar-feedback').textContent = 'CLICK THE REMAINING RED DOTS — NO TIME PENALTY';
+  const effectsStillVisible = game.targets.some(target =>
+    target.status === 'hit' || target.status === 'active'
+  );
+  if (game.repairedCount > 0 && result.activeCount === 0 && !effectsStillVisible) {
+    closeTrackDialog();
   }
+}
+function vibrateGuitarString(stringIndex) {
+  const string = els.guitarPanel.querySelectorAll('.guitar-strings span')[stringIndex];
+  if (!string) return;
+  string.classList.remove('is-vibrating');
+  void string.offsetWidth;
+  string.classList.add('is-vibrating');
+  string.addEventListener('animationend', () => string.classList.remove('is-vibrating'), {once:true});
 }
 function handleGuitarTarget(event) {
   if (!currentGuitarRepair()) return;
-  // Bring spawned targets up to date before accepting input after a frame gap.
-  updateGuitarRepair();
-  if (!currentGuitarRepair()) return;
   const button = event.target.closest('[data-guitar-target]');
   if (!button || !els.guitarTargets.contains(button)) return;
-  const index = Number(button.dataset.guitarTarget);
-  if (!Number.isInteger(index) || index < 0 || index >= guitarRepair.visible) return;
-  const target = guitarRepair.targets[index];
-  if (target.hit) return;
-  target.hit = true;
-  target.hitAt = performance.now();
+  const id = Number(button.dataset.guitarTarget);
+  const target = guitarRepair.targets.find(item => item.id === id);
+  if (!target || target.status !== 'active' || !target.visible) return;
+  const repairedCount = repairTrackEventType('guitars', target.type);
+  if (!repairedCount) {
+    target.status = 'cleared';
+    renderGuitarTargets();
+    return;
+  }
+  const now = performance.now();
+  target.status = 'hit';
+  target.hitAt = now;
+  guitarRepair.repairedCount++;
+  vibrateGuitarString(target.string);
+  playSwitchSound('off');
+  addLog('GUITARS repaired: ' + target.name + '.', 'repair');
+  document.getElementById('guitar-feedback').textContent =
+    target.name + ' REPAIRED — GUITAR SIGNAL RESTORED';
+  updateUI();
+  updateDialog();
   renderGuitarTargets();
-  updateGuitarRepair();
+  updateGuitarRepair(now);
 }
 
 
