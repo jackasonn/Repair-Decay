@@ -17,8 +17,9 @@ current behavior. No other instrument game is modified by this update.
 Input is case-insensitive; spaces and punctuation are optional. Wrong letters
 do not advance and can be corrected with Backspace. Line changes clear the
 input and select a new short challenge. Complete two distinct keyword sets to
-restore all current Vocal decay effects. As in current main, completed panels
-remain open; input disables and restoration feedback appears. Pausing freezes
+restore all current Vocal decay effects. Completed panels close automatically
+after restoration, and the shared close handler cleans up the finished typing
+session. Pausing freezes
 the displayed phrase and disables input, with a resume button in the panel.
 Closing or switching songs cancels stale input. Intro/interlude/outro gaps do
 not invent lyrics or repeat an old phrase.

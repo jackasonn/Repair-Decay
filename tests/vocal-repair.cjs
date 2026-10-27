@@ -46,8 +46,8 @@ for(const song of [0,3]){
  assert.equal(run('trackState.vocals.lowpass'),20000);
  assert.equal(run('trackState.vocals.delayDepth'),0);
  assert.equal(run('trackState.bass.events.length'),1);
- assert.equal(run('els.dialog.open'),true,'preserve current main dialog behavior');
- assert.equal(run('vocalRepair.finished'),true);
+ assert.equal(run('els.dialog.open'),false,'Vocal repairs auto close');
+ assert.equal(run('vocalRepair'),null);
  assert.equal(run('els.vocalInput.disabled'),true);
  const lines=Array.from(run('vocalLyricsForSong()'));
  assert.equal(lines.length,song===0?19:25);

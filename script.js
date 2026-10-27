@@ -42,8 +42,7 @@ const SONGS = [
       { id: 'drums', name: 'DRUMS', file: 'assets/rainy-night-drums.mp3' },
       { id: 'bass', name: 'BASS', file: 'assets/rainy-night-bass.mp3' },
       { id: 'guitars', name: 'GUITARS', file: 'assets/rainy-night-guitars.mp3' },
-      { id: 'keys', name: 'KEYS', file: 'assets/rainy-night-keys.mp3' },
-      { id: 'vocals', name: 'VOCALS', file: 'assets/rainy-night-vocals.mp3' }
+      { id: 'keys', name: 'KEYS', file: 'assets/rainy-night-keys.mp3' }
     ]
   },
   {
@@ -988,9 +987,11 @@ function repairTrack(id) {
   updateUI();
   updateTrackAudioVisuals();
   if (state.selectedTrack === id) updateDialog();
+  closeRepairedDialog(id);
 }
-function closeRepairedDialog() {
+function closeRepairedDialog(expectedTrack = null) {
   if (!els.dialog?.open) return;
+  if (expectedTrack && (state.overallDialog || state.selectedTrack !== expectedTrack)) return;
   const repaired = state.overallDialog
     ? TRACKS.every(track => trackState[track.id].events.length === 0)
     : state.selectedTrack && trackState[state.selectedTrack]?.events.length === 0;
@@ -1866,6 +1867,7 @@ function completeDrumTarget(note, elapsed, x, y) {
   updateRhythmPanel();
   updateUI();
   updateDialog();
+  closeRepairedDialog('drums');
   return true;
 }
 function updateRhythmRepair(now = performance.now()) {
@@ -2151,7 +2153,7 @@ function updateGuitarRepair(now = performance.now()) {
     document.getElementById('guitar-feedback').textContent =
       'GUITAR SIGNAL RESTORED — WAITING FOR DECAY';
   }
-  // Leave the mini-game open after all current Guitar events have been repaired.
+  // A successful final target closes the dialog in handleGuitarTarget().
 }
 function vibrateGuitarString(stringIndex, repairing = false) {
   const string = els.guitarPanel.querySelectorAll('.guitar-strings span')[stringIndex];
@@ -2254,6 +2256,7 @@ function handleGuitarTarget(event) {
   updateDialog();
   renderGuitarTargets();
   updateGuitarRepair(now);
+  closeRepairedDialog('guitars');
 }
 
 
@@ -2375,6 +2378,7 @@ function completeKeysTarget(note, now, elapsed, y) {
   updateUI();
   updateDialog();
   updateKeysRepair(now);
+  closeRepairedDialog('keys');
   return true;
 }
 function updateKeysRepair(now = performance.now()) {
@@ -2406,7 +2410,7 @@ function updateKeysRepair(now = performance.now()) {
     document.getElementById('keys-feedback').textContent = 'KEYS SIGNAL RESTORED — WAITING FOR DECAY';
   }
   drawKeysRepair(elapsed);
-  // Keep the Keys mini-game visible after all active effects are repaired.
+  // A successful final arrow closes the dialog in completeKeysTarget().
 }
 function handleKeysRepairKey(event) {
   const lane = KEYS_CODES.indexOf(event.code);
