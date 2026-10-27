@@ -1501,6 +1501,13 @@ function updatePlaybackClock() {
 
 function renderCurrentSong() {
   const song = SONGS[currentSongIndex];
+  const songBackgrounds = {
+    'on-time': 'assets/On time cover BW.png',
+    'reconcile': 'assets/Reconcile cover BW.png',
+    'rainy-night': 'assets/Riany n cover copy BW.png',
+    'there-is-love': 'assets/love cover copy BG.png'
+  };
+  document.body.style.setProperty('--song-background', 'url("' + encodeURI(songBackgrounds[song.id]) + '")');
   els.songTitle.innerHTML = '<img class="song-title-image" src="' + encodeURI(song.titleImage) + '" alt="' + song.title + '">';
   els.songNumber.textContent = String(song.number).padStart(2, '0') + ' OF ' + String(SONGS.length).padStart(2, '0');
   els.songArtist.textContent = song.artist;
