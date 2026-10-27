@@ -458,7 +458,13 @@ async function loadSwitchSounds() {
     off: 'assets/click-off.mp3',
     button: 'assets/button-press.mp3',
     error: 'assets/error.mp3',
-    plink: 'assets/plink.mp3'
+    plink: 'assets/plink.mp3',
+    guitarLowE: 'assets/guitar%20low%20e.mp3',
+    guitarA: 'assets/guitar%20a.mp3',
+    guitarD: 'assets/guitar%20d.mp3',
+    guitarG: 'assets/guitar%20g.mp3',
+    guitarB: 'assets/guitar%20b.mp3',
+    guitarHighE: 'assets/guitar%20high%20e.mp3'
   };
   const operation = Promise.all(Object.entries(files).map(async ([name, url]) => {
     try {
@@ -539,6 +545,12 @@ async function playUISound(name, volume) {
 }
 function playSwitchSound(direction) {
   return playUISound(direction, 0.62);
+}
+// String sound files are ordered exactly like the six visible strings, top to bottom.
+function playGuitarStringSound(stringIndex) {
+  const stringSounds = ['guitarLowE', 'guitarA', 'guitarD', 'guitarG', 'guitarB', 'guitarHighE'];
+  const sound = stringSounds[stringIndex];
+  if (sound) void playUISound(sound, 0.82);
 }
 async function loadAudio() {
   const requestedSongIndex = currentSongIndex;
@@ -1990,6 +2002,7 @@ function vibrateGuitarString(stringIndex, repairing = false) {
   if (!string) return;
   string.classList.remove('is-vibrating', 'is-repairing');
   void string.offsetWidth;
+  playGuitarStringSound(stringIndex);
   if (repairing) string.classList.add('is-repairing');
   string.classList.add('is-vibrating');
   string.addEventListener('animationend', () => {
