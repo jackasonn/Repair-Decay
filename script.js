@@ -1640,7 +1640,9 @@ document.addEventListener('DOMContentLoaded', () => {
       void startPlayback(true);
     }
   });
-  document.addEventListener('keydown', handleRepairKey);
+  document.addEventListener('keydown', handleRepairKey, true);
+  document.addEventListener('keyup', handleRepairKeyUp, true);
+  window.addEventListener('blur', () => { drumSpaceHeld = false; });
   document.addEventListener('keydown', handleKeysRepairKey);
   els.previousSong.addEventListener('click', () => switchSong(currentSongIndex - 1, false, true));
   els.nextSong.addEventListener('click', () => switchSong(currentSongIndex + 1, false, true));
@@ -1709,6 +1711,7 @@ const DRUM_RETRY_DELAY_MS = 650;
 const DRUM_HIT_VISUAL_MS = 720;
 const DRUM_COLOURS = ['#e69bd5', '#67dce6', '#9fda72', '#ed8c7e'];
 let rhythm = null;
+let drumSpaceHeld = false;
 
 function audibleSongPosition(trackId) {
   if (!state.playing || !state.audio) return currentMasterOffset();
@@ -1783,7 +1786,8 @@ function showDrumFeedbackLabel(message, x, y, variant) {
   const label = document.createElement('span');
   const labelClass = variant === 'success' ? 'drum-label-success'
     : variant === 'empty' ? 'drum-label-empty' : 'drum-label-error';
-  label.className = 'keys-hit-label drum-hit-label ' + labelClass;
+  label.className = 'keys-hit-label drum-hit-label ' + labelClass +
+    (variant === 'empty' ? ' repair-empty-notice' : '');
   label.textContent = message;
   label.style.left = Math.max(4, Math.min(96, x / rect.width * 100)) + '%';
   label.style.top = Math.max(12, Math.min(rect.height - 34, y)) + 'px';
@@ -1848,6 +1852,7 @@ function missDrumPress(elapsed, x, y, message = 'WRONG SPOT — TRY AGAIN AS A L
   const hasActiveDecay = activeDrumDefinitions().length > 0;
   if (!hasActiveDecay) {
     rhythm.bursts.push({at:elapsed, x:px, y:py, colour:'#e4d38c', kind:'empty'});
+    rhythm.emptyNoticeUntil = performance.now() + 1100;
     showDrumFeedbackLabel('NO DECAY EVENT TO FIX', px, py - 18, 'empty');
     setRepairFeedback('NO DECAY EVENT TO FIX — WAIT FOR A DECAY EVENT', 'neutral');
   } else {
@@ -1896,17 +1901,29 @@ function updateRhythmRepair(now = performance.now()) {
   });
   game.bursts = game.bursts.filter(burst => elapsed - burst.at < 680);
   const activeCount = activeDrumDefinitions().length;
-  if (!activeCount && game.repairedCount === 0 && !game.targets.some(note => note.status === 'active')) {
+  if (!activeCount && game.repairedCount === 0 && now >= (game.emptyNoticeUntil || 0) && !game.targets.some(note => note.status === 'active')) {
     setRepairFeedback('DRUM SIGNAL INTACT — WAITING FOR DECAY EVENTS');
   }
   drawRepairSignal(elapsed);
 }
 function handleRepairKey(event) {
-  if (event.code !== 'Space' || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
-  if (!els.dialog?.open || state.selectedTrack !== 'drums' || !currentRhythmRepair()) return;
-  if (/INPUT|TEXTAREA|SELECT|BUTTON/.test(event.target.tagName) || event.target.isContentEditable) return;
+  if (event.code !== 'Space' || event.ctrlKey || event.metaKey || event.altKey) return;
+  if (!drumSpaceHeld && !currentRhythmRepair()) return;
+  if (/INPUT|TEXTAREA|SELECT/.test(event.target?.tagName) || event.target?.isContentEditable) return;
+  // A dialog initially focuses Close. Space belongs to the game even there.
+  // Cancel held repeats too, including when the final hit has closed the panel.
   event.preventDefault();
+  event.stopPropagation();
+  if (event.repeat || drumSpaceHeld) return;
+  drumSpaceHeld = true;
   judgeDrumPress(null, null);
+}
+function handleRepairKeyUp(event) {
+  if (event.code !== 'Space' || !drumSpaceHeld) return;
+  // Keep ownership through release: focus may have moved after a successful hit.
+  event.preventDefault();
+  event.stopPropagation();
+  drumSpaceHeld = false;
 }
 function handleDrumRepairClick(event) {
   if (!currentRhythmRepair()) return;
@@ -2204,8 +2221,8 @@ function showGuitarNoRepairNotice(event) {
   const x = Math.max(22, Math.min(78, (event.clientX - rect.left) / rect.width * 100));
   const y = Math.max(12, Math.min(88, (event.clientY - rect.top) / rect.height * 100));
   const notice = document.createElement('span');
-  notice.className = 'guitar-hit-label guitar-empty-notice';
-  notice.textContent = 'THERE IS NO DECAY EVENT TO FIX UP HERE';
+  notice.className = 'guitar-hit-label guitar-empty-notice repair-empty-notice';
+  notice.textContent = 'NO DECAY EVENT TO FIX';
   notice.style.setProperty('--dot-x', x + '%');
   notice.style.setProperty('--dot-y', y + '%');
   els.guitarNotices.appendChild(notice);
@@ -2329,7 +2346,8 @@ function syncKeysTargets(now, elapsed) {
 }
 function showKeysFeedbackLabel(text, lane, y, variant = 'empty') {
   const label = document.createElement('span');
-  label.className = 'keys-hit-label keys-error-label' + (variant === 'early' ? ' keys-early-label' : '');
+  label.className = 'keys-hit-label keys-error-label' +
+    (variant === 'early' ? ' keys-early-label' : ' repair-empty-notice');
   label.textContent = text;
   label.style.left = (((lane + .5) / 4) * 100) + '%';
   label.style.top = Math.max(18, Math.min(260, y)) + 'px';
@@ -2746,17 +2764,18 @@ function renderBassRepair(game, activeCount) {
     if (!peg) return;
     const button = peg.querySelector('button');
     const definition = EVENT_TYPES.find(event => event.id === slot.type);
-    const name = definition ? definition.name : 'IN TUNE';
+    const name = definition ? definition.name : 'Bass tuning peg';
     peg.dataset.status = slot.status;
-    button.disabled = slot.status !== 'active';
-    button.setAttribute('aria-label', slot.status === 'active' ? 'Tune bass peg to repair '+name : name);
+    button.disabled = slot.status === 'turning' || slot.status === 'repaired';
+    button.setAttribute('aria-label', slot.status === 'active' ? 'Tune bass peg to repair '+name
+      : slot.status === 'idle' ? 'Bass tuning peg — no active decay' : name);
     button.querySelectorAll('[data-bass-frame]').forEach((frame,i)=>{frame.toggleAttribute('hidden', i !== slot.frame);});
-    peg.querySelector('.bass-effect-name').textContent = slot.status === 'idle' ? 'IN TUNE' : name;
+    peg.querySelector('.bass-effect-name').textContent = slot.status === 'idle' ? '' : name;
     peg.querySelector('.bass-hit-label').textContent = slot.status === 'repaired' ? slot.message : '';
   });
   document.getElementById('bass-active-count').textContent = activeCount+' ACTIVE';
   document.getElementById('bass-progress').textContent = game.repairedCount+' REPAIRED';
-  if (!activeCount && !game.hadDecay) document.getElementById('bass-feedback').textContent = 'BASS IN TUNE — WAITING FOR DECAY';
+  if (!activeCount && !game.hadDecay) document.getElementById('bass-feedback').textContent = 'BASS SIGNAL INTACT — WAITING FOR DECAY';
   if (activeCount && !game.slots.some(slot => slot.status === 'repaired')) {
     document.getElementById('bass-feedback').textContent = game.slots.some(slot => slot.status === 'turning')
       ? 'TUNING — RESTORING THE BASS EFFECT' : 'CLICK A RED GLOWING PEG TO TUNE';
@@ -2767,11 +2786,24 @@ function handleBassTuner(event) {
   const button = event.target.closest('[data-bass-peg]');
   if (!button || !els.bassTuners.contains(button)) return;
   const slot = bassRepair.slots[Number(button.dataset.bassPeg)];
-  if (!slot || slot.status !== 'active') return;
+  if (!slot || slot.status === 'turning' || slot.status === 'repaired') return;
+  if (slot.status === 'idle') { showBassNoTarget(Number(button.dataset.bassPeg)); return; }
   if (!trackState.bass.events.some(item => item.type === slot.type)) { updateBassRepair(); return; }
   slot.status = 'turning';
   slot.startedAt = performance.now();
   slot.frame = 0;
   void playUISound('button');
   updateBassRepair(slot.startedAt);
+}
+
+function showBassNoTarget(index) {
+  const peg = els.bassTuners.querySelectorAll('.bass-peg')[index];
+  if (!peg) return;
+  const label = document.createElement('span');
+  label.className = 'guitar-hit-label bass-empty-notice repair-empty-notice';
+  label.textContent = 'NO DECAY EVENT TO FIX';
+  peg.appendChild(label);
+  label.addEventListener('animationend', () => label.remove(), {once:true});
+  document.getElementById('bass-feedback').textContent = 'NO DECAY EVENT TO FIX';
+  void playUISound('error');
 }

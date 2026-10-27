@@ -17,7 +17,9 @@ Up to four distinct effects appear together. Additional effects wait for a
 free peg; new decay also joins this queue. All eight types can be repaired.
 The dialog closes automatically after every active Bass effect has cleared
 and the final success label has finished. A healthy panel can remain open
-waiting for decay. Closing or switching songs cancels unfinished turns.
+waiting for decay. Idle pegs remain clickable and show a shared shaking
+`NO DECAY EVENT TO FIX` notice, with no permanent idle text on the artwork.
+Closing or switching songs cancels unfinished turns.
 Playback, the decay scheduler and other instruments are unchanged.
 
 Checks: `node tests/bass-repair.cjs`, `node tests/repair-dialogs.cjs`,

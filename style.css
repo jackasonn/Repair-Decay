@@ -2804,3 +2804,26 @@ a.portfolio-card:focus-visible {
 @keyframes bass-repair-label { 0% { opacity:0; transform:translate(-50%,8px); } 15%,75% { opacity:1; transform:translate(-50%,-4px); } 100% { opacity:0; transform:translate(-50%,-20px); } }
 @media (max-width:600px) { .bass-panel { padding:10px; } .bass-headstock { width:min(100%,220px); } .bass-hit-label { font-size:.5rem; } }
 @media (prefers-reduced-motion:reduce) { .bass-peg[data-status="active"] .bass-tuner { animation:none; filter:drop-shadow(0 0 8px #e35b50); } .bass-peg[data-status="repaired"] .bass-hit-label { animation:none; transform:translateX(-50%); } }
+
+/* The same floating, gently shaking notice for an empty repair interaction. */
+.repair-empty-notice {
+  width:max-content; max-width:min(210px,62vw); white-space:normal; text-align:center;
+  color:#fff0b3; border-color:#fff0b3; background:rgba(21,18,9,.96);
+  text-shadow:0 0 9px #fff0b3; box-shadow:0 0 12px #0008;
+  animation:repair-empty-shake 1100ms ease-out forwards;
+}
+.bass-empty-notice { left:45%; top:0; z-index:6; }
+.bass-effect-name:empty { display:none; }
+@keyframes repair-empty-shake {
+  0% { opacity:0; transform:translate(-50%,5px); }
+  10% { opacity:1; transform:translate(calc(-50% - 4px),0); }
+  18% { transform:translate(calc(-50% + 4px),-2px); }
+  26% { transform:translate(calc(-50% - 3px),-4px); }
+  34% { transform:translate(calc(-50% + 3px),-6px); }
+  42% { transform:translate(-50%,-8px); }
+  78% { opacity:1; transform:translate(-50%,-16px); }
+  100% { opacity:0; transform:translate(-50%,-26px); }
+}
+@media (prefers-reduced-motion:reduce) {
+  .repair-empty-notice { animation:keys-hit-label-float 1100ms ease-out forwards; }
+}
