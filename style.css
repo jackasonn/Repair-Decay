@@ -2247,3 +2247,86 @@ a.portfolio-card:focus-visible {
   }
 }
 
+/* Prominent listening link on the project about page. */
+.soundcloud-cta {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  margin: 28px 0 12px;
+  padding: clamp(24px, 4vw, 38px);
+  overflow: hidden;
+  border: 1px solid rgba(127,154,99,.58);
+  background:
+    radial-gradient(ellipse at 88% 10%, rgba(127,154,99,.16), transparent 48%),
+    linear-gradient(115deg, rgba(127,154,99,.08), rgba(15,12,7,.82) 65%);
+  color: var(--cream);
+  text-decoration: none;
+  transition: border-color .2s ease, transform .2s ease, background .2s ease;
+}
+.soundcloud-cta::after {
+  content: "♫";
+  position: absolute;
+  right: clamp(20px, 5vw, 54px);
+  top: 50%;
+  transform: translateY(-52%);
+  color: rgba(228,211,140,.13);
+  font-size: clamp(5rem, 13vw, 9rem);
+  line-height: 1;
+  pointer-events: none;
+}
+.soundcloud-cta:hover {
+  transform: translateY(-2px);
+  border-color: var(--green);
+  background:
+    radial-gradient(ellipse at 88% 10%, rgba(127,154,99,.22), transparent 48%),
+    linear-gradient(115deg, rgba(127,154,99,.12), rgba(15,12,7,.9) 65%);
+}
+.soundcloud-cta:focus-visible {
+  outline: 2px solid var(--cream-dim);
+  outline-offset: 4px;
+}
+.soundcloud-cta-kicker,
+.soundcloud-cta-platform {
+  position: relative;
+  z-index: 1;
+  color: var(--green);
+  font-size: .65rem;
+  letter-spacing: .17em;
+}
+.soundcloud-cta-title {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  max-width: 100%;
+  font-family: 'VT323', monospace;
+  font-size: clamp(2.4rem, 6vw, 4.8rem);
+  line-height: .95;
+  letter-spacing: .015em;
+}
+.soundcloud-cta-title > span {
+  color: var(--green);
+  font-family: sans-serif;
+  font-size: .45em;
+}
+.soundcloud-cta-platform {
+  color: var(--cream-dim);
+  font-size: .58rem;
+}
+@media (max-width: 560px) {
+  .soundcloud-cta {
+    padding: 22px 18px;
+  }
+  .soundcloud-cta-title {
+    font-size: clamp(2rem, 9vw, 3.1rem);
+  }
+  .soundcloud-cta::after {
+    right: 12px;
+    opacity: .7;
+  }
+}
+
