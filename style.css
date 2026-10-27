@@ -2671,3 +2671,6 @@ a.portfolio-card:focus-visible {
 .guitar-strings { pointer-events: none; }
 .guitar-strings span { pointer-events: auto; }
 .guitar-soundboard { touch-action: none; }
+
+/* Image wordmark */
+.wordmark-image { display: block; width: min(100%, 275px); height: auto; object-fit: contain; }
