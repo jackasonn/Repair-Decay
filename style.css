@@ -895,16 +895,25 @@ body {
   transition: background .45s ease;
 }
 body.decay-calm {
-  background: radial-gradient(circle at 50% 0%, rgba(68,111,67,.22), transparent 35rem),
-    linear-gradient(135deg, #080d08, #0d120b 52%, #070906);
+  background-image: linear-gradient(135deg,rgba(8,13,8,.5),rgba(13,18,11,.5) 52%,rgba(7,9,6,.5)),url('On%20time%20cover.png');
+  background-position:center;
+  background-size:cover;
+  background-attachment:fixed;
+  background-repeat:no-repeat;
 }
 body.decay-warning {
-  background: radial-gradient(circle at 50% 0%, rgba(155,116,30,.24), transparent 35rem),
-    linear-gradient(135deg, #100c05, #181106 52%, #0b0805);
+  background-image: linear-gradient(135deg,rgba(16,12,5,.5),rgba(24,17,6,.5) 52%,rgba(11,8,5,.5)),url('On%20time%20cover.png');
+  background-position:center;
+  background-size:cover;
+  background-attachment:fixed;
+  background-repeat:no-repeat;
 }
 body.decay-critical {
-  background: radial-gradient(circle at 50% 0%, rgba(155,43,37,.34), transparent 35rem),
-    linear-gradient(135deg, #120605, #1c0908 52%, #090504);
+  background-image: linear-gradient(135deg,rgba(18,6,5,.5),rgba(28,9,8,.5) 52%,rgba(9,5,4,.5)),url('On%20time%20cover.png');
+  background-position:center;
+  background-size:cover;
+  background-attachment:fixed;
+  background-repeat:no-repeat;
 }
 body::after {
   content: '';
