@@ -1501,6 +1501,7 @@ function updatePlaybackClock() {
 
 function renderCurrentSong() {
   const song = SONGS[currentSongIndex];
+  document.body.classList.toggle('on-time-background', song.id === 'on-time');
   els.songTitle.innerHTML = '<img class="song-title-image" src="' + encodeURI(song.titleImage) + '" alt="' + song.title + '">';
   els.songNumber.textContent = String(song.number).padStart(2, '0') + ' OF ' + String(SONGS.length).padStart(2, '0');
   els.songArtist.textContent = song.artist;
