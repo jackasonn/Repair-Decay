@@ -156,6 +156,9 @@ function cacheElements() {
   els.rhythmPanel = document.getElementById('rhythm-panel');
   els.guitarPanel = document.getElementById('guitar-panel');
   els.keysPanel = document.getElementById('keys-panel');
+  els.vocalPanel = document.getElementById('vocal-panel');
+  els.vocalInput = document.getElementById('vocal-input');
+  els.vocalPlay = document.getElementById('vocal-play');
   els.guitarTargets = document.getElementById('guitar-targets');
   els.guitarNotices = document.getElementById('guitar-notices');
   els.guitarStrings = document.querySelector('.guitar-strings');
@@ -987,11 +990,13 @@ function openTrackDialog(id) {
   els.dialog.showModal();
   if (id === 'guitars') startGuitarRepair();
   if (id === 'keys') startKeysRepair();
+  if (id === 'vocals' && vocalTypingAvailable()) startVocalRepair();
   void playUISound('button');
 }
 function closeTrackDialog(fromUserAction = false) {
   guitarRepair = null;
   keysRepair = null;
+  vocalRepair = null;
   const wasOverallDialog = state.overallDialog;
   if (fromUserAction) void playUISound('button');
   state.soloTrack = null;
@@ -1224,6 +1229,7 @@ function updateOverallDecayDialog() {
   els.rhythmPanel.hidden = true;
   els.guitarPanel.hidden = true;
   els.keysPanel.hidden = true;
+  els.vocalPanel.hidden = true;
   els.switchesHeadingTitle.textContent = 'GLOBAL REPAIR SWITCHES';
   els.switchesHeadingHelp.textContent = 'FLIP AN ACTIVE SWITCH TO REPAIR THAT EVENT ON EVERY INSTRUMENT';
 
@@ -1251,11 +1257,13 @@ function updateDialog() {
   const isDrums = track.id === 'drums';
   const isGuitar = track.id === 'guitars';
   const isKeys = track.id === 'keys';
-  const rhythmLocked = isDrums || isGuitar || isKeys;
+  const isVocalTyping = track.id === 'vocals' && vocalTypingAvailable();
+  const rhythmLocked = isDrums || isGuitar || isKeys || isVocalTyping;
   els.faultSwitches.hidden = rhythmLocked;
   document.getElementById('decay-switches-heading').hidden = rhythmLocked;
   els.guitarPanel.hidden = !isGuitar;
   els.keysPanel.hidden = !isKeys;
+  els.vocalPanel.hidden = !isVocalTyping;
 
   els.dialogArtStage.classList.remove('system-decay-art-stage', 'system-decay-critical', 'system-decay-warning');
   els.dialogInstrumentImage.hidden = false;
@@ -1472,6 +1480,7 @@ function updatePlaybackClock() {
   }
   updateGuitarRepair(now);
   updateKeysRepair(now);
+  updateVocalRepair();
   requestAnimationFrame(updatePlaybackClock);
 }
 
@@ -1619,7 +1628,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       return;
     }
-    if (state.selectedTrack === 'guitars' || state.selectedTrack === 'keys') return;
+    if (state.selectedTrack === 'guitars' || state.selectedTrack === 'keys' ||
+        (state.selectedTrack === 'vocals' && vocalTypingAvailable())) return;
     if (state.selectedTrack === 'drums') {
       showRepairLockToast(event.clientX, event.clientY);
       void playUISound('error');
@@ -1632,9 +1642,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   els.guitarTargets.addEventListener('click', handleGuitarTarget);
+  els.dialog.addEventListener('close', () => { guitarRepair = null; keysRepair = null; vocalRepair = null; });
+  els.vocalPlay.addEventListener('click', async () => {
+    if (!currentVocalRepair()) return;
+    await startPlayback(true);
+    if (currentVocalRepair()) { updateVocalRepair(); els.vocalInput.focus({preventScroll:true}); }
+  });
+  els.vocalInput.addEventListener('input', handleVocalInput);
+  els.vocalInput.addEventListener('compositionend', handleVocalInput);
   els.guitarStrings.addEventListener('click', handleGuitarStringClick);
   els.keysSignal.addEventListener('click', handleKeysRepairClick);
-  els.dialog.addEventListener('close', () => { guitarRepair = null; keysRepair = null; });
   els.solo.addEventListener('click', toggleSolo);
   els.rhythmStart.addEventListener('click', () => restartRhythmRepair(true));
 
@@ -1682,7 +1699,8 @@ function drumRepairBeats(buffer) {
 }
 // The source clock runs ahead of the speaker. Use output timestamps when
 // available, plus the existing pitch worklet's fixed neutral-path delay.
-function repairSongPosition() {
+function repairSongPosition() { return audibleSongPosition('drums'); }
+function audibleSongPosition(trackId) {
   if (!state.playing || !state.audio) return currentMasterOffset();
   const audio = state.audio;
   let outputTime = audio.currentTime - (audio.outputLatency || audio.baseLatency || 0);
@@ -1692,7 +1710,7 @@ function repairSongPosition() {
   }
   // pitch-shifter.js buffers 3072 samples and writes one 128-frame quantum
   // before its first output, so the neutral path is delayed by 2944 samples.
-  const workletDelay = state.sources.drums?.pitchShift ? 2944 / audio.sampleRate : 0;
+  const workletDelay = state.sources[trackId]?.pitchShift ? 2944 / audio.sampleRate : 0;
   return Math.max(0, (state.offsets.drums || 0) + outputTime - state.startedAt - workletDelay);
 }
 function prepareRhythmRepair() {
@@ -2253,4 +2271,105 @@ function drawKeysRepair(elapsed) {
     }
     ctx.globalAlpha=1;
   });
+}
+
+
+// Pilot: There Is Love only. Lyrics follow the shared audible song position;
+// character highlighting follows the visitor's own correctly typed prefix.
+const VOCAL_LINES_REQUIRED = 2;
+let vocalRepair = null;
+function vocalTypingAvailable() { return SONGS[currentSongIndex].id === 'there-is-love'; }
+function vocalLetters(text) { return text.toLowerCase().replace(/[^a-z]/g, ''); }
+function vocalLyricAt(position) {
+  return THERE_IS_LOVE_LYRICS.findIndex(line => position >= line.start && position < line.end);
+}
+function currentVocalRepair() {
+  return vocalRepair && !vocalRepair.finished && els.dialog?.open && !state.overallDialog &&
+    state.selectedTrack === 'vocals' && vocalTypingAvailable() &&
+    vocalRepair.generation === state.songGeneration && vocalRepair.song === currentSongIndex;
+}
+function startVocalRepair() {
+  vocalRepair = null;
+  els.vocalPlay.hidden = state.playing;
+  els.vocalInput.value = '';
+  if (!trackState.vocals?.events.length) {
+    document.getElementById('vocal-lyric').textContent = 'VOCAL SIGNAL RESTORED';
+    document.getElementById('vocal-feedback').textContent = 'NO REPAIR NEEDED';
+    document.getElementById('vocal-progress').textContent = '0 / 2 LINES RESTORED';
+    els.vocalInput.disabled = true;
+    return;
+  }
+  vocalRepair = {song:currentSongIndex, generation:state.songGeneration, line:-2,
+    completed:new Set(), correct:0, finished:false};
+  updateVocalRepair();
+  els.vocalInput.focus({preventScroll:true});
+}
+function renderVocalLetters(line, correct) {
+  const display = document.getElementById('vocal-lyric');
+  display.replaceChildren();
+  let letter = 0;
+  for (const char of line.text) {
+    const span = document.createElement('span');
+    const isLetter = /[a-z]/i.test(char);
+    const lit = isLetter ? letter < correct : letter > 0 && letter <= correct;
+    if (isLetter) letter++;
+    span.className = lit ? 'vocal-letter is-typed' : 'vocal-letter';
+    span.textContent = char;
+    display.appendChild(span);
+  }
+}
+function updateVocalRepair() {
+  if (!currentVocalRepair()) return;
+  const game = vocalRepair;
+  const position = audibleSongPosition('vocals');
+  const index = vocalLyricAt(position);
+  const changed = game.line !== index;
+  if (changed) {
+    game.line = index;
+    game.correct = 0;
+    els.vocalInput.value = '';
+    els.vocalInput.setAttribute('aria-invalid', 'false');
+    if (index >= 0) {
+      renderVocalLetters(THERE_IS_LOVE_LYRICS[index], 0);
+      document.getElementById('vocal-section').textContent = THERE_IS_LOVE_LYRICS[index].section;
+    } else {
+      document.getElementById('vocal-lyric').textContent = 'LISTEN FOR THE NEXT VOCAL LINE…';
+      document.getElementById('vocal-section').textContent = 'INSTRUMENTAL / BETWEEN LINES';
+    }
+  }
+  const done = game.completed.has(index);
+  els.vocalPlay.hidden = state.playing;
+  els.vocalInput.disabled = !state.playing || index < 0 || done;
+  if (changed && !els.vocalInput.disabled) els.vocalInput.focus({preventScroll:true});
+  document.getElementById('vocal-progress').textContent = game.completed.size + ' / 2 LINES RESTORED';
+  if (!state.playing) document.getElementById('vocal-feedback').textContent = 'RESUME THE SONG TO FOLLOW THE LYRICS';
+  else if (index < 0) document.getElementById('vocal-feedback').textContent = position >= THERE_IS_LOVE_LYRICS[THERE_IS_LOVE_LYRICS.length-1].end
+    ? 'VOCALS FINISHED — REPLAY THE SONG TO CONTINUE REPAIR' : 'WAITING FOR THE NEXT SUNG LINE';
+  else if (done) document.getElementById('vocal-feedback').textContent = 'LINE RESTORED — WAIT FOR THE NEXT LYRIC';
+  else if (changed) document.getElementById('vocal-feedback').textContent = 'TYPE THIS LINE — PUNCTUATION AND CAPITALS ARE OPTIONAL';
+}
+function handleVocalInput(event) {
+  if (event?.isComposing || !currentVocalRepair()) return;
+  const previousLine = vocalRepair.line;
+  updateVocalRepair();
+  if (!currentVocalRepair() || previousLine !== vocalRepair.line || els.vocalInput.disabled) return;
+  const game = vocalRepair;
+  const line = THERE_IS_LOVE_LYRICS[game.line];
+  const expected = vocalLetters(line.text), typed = vocalLetters(els.vocalInput.value);
+  let correct = 0;
+  while (correct < expected.length && correct < typed.length && expected[correct] === typed[correct]) correct++;
+  game.correct = correct;
+  renderVocalLetters(line, correct);
+  const wrong = correct < typed.length;
+  document.getElementById('vocal-feedback').textContent = wrong
+    ? 'CHECK THE NEXT LETTER — BACKSPACE TO CORRECT IT' : 'KEEP TYPING — FOLLOW THE HIGHLIGHTED LETTERS';
+  els.vocalInput.setAttribute('aria-invalid', wrong ? 'true' : 'false');
+  if (correct === expected.length && !wrong) {
+    game.completed.add(game.line);
+    if (game.completed.size >= VOCAL_LINES_REQUIRED) {
+      game.finished = true;
+      document.getElementById('vocal-feedback').textContent = 'VOCAL REPAIR COMPLETE — SIGNAL RESTORED';
+      repairTrack('vocals');
+    } else updateVocalRepair();
+  }
 }

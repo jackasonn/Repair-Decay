@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0b0906">
     <title>REPAIR / DECAY — Interactive Music</title>
-    <link rel="stylesheet" href="style.css?v=20261027-guitar-keys-interaction">
+    <link rel="stylesheet" href="style.css?v=20261027-vocal-typing">
 </head>
 <body>
     <div class="scanlines" aria-hidden="true"></div>
@@ -144,6 +144,16 @@
                     <p id="keys-feedback" role="status">PRESS THE MATCHING KEY AT THE TOP OR CLICK A MOVING ARROW</p>
                     <p id="keys-progress" aria-live="polite">0 REPAIRED · 0 RETRIES</p>
                 </section>
+                <section class="vocal-panel" id="vocal-panel" aria-label="Vocal lyric typing repair" hidden>
+                    <div class="panel-heading"><span>VOCAL REPAIR</span><span id="vocal-section">LIVE LYRICS</span></div>
+                    <p>Type the lyrics being sung now. Correct letters light up as you type. Complete 2 lines to restore the vocal. Capitals, spaces and punctuation are optional.</p>
+                    <p class="vocal-lyric" id="vocal-lyric" aria-live="polite"></p>
+                    <label for="vocal-input">TYPE THE CURRENT LYRIC</label>
+                    <input id="vocal-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type the line above…" aria-describedby="vocal-feedback">
+                    <button class="solo-button" id="vocal-play" type="button" hidden>RESUME SONG</button>
+                    <p id="vocal-feedback" role="status">FOLLOW THE CURRENT VOCAL LINE</p>
+                    <p id="vocal-progress">0 / 2 LINES RESTORED</p>
+                </section>
                 <section class="rhythm-panel" id="rhythm-panel" aria-label="Drums rhythm repair" hidden>
                     <div class="panel-heading"><span>RHYTHM REPAIR</span><span>KEY: F</span></div>
                     <p>Press <kbd>F</kbd> as each moving drum hit reaches the centre. Hit at least 6 of the 8 beats to restore the drums. Play through all 8 cues; repair completes at the end of the round.</p>
@@ -158,6 +168,7 @@
         </div>
         <div class="signal-lock-toast" id="repair-lock-toast" role="status" aria-live="polite" hidden>Hit 6 of 8 rhythm beats and finish the round to restore the drums.</div>
     </dialog>
-    <script src="script.js?v=20261027-guitar-keys-interaction"></script>
+    <script src="there-is-love-lyrics.js?v=20261027-1"></script>
+    <script src="script.js?v=20261027-vocal-typing"></script>
 </body>
 </html>

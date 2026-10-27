@@ -2524,3 +2524,19 @@ a.portfolio-card:focus-visible {
     min-height: 190px;
   }
 }
+
+/* Pilot Vocal typing repair, scoped to There Is Love. */
+.vocal-panel[hidden] { display:none; }
+.vocal-panel { margin-top:18px; padding:18px; border:1px solid var(--line); background:rgba(8,7,4,.6); }
+.vocal-panel p { font-size:.74rem; line-height:1.7; color:var(--cream-dim); }
+.vocal-panel .vocal-lyric { margin:22px 0; min-height:5em; font-size:clamp(1.2rem,2vw,1.7rem); line-height:1.8; color:#74756d; }
+.vocal-letter { color:#74756d; transition:color .08s, text-shadow .08s; }
+.vocal-letter.is-typed { color:#e4d38c; text-shadow:0 0 10px #b8d68566; }
+.vocal-panel label { display:block; margin-bottom:10px; font-size:.7rem; color:var(--cream-dim); }
+#vocal-input { width:100%; padding:12px; background:#11130c; border:1px solid var(--line); color:var(--cream); font:inherit; font-size:1rem; }
+#vocal-input:focus-visible { outline:2px solid var(--green); outline-offset:3px; }
+#vocal-input[aria-invalid="true"] { border-color:var(--red); }
+#vocal-input:disabled { opacity:.5; }
+#vocal-feedback, #vocal-progress { color:var(--green); }
+
+#vocal-play[hidden] { display:none; }
