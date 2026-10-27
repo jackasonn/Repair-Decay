@@ -2080,31 +2080,115 @@ main,
 /* Drum repair replaces manual switches; author display rules must respect hidden. */
 #fault-switches[hidden], #decay-switches-heading[hidden] { display: none; }
 
-/* Pointer-based Guitar repair; scoped to the existing instrument dialog. */
-.guitar-panel[hidden] { display: none; }
-.guitar-panel { margin-top: 18px; padding: 16px; border: 1px solid var(--line); background: rgba(8,7,4,.5); }
-.guitar-panel p { color: var(--cream-dim); font-size: .74rem; line-height: 1.6; }
-.guitar-soundboard { position: relative; width: 100%; height: clamp(230px, 28vw, 340px); overflow: hidden; border: 1px solid #7e663b; border-radius: 5px;
-  background: repeating-linear-gradient(2deg, transparent 0 4px, rgba(63,38,13,.09) 5px 6px), linear-gradient(110deg,#a67f40,#d2b16c 45%,#a67b3e); }
-.guitar-soundhole { position: absolute; left: 22%; top: 50%; width: 53%; aspect-ratio: 1; transform: translateY(-50%); border-radius: 50%; border: 7px solid #352a19; outline: 3px solid #c3a366;
-  box-shadow: 0 0 0 7px #76562e, 0 0 0 11px #cfad68, inset 0 7px 22px #000; background: radial-gradient(ellipse at 50% 65%,#282016,#080806 80%); }
+/* Guitar repair: live event targets with a bright burst and vibrating strings. */
+.guitar-panel[hidden] { display:none; }
+.guitar-panel { margin-top:18px; padding:16px; border:1px solid var(--line); background:rgba(8,7,4,.5); }
+.guitar-panel p { color:var(--cream-dim); font-size:.74rem; line-height:1.6; }
+.guitar-soundboard {
+  position:relative; width:100%; height:clamp(230px,28vw,340px); overflow:hidden;
+  border:1px solid #7e663b; border-radius:5px;
+  background:repeating-linear-gradient(2deg,transparent 0 4px,rgba(63,38,13,.09) 5px 6px),linear-gradient(110deg,#a67f40,#d2b16c 45%,#a67b3e);
+}
+.guitar-soundhole {
+  position:absolute; left:22%; top:50%; width:53%; aspect-ratio:1; transform:translateY(-50%);
+  border-radius:50%; border:7px solid #352a19; outline:3px solid #c3a366;
+  box-shadow:0 0 0 7px #76562e,0 0 0 11px #cfad68,inset 0 7px 22px #000;
+  background:radial-gradient(ellipse at 50% 65%,#282016,#080806 80%);
+}
 .guitar-bridge { position:absolute; right:4%; top:4%; height:92%; width:7%; background:linear-gradient(90deg,#312518,#63472a,#21190f); border-right:4px solid #c6bea0; }
 .guitar-strings { position:absolute; inset:0; pointer-events:none; }
-.guitar-strings span { position:absolute; left:0; width:100%; top:12%; height:5px; background:linear-gradient(#ead697,#877043); box-shadow:0 3px 4px #181007aa; }
+.guitar-strings span {
+  position:absolute; left:0; width:100%; top:12%; height:5px;
+  background:linear-gradient(#ead697,#877043); box-shadow:0 3px 4px #181007aa;
+  transform-origin:center; will-change:transform,filter;
+}
 .guitar-strings span:nth-child(2) { top:27%; height:4px; }
 .guitar-strings span:nth-child(3) { top:42%; height:3px; }
 .guitar-strings span:nth-child(4) { top:57%; height:3px; background:#ddd7b5; }
 .guitar-strings span:nth-child(5) { top:72%; height:2px; background:#e6e2cb; }
 .guitar-strings span:nth-child(6) { top:87%; height:2px; background:#ece9d8; }
-.guitar-targets { position:absolute; inset:0; }
-.guitar-dot { position:absolute; left:var(--dot-x); top:var(--dot-y); transform:translate(-50%,-50%); width:40px; height:40px; border:3px solid #ffd5c6; border-radius:50%; cursor:pointer; background:#c33c32; box-shadow:0 0 15px #e64c3199; color:#eff5d6; font-size:20px; line-height:1; padding:0; touch-action:manipulation; }
-.guitar-dot:hover { background:#ef5946; }
+.guitar-strings span.is-vibrating { animation:guitar-string-vibrate 560ms ease-out; }
+@keyframes guitar-string-vibrate {
+  0% { transform:translateY(0) scaleY(1); filter:drop-shadow(0 0 0 transparent); }
+  8% { transform:translateY(-3px) scaleY(2.8); filter:drop-shadow(0 0 7px #fff0b3); }
+  18% { transform:translateY(3px) scaleY(2.3); filter:drop-shadow(0 0 6px #9fda72); }
+  30% { transform:translateY(-2.4px) scaleY(2); }
+  43% { transform:translateY(2px) scaleY(1.8); }
+  57% { transform:translateY(-1.3px) scaleY(1.5); }
+  72% { transform:translateY(1px) scaleY(1.25); }
+  86% { transform:translateY(-.5px) scaleY(1.1); }
+  100% { transform:translateY(0) scaleY(1); filter:drop-shadow(0 0 0 transparent); }
+}
+.guitar-targets { position:absolute; inset:0; pointer-events:none; overflow:visible; }
+.guitar-target-wrap { position:absolute; left:var(--dot-x); top:var(--dot-y); width:0; height:0; z-index:4; pointer-events:none; }
+.guitar-dot {
+  position:absolute; left:0; top:0; transform:translate(-50%,-50%);
+  width:40px; height:40px; border:3px solid #ffd5c6; border-radius:50%;
+  cursor:pointer; background:#c33c32; box-shadow:0 0 12px #e64c3199,0 0 22px #e64c314d;
+  color:#eff5d6; font-size:20px; line-height:1; padding:0; touch-action:manipulation;
+  pointer-events:auto; animation:guitar-target-pulse 1.6s ease-in-out infinite;
+}
+.guitar-dot::before {
+  content:""; position:absolute; inset:-6px; border:1px solid #ffd5c6; border-radius:50%;
+  opacity:.65; animation:guitar-target-ring 1.6s ease-out infinite; pointer-events:none;
+}
+.guitar-dot:hover { background:#ef5946; box-shadow:0 0 18px #ff7d62,0 0 30px #e64c3177; }
 .guitar-dot:focus-visible { outline:3px solid #fff3bc; outline-offset:4px; }
-.guitar-dot.is-repaired { background:#4d814b; border-color:#c2df9b; box-shadow:0 0 12px #83bd5b66; cursor:default; opacity:1; }
+.guitar-dot.is-exploding {
+  z-index:2; cursor:default; pointer-events:none; color:#fffdf0;
+  border-color:var(--target-colour); background:var(--target-colour);
+  box-shadow:0 0 24px var(--target-colour),0 0 45px var(--target-colour);
+  animation:guitar-dot-explode 520ms ease-out forwards;
+}
+.guitar-dot.is-exploding::before { border-color:var(--target-colour); opacity:1; animation:guitar-ring-explode 520ms ease-out forwards; }
+.guitar-dot.is-exploding::after {
+  content:""; position:absolute; inset:-13px; border:2px solid var(--target-colour);
+  border-radius:50%; pointer-events:none; animation:guitar-ring-explode 560ms ease-out 35ms forwards;
+}
+.guitar-explosion { position:absolute; left:0; top:0; z-index:3; width:0; height:0; pointer-events:none; }
+.guitar-explosion i {
+  position:absolute; left:0; top:0; width:5px; height:5px; border-radius:50%;
+  background:var(--target-colour); box-shadow:0 0 8px var(--target-colour);
+  animation:guitar-spark-pop 520ms cubic-bezier(.12,.74,.25,1) forwards;
+}
+.guitar-hit-label {
+  position:absolute; left:0; top:-29px; z-index:5; transform:translate(-50%,0);
+  max-width:220px; padding:4px 7px; white-space:nowrap;
+  border:1px solid var(--target-colour); background:rgba(10,9,6,.94);
+  color:var(--target-colour); font-size:.58rem; font-weight:700; letter-spacing:.07em;
+  text-shadow:0 0 9px var(--target-colour); box-shadow:0 0 12px #0008;
+  pointer-events:none; animation:guitar-hit-float 760ms ease-out forwards;
+}
+@keyframes guitar-target-pulse {
+  0%,100% { transform:translate(-50%,-50%) scale(.94); }
+  50% { transform:translate(-50%,-50%) scale(1.04); }
+}
+@keyframes guitar-target-ring { 0% { transform:scale(.72); opacity:.8; } 75%,100% { transform:scale(1.42); opacity:0; } }
+@keyframes guitar-dot-explode {
+  0% { transform:translate(-50%,-50%) scale(1); opacity:1; }
+  24% { transform:translate(-50%,-50%) scale(1.25); opacity:1; }
+  100% { transform:translate(-50%,-50%) scale(.08); opacity:0; }
+}
+@keyframes guitar-ring-explode { 0% { transform:scale(.45); opacity:1; } 100% { transform:scale(2.25); opacity:0; } }
+@keyframes guitar-spark-pop {
+  0% { opacity:1; transform:translate(-50%,-50%) rotate(var(--spark-angle)) translateX(0) scale(1); }
+  100% { opacity:0; transform:translate(-50%,-50%) rotate(var(--spark-angle)) translateX(34px) scale(.2); }
+}
+@keyframes guitar-hit-float {
+  0% { opacity:0; transform:translate(-50%,5px) scale(.94); }
+  15% { opacity:1; transform:translate(-50%,0) scale(1); }
+  72% { opacity:1; transform:translate(-50%,-16px) scale(1); }
+  100% { opacity:0; transform:translate(-50%,-27px) scale(.96); }
+}
 #guitar-feedback, #guitar-progress { color:var(--green); }
-@media (max-width:600px) { .guitar-panel { padding:10px; } .guitar-dot { width:36px; height:36px; } }
+@media (max-width:600px) { .guitar-panel { padding:10px; } .guitar-dot { width:36px; height:36px; } .guitar-hit-label { font-size:.52rem; max-width:180px; } }
+@media (prefers-reduced-motion:reduce) {
+  .guitar-dot, .guitar-dot::before { animation:none; }
+  .guitar-strings span.is-vibrating { animation-duration:220ms; }
+  .guitar-dot.is-exploding, .guitar-dot.is-exploding::before, .guitar-dot.is-exploding::after,
+  .guitar-explosion i, .guitar-hit-label { animation-duration:220ms; }
+}
 
-/* Four-lane Keys repair stays inside the existing right-side controls. */
 .keys-panel[hidden], #keys-retry[hidden] { display: none; }
 .keys-panel { margin-top:18px; padding:16px; border:1px solid var(--line); background:rgba(8,7,4,.6); }
 .keys-panel p { font-size:.74rem; line-height:1.65; color:var(--cream-dim); }
