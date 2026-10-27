@@ -2674,3 +2674,39 @@ a.portfolio-card:focus-visible {
 
 /* Image wordmark */
 .wordmark-image { display: block; width: min(100%, 275px); height: auto; object-fit: contain; filter: brightness(0) invert(1); }
+
+
+/* Event-linked Drum mini-game, styled to match the Keys arrow glow and bursts. */
+.rhythm-panel[hidden] { display: none !important; }
+.rhythm-signal-wrap { position: relative; width: 100%; }
+#repair-signal {
+  display: block; width: 100%; height: 230px;
+  border: 1px solid var(--line);
+  background: radial-gradient(ellipse at 62% 50%, rgba(127,154,99,.08), transparent 38%), linear-gradient(#11150f,#090a07);
+  cursor: crosshair; touch-action: manipulation;
+}
+.rhythm-target-labels { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+.drum-hit-label { max-width: min(220px, 52vw); }
+.drum-label-success {
+  --keys-target-colour: #9fda72;
+  border-color: #9fda72; color: #b9f18f; background: rgba(8,20,8,.96);
+  text-shadow: 0 0 10px rgba(159,218,114,.9);
+  box-shadow: 0 0 20px rgba(159,218,114,.36), 0 0 12px #0008;
+}
+.drum-label-error {
+  --keys-target-colour: #e35b50;
+  border-color: #e35b50; color: #ff8174; background: rgba(35,8,7,.96);
+  text-shadow: 0 0 10px rgba(227,91,80,.9);
+  box-shadow: 0 0 20px rgba(227,91,80,.4), 0 0 12px #0008;
+  animation: keys-error-label-pop 700ms cubic-bezier(.15,.8,.2,1) forwards;
+}
+#repair-feedback[data-feedback-state="success"] { color: #9fda72; text-shadow: 0 0 9px rgba(159,218,114,.32); }
+#repair-feedback[data-feedback-state="error"] { color: #ff8174; text-shadow: 0 0 9px rgba(227,91,80,.42); }
+#repair-progress { color: var(--green); font-size: .66rem; letter-spacing: .08em; }
+@media (max-width: 600px) {
+  #repair-signal { height: 190px; }
+  .rhythm-panel { padding: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .drum-label-error, .drum-label-success { animation-duration: 220ms; }
+}
