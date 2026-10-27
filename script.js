@@ -974,7 +974,6 @@ function repairTrack(id) {
   updateUI();
   updateTrackAudioVisuals();
   if (state.selectedTrack === id) updateDialog();
-  closeRepairedDialog();
 }
 function closeRepairedDialog() {
   if (!els.dialog?.open) return;
@@ -1984,20 +1983,18 @@ function updateGuitarRepair(now = performance.now()) {
     document.getElementById('guitar-feedback').textContent =
       'GUITAR SIGNAL RESTORED — WAITING FOR DECAY';
   }
-  const effectsStillVisible = game.targets.some(target =>
-    target.status === 'hit' || target.status === 'active'
-  );
-  if (game.repairedCount > 0 && result.activeCount === 0 && !effectsStillVisible) {
-    closeTrackDialog();
-  }
+  // Leave the mini-game open after all current Guitar events have been repaired.
 }
-function vibrateGuitarString(stringIndex) {
+function vibrateGuitarString(stringIndex, repairing = false) {
   const string = els.guitarPanel.querySelectorAll('.guitar-strings span')[stringIndex];
   if (!string) return;
-  string.classList.remove('is-vibrating');
+  string.classList.remove('is-vibrating', 'is-repairing');
   void string.offsetWidth;
+  if (repairing) string.classList.add('is-repairing');
   string.classList.add('is-vibrating');
-  string.addEventListener('animationend', () => string.classList.remove('is-vibrating'), {once:true});
+  string.addEventListener('animationend', () => {
+    string.classList.remove('is-vibrating', 'is-repairing');
+  }, {once:true});
 }
 
 function handleGuitarStringClick(event) {
@@ -2036,7 +2033,7 @@ function handleGuitarTarget(event) {
   target.status = 'hit';
   target.hitAt = now;
   guitarRepair.repairedCount++;
-  vibrateGuitarString(target.string);
+  vibrateGuitarString(target.string, true);
   playSwitchSound('off');
   addLog('GUITARS repaired: ' + target.name + '.', 'repair');
   document.getElementById('guitar-feedback').textContent =
@@ -2197,8 +2194,7 @@ function updateKeysRepair(now = performance.now()) {
     document.getElementById('keys-feedback').textContent = 'KEYS SIGNAL RESTORED — WAITING FOR DECAY';
   }
   drawKeysRepair(elapsed);
-  const activeTargetsRemain = game.notes.some(note => note.status === 'active' || note.status === 'hit');
-  if (game.repairedCount > 0 && activeCount === 0 && !activeTargetsRemain) closeTrackDialog();
+  // Keep the Keys mini-game visible after all active effects are repaired.
 }
 function handleKeysRepairKey(event) {
   const lane = KEYS_CODES.indexOf(event.code);
