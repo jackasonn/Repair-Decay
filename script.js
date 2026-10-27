@@ -2006,6 +2006,7 @@ function handleGuitarStringClick(event) {
   const stringIndex = Array.from(els.guitarStrings.querySelectorAll('span')).indexOf(string);
   if (stringIndex < 0) return;
   vibrateGuitarString(stringIndex);
+  void playUISound('error');
   const board = els.guitarPanel.querySelector('.guitar-soundboard');
   const rect = board.getBoundingClientRect();
   const x = Math.max(22, Math.min(78, (event.clientX - rect.left) / rect.width * 100));
@@ -2105,6 +2106,22 @@ function syncKeysTargets(now, elapsed) {
   });
   return activeTypes.size;
 }
+function showKeysFeedbackLabel(text, lane, y, variant = 'empty') {
+  const label = document.createElement('span');
+  label.className = 'keys-hit-label keys-error-label' + (variant === 'early' ? ' keys-early-label' : '');
+  label.textContent = text;
+  label.style.left = (((lane + .5) / 4) * 100) + '%';
+  label.style.top = Math.max(18, Math.min(260, y)) + 'px';
+  label.style.setProperty('--keys-target-colour', '#e35b50');
+  els.keysTargetLabels.appendChild(label);
+  label.addEventListener('animationend', () => label.remove(), {once:true});
+}
+function showKeysNoTarget(lane, elapsed) {
+  keysRepair.bursts.push({lane, at:elapsed, y:44, colour:'#e35b50', kind:'empty'});
+  showKeysFeedbackLabel('NO DECAY EVENT TO FIX', lane, 17, 'empty');
+  document.getElementById('keys-feedback').textContent = 'NO DECAY EVENT TO FIX';
+  void playUISound('error');
+}
 function showKeysHitLabel(note, y) {
   const label = document.createElement('span');
   label.className = 'keys-hit-label';
@@ -2114,6 +2131,20 @@ function showKeysHitLabel(note, y) {
   label.style.setProperty('--keys-target-colour', note.colour);
   els.keysTargetLabels.appendChild(label);
   label.addEventListener('animationend', () => label.remove(), {once:true});
+}
+function failKeysTargetEarly(note, now, elapsed, y) {
+  if (!currentKeysRepair() || note.status !== 'active') return false;
+  keysRepair.bursts.push({lane:note.lane, at:elapsed, y, colour:'#e35b50', kind:'early'});
+  showKeysFeedbackLabel('TRY AGAIN', note.lane, y - 27, 'early');
+  note.misses++;
+  keysRepair.missCount++;
+  note.at = elapsed + KEYS_TRAVEL_MS + KEYS_RETRY_DELAY_MS;
+  keysRepair.nextNoteAt = Math.max(keysRepair.nextNoteAt, note.at + KEYS_EVENT_SPACING_MS);
+  document.getElementById('keys-feedback').textContent =
+    'TOO EARLY — TRY AGAIN AS THE ARROW REACHES THE TOP';
+  void playUISound('error');
+  updateKeysRepair(now);
+  return true;
 }
 function completeKeysTarget(note, now, elapsed, y) {
   if (!currentKeysRepair() || note.status !== 'active') return false;
@@ -2126,7 +2157,7 @@ function completeKeysTarget(note, now, elapsed, y) {
   note.status = 'hit';
   note.hitAt = now;
   keysRepair.repairedCount++;
-  keysRepair.bursts.push({lane:note.lane, at:elapsed, y:y, colour:note.colour});
+  keysRepair.bursts.push({lane:note.lane, at:elapsed, y:y, colour:note.colour, kind:'hit'});
   showKeysHitLabel(note, y);
   playSwitchSound('off');
   addLog('KEYS repaired: ' + note.name + '.', 'repair');
@@ -2185,8 +2216,17 @@ function handleKeysRepairKey(event) {
     Math.abs(elapsed - item.at) <= KEYS_WINDOW_MS
   );
   if (!note) {
-    document.getElementById('keys-feedback').textContent =
-      'MATCH THE ARROW DIRECTION AS IT REACHES THE TOP — MISSED ARROWS RETURN';
+    const earlyTarget = keysRepair.notes
+      .filter(item => item.status === 'active' && item.lane === lane)
+      .map(item => ({note:item, until:item.at - elapsed}))
+      .filter(item => item.until > KEYS_WINDOW_MS && item.until <= KEYS_TRAVEL_MS)
+      .sort((a, b) => a.until - b.until)[0];
+    if (earlyTarget) {
+      const y = 44 + earlyTarget.until / KEYS_TRAVEL_MS * (300 - 44 - 15);
+      failKeysTargetEarly(earlyTarget.note, now, elapsed, Math.max(14, Math.min(280, y)));
+      return;
+    }
+    showKeysNoTarget(lane, elapsed);
     return;
   }
   const until = note.at - elapsed;
@@ -2243,8 +2283,11 @@ function drawKeysRepair(elapsed) {
   for(let lane=0;lane<4;lane++) {
     ctx.fillStyle = lane%2 ? 'rgba(228,211,140,.025)' : 'rgba(228,211,140,.055)';
     ctx.fillRect(width*lane/4,0,width/4,height);
-    const burst=keysRepair?.bursts.find(item=>item.lane===lane&&elapsed-item.at<260);
-    arrow(lane,receptorY,burst?burst.colour:'#8e917f',Boolean(burst),burst?4:0);
+    const burst=keysRepair?.bursts.slice().reverse().find(item=>
+      item.lane===lane && elapsed-item.at<260 && (item.kind==='hit' || item.kind==='empty')
+    );
+    const shake = burst ? (burst.kind === 'empty' ? 7 : 4) : 0;
+    arrow(lane,receptorY,burst?burst.colour:'#8e917f',Boolean(burst),shake);
   }
   if(!keysRepair)return;
   keysRepair.notes.forEach(note=>{
@@ -2261,6 +2304,7 @@ function drawKeysRepair(elapsed) {
     ctx.restore();
   });
   keysRepair.bursts.forEach(burst=>{
+    if (burst.kind === 'empty') return;
     const age=Math.max(0,elapsed-burst.at)/520;
     const x=width*(burst.lane+.5)/4;
     const burstY=Number.isFinite(burst.y)?burst.y:receptorY;
