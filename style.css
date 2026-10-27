@@ -890,6 +890,14 @@ h2 {
   font-size: .52rem;
 }
 
+/* On Time artwork sits above the reactive background but below the interface. */
+body.on-time-background::before {
+  background: url('assets/On%20time%20cBG.png') center center / contain no-repeat;
+  opacity: .5;
+  mix-blend-mode: normal;
+  z-index: 1;
+}
+
 /* The whole interface shifts from calm green to amber/red as the song destabilises. */
 body {
   transition: background .45s ease;
