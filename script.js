@@ -2016,7 +2016,6 @@ function handleGuitarStringClick(event) {
   const stringIndex = Array.from(els.guitarStrings.querySelectorAll('span')).indexOf(string);
   if (stringIndex < 0) return;
   vibrateGuitarString(stringIndex);
-  void playUISound('error');
   const board = els.guitarPanel.querySelector('.guitar-soundboard');
   const rect = board.getBoundingClientRect();
   const x = Math.max(22, Math.min(78, (event.clientX - rect.left) / rect.width * 100));
