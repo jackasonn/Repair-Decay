@@ -2777,3 +2777,30 @@ a.portfolio-card:focus-visible {
 /* Centre the instrument-name artwork within each instrument card. */
 .track-info .track-name { justify-content:center; text-align:center; }
 .track-name-art { margin-inline:auto; object-position:center center; }
+
+/* Original hand-painted Bass headstock and four tuning pegs. */
+.bass-panel[hidden] { display:none; }
+.bass-panel { margin-top:18px; padding:16px; border:1px solid var(--line); background:rgba(8,7,4,.5); }
+.bass-panel > p { color:var(--cream-dim); font-size:.74rem; line-height:1.6; }
+.bass-headstock { position:relative; width:min(100%,240px); aspect-ratio:1250/2048; margin:8px auto 18px; }
+.bass-headstock-art, .bass-tuners { position:absolute; inset:0; width:100%; height:100%; }
+.bass-headstock-art { pointer-events:none; }
+.bass-tuners { pointer-events:none; }
+.bass-peg { position:absolute; left:var(--peg-x); top:var(--peg-y); width:35.2%; aspect-ratio:440/360; transform:translate(-100%,-50%); }
+.bass-tuner { position:absolute; inset:0; width:100%; height:100%; padding:0; border:0; background:none; cursor:pointer; pointer-events:auto; touch-action:manipulation; }
+.bass-tuner svg { position:absolute; inset:0; width:100%; height:100%; overflow:visible; pointer-events:none; }
+.bass-tuner svg[hidden] { display:none; }
+.bass-tuner:disabled { cursor:default; opacity:1; }
+.bass-tuner:focus-visible { outline:2px solid var(--cream); outline-offset:4px; border-radius:40%; }
+.bass-peg[data-status="active"] .bass-tuner { animation:bass-tune-glow 1.1s ease-in-out infinite; }
+.bass-peg[data-status="turning"] .bass-tuner { filter:drop-shadow(0 0 8px #e4d38c); }
+.bass-peg[data-status="repaired"] .bass-tuner { filter:drop-shadow(0 0 9px #9fda72); }
+.bass-effect-name { position:absolute; top:90%; left:36%; transform:translateX(-50%); padding:2px 5px; background:#0a0906dc; color:var(--cream-dim); font-size:.52rem; line-height:1.2; letter-spacing:.04em; white-space:nowrap; pointer-events:none; }
+.bass-peg[data-status="active"] .bass-effect-name { color:#e35b50; }
+.bass-hit-label { display:none; position:absolute; left:45%; top:0; z-index:4; max-width:220px; padding:4px 7px; white-space:nowrap; border:1px solid #9fda72; background:rgba(10,9,6,.94); color:#9fda72; font-size:.58rem; font-weight:700; letter-spacing:.07em; text-shadow:0 0 9px #9fda72; box-shadow:0 0 12px #0008; pointer-events:none; }
+.bass-peg[data-status="repaired"] .bass-hit-label { display:block; animation:bass-repair-label 900ms ease-out forwards; }
+#bass-feedback, #bass-progress { color:var(--green); }
+@keyframes bass-tune-glow { 0%,100% { filter:drop-shadow(0 0 3px #e35b50); } 50% { filter:drop-shadow(0 0 13px #ff3930) drop-shadow(0 0 5px #ff3930); } }
+@keyframes bass-repair-label { 0% { opacity:0; transform:translate(-50%,8px); } 15%,75% { opacity:1; transform:translate(-50%,-4px); } 100% { opacity:0; transform:translate(-50%,-20px); } }
+@media (max-width:600px) { .bass-panel { padding:10px; } .bass-headstock { width:min(100%,220px); } .bass-hit-label { font-size:.5rem; } }
+@media (prefers-reduced-motion:reduce) { .bass-peg[data-status="active"] .bass-tuner { animation:none; filter:drop-shadow(0 0 8px #e35b50); } .bass-peg[data-status="repaired"] .bass-hit-label { animation:none; transform:translateX(-50%); } }

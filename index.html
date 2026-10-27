@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0b0906">
     <title>REPAIR / DECAY — Interactive Music</title>
-    <link rel="stylesheet" href="style.css?v=20261027-vocal-keywords">
+    <link rel="stylesheet" href="style.css?v=20261028-bass-tuning">
 </head>
 <body>
     <div class="scanlines" aria-hidden="true"></div>
@@ -119,6 +119,16 @@
                     <span id="dialog-switches-heading-help">FLIP ACTIVE SWITCHES OFF TO REPAIR</span>
                 </div>
                 <div class="fault-switches" id="fault-switches" aria-label="Decay event repair switches"></div>
+                <section class="bass-panel" id="bass-panel" aria-label="Bass tuning repair" hidden>
+                    <div class="panel-heading"><span>BASS TUNING REPAIR</span><span id="bass-active-count">0 ACTIVE</span></div>
+                    <p>Click a red glowing tuning peg to turn it and repair its labelled effect. Repair every active effect to restore the bass.</p>
+                    <div class="bass-headstock" id="bass-headstock">
+                        <svg class="bass-headstock-art" viewBox="400 0 1250 2048" aria-hidden="true"><image href="assets/bass-headstock.png" width="2048" height="2048" /></svg>
+                        <div id="bass-tuners" class="bass-tuners"></div>
+                    </div>
+                    <p id="bass-feedback" role="status">CLICK A RED GLOWING PEG TO TUNE</p>
+                    <p id="bass-progress" aria-live="polite">0 REPAIRED</p>
+                </section>
                 <section class="guitar-panel" id="guitar-panel" aria-label="Guitar string repair" hidden>
                     <div class="panel-heading"><span>GUITAR REPAIR</span><span id="guitar-active-count">0 ACTIVE</span></div>
                     <p>Each glowing target represents an active guitar decay effect. Click it to repair that effect immediately.</p>
@@ -171,6 +181,6 @@
     </dialog>
     <script src="there-is-love-lyrics.js?v=20261027-keywords"></script>
     <script src="on-time-lyrics.js?v=20261027-keywords"></script>
-    <script src="script.js?v=20261028-auto-close"></script>
+    <script src="script.js?v=20261028-bass-tuning"></script>
 </body>
 </html>

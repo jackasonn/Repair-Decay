@@ -157,6 +157,8 @@ function cacheElements() {
   els.dialogParticles = document.getElementById('dialog-particles');
   els.faultSwitches = document.getElementById('fault-switches');
   els.rhythmPanel = document.getElementById('rhythm-panel');
+  els.bassPanel = document.getElementById('bass-panel');
+  els.bassTuners = document.getElementById('bass-tuners');
   els.guitarPanel = document.getElementById('guitar-panel');
   els.keysPanel = document.getElementById('keys-panel');
   els.vocalPanel = document.getElementById('vocal-panel');
@@ -1002,6 +1004,7 @@ function openTrackDialog(id) {
   state.selectedTrack = id;
   updateDialog();
   els.dialog.showModal();
+  if (id === 'bass') startBassRepair();
   if (id === 'guitars') startGuitarRepair();
   if (id === 'drums') startRhythmRepair(true);
   if (id === 'keys') startKeysRepair();
@@ -1009,6 +1012,7 @@ function openTrackDialog(id) {
   void playUISound('button');
 }
 function closeTrackDialog(fromUserAction = false) {
+  bassRepair = null;
   guitarRepair = null;
   keysRepair = null;
   vocalRepair = null;
@@ -1243,6 +1247,7 @@ function updateOverallDecayDialog() {
     : 'NO ACTIVE DECAY EVENTS TO REPAIR';
   els.solo.hidden = true;
   els.rhythmPanel.hidden = true;
+  els.bassPanel.hidden = true;
   els.guitarPanel.hidden = true;
   els.keysPanel.hidden = true;
   els.vocalPanel.hidden = true;
@@ -1270,13 +1275,15 @@ function updateDialog() {
   const s = trackState[track.id];
   const decay = severityFor(track.id);
   const status = statusFor(decay);
+  const isBass = track.id === 'bass';
   const isDrums = track.id === 'drums';
   const isGuitar = track.id === 'guitars';
   const isKeys = track.id === 'keys';
   const isVocalTyping = track.id === 'vocals' && vocalTypingAvailable();
-  const rhythmLocked = isDrums || isGuitar || isKeys || isVocalTyping;
+  const rhythmLocked = isBass || isDrums || isGuitar || isKeys || isVocalTyping;
   els.faultSwitches.hidden = rhythmLocked;
   document.getElementById('decay-switches-heading').hidden = rhythmLocked;
+  els.bassPanel.hidden = !isBass;
   els.guitarPanel.hidden = !isGuitar;
   els.keysPanel.hidden = !isKeys;
   els.vocalPanel.hidden = !isVocalTyping;
@@ -1494,6 +1501,7 @@ function updatePlaybackClock() {
       state.lastTrackVisualAt = now;
     }
   }
+  updateBassRepair(now);
   updateGuitarRepair(now);
   updateKeysRepair(now);
   updateVocalRepair();
@@ -1651,7 +1659,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       return;
     }
-    if (state.selectedTrack === 'guitars' || state.selectedTrack === 'keys' ||
+    if (state.selectedTrack === 'bass' || state.selectedTrack === 'guitars' || state.selectedTrack === 'keys' ||
         (state.selectedTrack === 'vocals' && vocalTypingAvailable())) return;
     if (state.selectedTrack === 'drums') {
       showRepairLockToast(event.clientX, event.clientY);
@@ -1664,8 +1672,9 @@ document.addEventListener('DOMContentLoaded', () => {
       void playUISound('error');
     }
   });
+  els.bassTuners.addEventListener('click', handleBassTuner);
   els.guitarTargets.addEventListener('click', handleGuitarTarget);
-  els.dialog.addEventListener('close', () => { guitarRepair = null; keysRepair = null; vocalRepair = null; });
+  els.dialog.addEventListener('close', () => { bassRepair = null; guitarRepair = null; keysRepair = null; vocalRepair = null; });
   els.vocalPlay.addEventListener('click', async () => {
     if (!currentVocalRepair()) return;
     await startPlayback(true);
@@ -2649,4 +2658,120 @@ function handleVocalInput(event) {
       repairTrack('vocals');
     } else updateVocalRepair();
   }
+}
+
+
+// Bass: four physical pegs share a queue of the stem's actual decay effects.
+const BASS_TURN_MS = 600;
+const BASS_FEEDBACK_MS = 900;
+const BASS_PEG_POSITIONS = [[61.9,22.9],[54.6,39.1],[48.4,54.7],[42.2,71.2]];
+// Crop transparent margins in SVG, leaving the supplied PNGs untouched.
+// Each viewBox aligns the shaft end to the same point as its angle changes.
+const BASS_TUNER_FRAMES = [
+  {angle:0, box:'610 150 440 360'},
+  {angle:30, box:'520 520 440 360'},
+  {angle:70, box:'425 820 440 360'},
+  {angle:90, box:'350 1070 440 360'}
+];
+let bassRepair = null;
+function currentBassRepair() {
+  return !!bassRepair && els.dialog?.open && !state.overallDialog &&
+    state.selectedTrack === 'bass' && bassRepair.song === currentSongIndex &&
+    bassRepair.generation === state.songGeneration;
+}
+function startBassRepair() {
+  bassRepair = {song:currentSongIndex, generation:state.songGeneration,
+    repairedCount:0, hadDecay:false, signature:'', slots:Array.from({length:4},()=>({status:'idle',type:null,frame:3}))};
+  els.bassTuners.innerHTML = BASS_PEG_POSITIONS.map(([x,y],index) =>
+    '<div class="bass-peg" style="--peg-x:'+x+'%;--peg-y:'+y+'%">'+
+      '<button class="bass-tuner" type="button" data-bass-peg="'+index+'" disabled>'+
+        BASS_TUNER_FRAMES.map((frame,i)=>'<svg data-bass-frame="'+i+'" viewBox="'+frame.box+'" aria-hidden="true"'+(i===3?'':' hidden')+'><image href="assets/bass-tuner-'+frame.angle+'.png" width="2048" height="2048" /></svg>').join('')+
+      '</button><span class="bass-effect-name"></span><span class="bass-hit-label" role="status"></span></div>'
+  ).join('');
+  document.getElementById('bass-feedback').textContent = 'CLICK A RED GLOWING PEG TO TUNE';
+  updateBassRepair();
+}
+function updateBassRepair(now = performance.now()) {
+  if (!currentBassRepair()) return;
+  const game = bassRepair;
+  game.slots.forEach(slot => {
+    if (slot.status !== 'turning') return;
+    const progress = Math.max(0, now - slot.startedAt) / BASS_TURN_MS;
+    slot.frame = Math.min(3, Math.floor(progress * 4));
+    if (progress < 1) return;
+    const removed = repairTrackEventType('bass', slot.type);
+    slot.status = removed ? 'repaired' : 'idle';
+    slot.until = now + BASS_FEEDBACK_MS;
+    slot.frame = 3;
+    if (removed) {
+      game.repairedCount++;
+      const name = EVENT_TYPES.find(event => event.id === slot.type).name;
+      slot.message = name + ' REPAIRED';
+      document.getElementById('bass-feedback').textContent = slot.message + (trackState.bass.events.length ? ' — TUNE THE REMAINING GLOWING PEGS' : ' — BASS SIGNAL RESTORED');
+      playSwitchSound('off');
+      addLog('BASS repaired: ' + name + '.', 'repair');
+      updateUI();
+      updateDialog();
+    }
+  });
+  const active = EVENT_TYPES.filter(event => trackState.bass.events.some(item => item.type === event.id));
+  if (active.length) game.hadDecay = true;
+  game.slots.forEach(slot => {
+    if ((slot.status === 'active' && !active.some(event => event.id === slot.type)) ||
+        (slot.status === 'repaired' && now >= slot.until)) {
+      slot.status = 'idle'; slot.type = null;
+    }
+  });
+  const assigned = new Set(game.slots.filter(slot => slot.status !== 'idle').map(slot => slot.type));
+  for (const effect of active) {
+    if (assigned.has(effect.id)) continue;
+    const slot = game.slots.find(item => item.status === 'idle');
+    if (!slot) break;
+    Object.assign(slot, {type:effect.id, status:'active', frame:0, message:''});
+    assigned.add(effect.id);
+  }
+  renderBassRepair(game, active.length);
+  // Let the final rotation and success label finish before automatically closing.
+  if (game.hadDecay && !active.length && game.slots.every(slot => slot.status === 'idle')) {
+    closeRepairedDialog('bass');
+  }
+}
+function renderBassRepair(game, activeCount) {
+  const signature = JSON.stringify([activeCount,game.repairedCount,game.slots]);
+  if (signature === game.signature) return;
+  game.signature = signature;
+  const pegs = els.bassTuners.querySelectorAll('.bass-peg');
+  game.slots.forEach((slot,index) => {
+    const peg = pegs[index];
+    if (!peg) return;
+    const button = peg.querySelector('button');
+    const definition = EVENT_TYPES.find(event => event.id === slot.type);
+    const name = definition ? definition.name : 'IN TUNE';
+    peg.dataset.status = slot.status;
+    button.disabled = slot.status !== 'active';
+    button.setAttribute('aria-label', slot.status === 'active' ? 'Tune bass peg to repair '+name : name);
+    button.querySelectorAll('[data-bass-frame]').forEach((frame,i)=>{frame.toggleAttribute('hidden', i !== slot.frame);});
+    peg.querySelector('.bass-effect-name').textContent = slot.status === 'idle' ? 'IN TUNE' : name;
+    peg.querySelector('.bass-hit-label').textContent = slot.status === 'repaired' ? slot.message : '';
+  });
+  document.getElementById('bass-active-count').textContent = activeCount+' ACTIVE';
+  document.getElementById('bass-progress').textContent = game.repairedCount+' REPAIRED';
+  if (!activeCount && !game.hadDecay) document.getElementById('bass-feedback').textContent = 'BASS IN TUNE — WAITING FOR DECAY';
+  if (activeCount && !game.slots.some(slot => slot.status === 'repaired')) {
+    document.getElementById('bass-feedback').textContent = game.slots.some(slot => slot.status === 'turning')
+      ? 'TUNING — RESTORING THE BASS EFFECT' : 'CLICK A RED GLOWING PEG TO TUNE';
+  }
+}
+function handleBassTuner(event) {
+  if (!currentBassRepair()) return;
+  const button = event.target.closest('[data-bass-peg]');
+  if (!button || !els.bassTuners.contains(button)) return;
+  const slot = bassRepair.slots[Number(button.dataset.bassPeg)];
+  if (!slot || slot.status !== 'active') return;
+  if (!trackState.bass.events.some(item => item.type === slot.type)) { updateBassRepair(); return; }
+  slot.status = 'turning';
+  slot.startedAt = performance.now();
+  slot.frame = 0;
+  void playUISound('button');
+  updateBassRepair(slot.startedAt);
 }
