@@ -182,7 +182,7 @@ function renderTracks() {
     return '<button class="track-card healthy" type="button" data-track="' + t.id + '" aria-label="Open ' + t.name + ' track diagnostics">' +
       '<div class="track-visual" aria-hidden="true"></div>' +
       '<div class="track-artwork-stage">' +
-        '<img class="track-instrument-image" src="assets/' + t.id + '.png" alt="" loading="lazy" decoding="async">' +
+        '<img class="track-instrument-image" src="assets/' + (t.id === 'vocals' ? 'vocal' : t.id) + '.png" alt="" loading="lazy" decoding="async">' +
       '</div>' +
       '<div class="track-signal" aria-hidden="true">' +
         '<div class="signal-bars">' + bars + '</div>' +
