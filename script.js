@@ -1292,7 +1292,7 @@ function updateDialog() {
   els.switchesHeadingHelp.textContent = 'FLIP ACTIVE SWITCHES OFF TO REPAIR';
 
   if (els.dialogInstrumentImage.dataset.track !== track.id) {
-    els.dialogInstrumentImage.src = 'assets/' + track.id + '.png';
+    els.dialogInstrumentImage.src = 'assets/' + (track.id === 'vocals' ? 'vocal' : track.id) + '.png';
     els.dialogInstrumentImage.alt = track.name.toLowerCase() + ' instrument illustration';
     els.dialogInstrumentImage.dataset.track = track.id;
   }
