@@ -2710,3 +2710,19 @@ a.portfolio-card:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .drum-label-error, .drum-label-success { animation-duration: 220ms; }
 }
+
+
+/* No-event feedback is informative, not a failed-hit TRY AGAIN burst. */
+.drum-label-empty {
+  --keys-target-colour: #e4d38c;
+  border-color: #e4d38c;
+  color: #fff0b3;
+  background: rgba(21,18,9,.96);
+  text-shadow: 0 0 10px rgba(228,211,140,.82);
+  box-shadow: 0 0 18px rgba(228,211,140,.25), 0 0 12px #0008;
+  animation: keys-hit-label-float 760ms ease-out forwards;
+}
+#repair-feedback[data-feedback-state="neutral"] {
+  color: #e4d38c;
+  text-shadow: 0 0 8px rgba(228,211,140,.25);
+}
