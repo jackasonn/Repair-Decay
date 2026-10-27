@@ -2184,18 +2184,18 @@ main,
 @media (max-width:600px) { .guitar-panel { padding:10px; } .guitar-dot { width:36px; height:36px; } .guitar-hit-label { font-size:.52rem; max-width:180px; } }
 /* Click anywhere along a string to pluck it, even when it has no decay target. */
 .guitar-strings { z-index:2; pointer-events:none; }
-.guitar-strings span { top:calc(12% - 9px); height:18px; background:transparent; box-shadow:none; cursor:pointer; pointer-events:auto; }
+.guitar-strings span { top:calc(12% - 16px); height:32px; background:transparent; box-shadow:none; cursor:pointer; pointer-events:auto; }
 .guitar-strings span::before {
   content:""; position:absolute; left:0; right:0; top:50%;
   height:var(--string-thickness,3px); transform:translateY(-50%);
   background:var(--string-colour,linear-gradient(#ead697,#877043));
   box-shadow:0 2px 4px #181007aa; pointer-events:none;
 }
-.guitar-strings span:nth-child(2) { top:calc(27% - 9px); --string-thickness:4px; }
-.guitar-strings span:nth-child(3) { top:calc(42% - 9px); --string-thickness:3px; }
-.guitar-strings span:nth-child(4) { top:calc(57% - 9px); --string-thickness:3px; --string-colour:#ddd7b5; }
-.guitar-strings span:nth-child(5) { top:calc(72% - 9px); --string-thickness:2px; --string-colour:#e6e2cb; }
-.guitar-strings span:nth-child(6) { top:calc(87% - 9px); --string-thickness:2px; --string-colour:#ece9d8; }
+.guitar-strings span:nth-child(2) { top:calc(27% - 16px); --string-thickness:4px; }
+.guitar-strings span:nth-child(3) { top:calc(42% - 16px); --string-thickness:3px; }
+.guitar-strings span:nth-child(4) { top:calc(57% - 16px); --string-thickness:3px; --string-colour:#ddd7b5; }
+.guitar-strings span:nth-child(5) { top:calc(72% - 16px); --string-thickness:2px; --string-colour:#e6e2cb; }
+.guitar-strings span:nth-child(6) { top:calc(87% - 16px); --string-thickness:2px; --string-colour:#ece9d8; }
 .guitar-strings span:hover::before { filter:drop-shadow(0 0 5px #fff0b3); }
 .guitar-targets { z-index:3; }
 .guitar-notices { position:absolute; inset:0; z-index:8; pointer-events:none; overflow:visible; }
@@ -2568,4 +2568,25 @@ a.portfolio-card:focus-visible {
 }
 @media (prefers-reduced-motion: reduce) {
   .keys-error-label { animation-duration: 220ms; }
+}
+
+
+/* Successful Guitar repairs flash red; ordinary exploratory plucks keep their original glow. */
+.guitar-strings span.is-vibrating.is-repairing {
+  animation-name: guitar-string-vibrate-repair;
+}
+.guitar-strings span.is-vibrating.is-repairing::before {
+  background: #e35b50;
+  box-shadow: 0 0 8px #e35b50, 0 0 15px rgba(227,91,80,.7);
+}
+@keyframes guitar-string-vibrate-repair {
+  0% { transform:translateY(0) scaleY(1); filter:drop-shadow(0 0 0 transparent); }
+  8% { transform:translateY(-3px) scaleY(2.8); filter:drop-shadow(0 0 8px #e35b50); }
+  18% { transform:translateY(3px) scaleY(2.3); filter:drop-shadow(0 0 10px #e35b50); }
+  30% { transform:translateY(-2.4px) scaleY(2); filter:drop-shadow(0 0 8px #e35b50); }
+  43% { transform:translateY(2px) scaleY(1.8); filter:drop-shadow(0 0 7px #e35b50); }
+  57% { transform:translateY(-1.3px) scaleY(1.5); filter:drop-shadow(0 0 5px #e35b50); }
+  72% { transform:translateY(1px) scaleY(1.25); filter:drop-shadow(0 0 4px #e35b50); }
+  86% { transform:translateY(-.5px) scaleY(1.1); filter:drop-shadow(0 0 2px #e35b50); }
+  100% { transform:translateY(0) scaleY(1); filter:drop-shadow(0 0 0 transparent); }
 }
