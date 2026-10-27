@@ -2770,3 +2770,7 @@ a.portfolio-card:focus-visible {
 /* Branded instrument lettering, preserving the original 24px label height. */
 .track-info .track-name { display:flex; align-items:center; min-height:1.08em; }
 .track-name-art { display:block; width:auto; max-width:100%; height:24px; object-fit:contain; object-position:left center; filter:brightness(0) saturate(100%) invert(86%) sepia(17%) saturate(786%) hue-rotate(354deg) brightness(96%) contrast(86%); }
+
+/* Centre the instrument-name artwork within each instrument card. */
+.track-info .track-name { justify-content:center; text-align:center; }
+.track-name-art { margin-inline:auto; object-position:center center; }
