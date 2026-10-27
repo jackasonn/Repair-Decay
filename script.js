@@ -4,6 +4,7 @@
 const SONGS = [
   {
     id: 'on-time',
+    cover: 'On time cover.png',
     title: 'ON TIME',
     number: 1,
     artist: 'TAYLA KANE AND JACKSON MOORE',
@@ -17,6 +18,7 @@ const SONGS = [
   },
   {
     id: 'reconcile',
+    cover: 'Reconcile cover.png',
     title: 'RECONCILE',
     number: 2,
     artist: 'JACKSON MOORE',
@@ -29,6 +31,7 @@ const SONGS = [
   },
   {
     id: 'rainy-night',
+    cover: 'Riany n cover copy.png',
     title: 'RAINY NIGHT',
     number: 3,
     artist: 'TAYLA KANE',
@@ -42,6 +45,7 @@ const SONGS = [
   },
   {
     id: 'there-is-love',
+    cover: 'love cover copy 2.png',
     title: 'THERE IS LOVE',
     number: 4,
     artist: 'JACKSON MOORE',
@@ -1474,8 +1478,10 @@ function renderCurrentSong() {
   els.songNumber.textContent = 'SONG ' + String(song.number).padStart(2, '0');
   els.songArtist.textContent = song.artist;
   els.artNoise.textContent = String(currentSongIndex + 1).padStart(3, '0');
-  els.albumArt.classList.toggle('has-cover', song.id === 'on-time');
-  els.albumArt.setAttribute('aria-label', song.id === 'on-time' ? 'On Time cover artwork' : song.title + ' artwork placeholder');
+  els.albumCoverImage.src = encodeURI(song.cover);
+  els.albumCoverImage.alt = song.title + ' cover artwork';
+  els.albumArt.classList.toggle('has-cover', Boolean(song.cover));
+  els.albumArt.setAttribute('aria-label', song.title + ' cover artwork');
   document.title = 'REPAIR / DECAY — ' + song.title;
 }
 function updateSongNavigation() {
