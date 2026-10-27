@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0b0906">
     <title>REPAIR / DECAY — Interactive Music</title>
-    <link rel="stylesheet" href="style.css?v=20261027-waveform-cleanup">
+    <link rel="stylesheet" href="style.css?v=20261027-guitar-target-repair">
 </head>
 <body>
     <div class="scanlines" aria-hidden="true"></div>
@@ -120,9 +120,9 @@
                 </div>
                 <div class="fault-switches" id="fault-switches" aria-label="Decay event repair switches"></div>
                 <section class="guitar-panel" id="guitar-panel" aria-label="Guitar string repair" hidden>
-                    <div class="panel-heading"><span>GUITAR REPAIR</span><span id="guitar-time">18s</span></div>
-                    <p>Click the red dots on all six strings to turn them green. New dots appear every 2–3 seconds. Repair all 8 dots to restore the guitar.</p>
-                    <div class="guitar-soundboard" aria-label="Six guitar strings over a sound hole">
+                    <div class="panel-heading"><span>GUITAR REPAIR</span><span id="guitar-active-count">0 ACTIVE</span></div>
+                    <p>Each glowing target represents an active guitar decay effect. Click it to repair that effect immediately.</p>
+                    <div class="guitar-soundboard" aria-label="Six guitar strings with clickable decay-repair targets">
                         <div class="guitar-soundhole" aria-hidden="true"></div>
                         <div class="guitar-bridge" aria-hidden="true"></div>
                         <div class="guitar-strings" aria-hidden="true">
@@ -130,8 +130,8 @@
                         </div>
                         <div id="guitar-targets" class="guitar-targets"></div>
                     </div>
-                    <p id="guitar-feedback" role="status">CLICK EACH RED DOT TO TURN IT GREEN</p>
-                    <p id="guitar-progress" aria-live="polite">0 / 8 REPAIRED</p>
+                    <p id="guitar-feedback" role="status">CLICK A GLOWING TARGET TO REPAIR ITS EFFECT</p>
+                    <p id="guitar-progress" aria-live="polite">0 REPAIRED</p>
                 </section>
                 <section class="keys-panel" id="keys-panel" aria-label="Keys arrow repair" hidden>
                     <div class="panel-heading"><span>KEYS REPAIR</span><span id="keys-time">18s</span></div>
@@ -155,6 +155,6 @@
         </div>
         <div class="signal-lock-toast" id="repair-lock-toast" role="status" aria-live="polite" hidden>Hit 6 of 8 rhythm beats and finish the round to restore the drums.</div>
     </dialog>
-    <script src="script.js?v=20261027-song-counter"></script>
+    <script src="script.js?v=20261027-guitar-target-repair"></script>
 </body>
 </html>
