@@ -2673,4 +2673,4 @@ a.portfolio-card:focus-visible {
 .guitar-soundboard { touch-action: none; }
 
 /* Image wordmark */
-.wordmark-image { display: block; width: min(100%, 275px); height: auto; object-fit: contain; }
+.wordmark-image { display: block; width: min(100%, 275px); height: auto; object-fit: contain; filter: brightness(0) invert(1); }
