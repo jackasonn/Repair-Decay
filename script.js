@@ -4,6 +4,7 @@
 const SONGS = [
   {
     id: 'on-time',
+    titleImage: 'assets/On time fonts.png',
     cover: 'On time cover.png',
     title: 'ON TIME',
     number: 1,
@@ -18,6 +19,7 @@ const SONGS = [
   },
   {
     id: 'reconcile',
+    titleImage: 'assets/Reconcile fonts.png',
     cover: 'Reconcile cover.png',
     title: 'RECONCILE',
     number: 2,
@@ -31,6 +33,7 @@ const SONGS = [
   },
   {
     id: 'rainy-night',
+    titleImage: 'assets/Rainy night fonts.png',
     cover: 'Riany n cover copy.png',
     title: 'RAINY NIGHT',
     number: 3,
@@ -45,6 +48,7 @@ const SONGS = [
   },
   {
     id: 'there-is-love',
+    titleImage: 'assets/This is love fonts.png',
     cover: 'love cover copy 2.png',
     title: 'THERE IS LOVE',
     number: 4,
@@ -1497,7 +1501,7 @@ function updatePlaybackClock() {
 
 function renderCurrentSong() {
   const song = SONGS[currentSongIndex];
-  els.songTitle.textContent = song.title;
+  els.songTitle.innerHTML = '<img class="song-title-image" src="' + encodeURI(song.titleImage) + '" alt="' + song.title + '">';
   els.songNumber.textContent = String(song.number).padStart(2, '0') + ' OF ' + String(SONGS.length).padStart(2, '0');
   els.songArtist.textContent = song.artist;
   els.artNoise.textContent = String(currentSongIndex + 1).padStart(3, '0');
