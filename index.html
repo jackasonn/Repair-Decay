@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0b0906">
     <title>REPAIR / DECAY — Interactive Music</title>
-    <link rel="stylesheet" href="style.css?v=20261027-guitar-target-repair">
+    <link rel="stylesheet" href="style.css?v=20261027-guitar-keys-interaction">
 </head>
 <body>
     <div class="scanlines" aria-hidden="true"></div>
@@ -129,17 +129,20 @@
                             <span></span><span></span><span></span><span></span><span></span><span></span>
                         </div>
                         <div id="guitar-targets" class="guitar-targets"></div>
+                        <div id="guitar-notices" class="guitar-notices" aria-hidden="true"></div>
                     </div>
                     <p id="guitar-feedback" role="status">CLICK A GLOWING TARGET TO REPAIR ITS EFFECT</p>
                     <p id="guitar-progress" aria-live="polite">0 REPAIRED</p>
                 </section>
                 <section class="keys-panel" id="keys-panel" aria-label="Keys arrow repair" hidden>
-                    <div class="panel-heading"><span>KEYS REPAIR</span><span id="keys-time">18s</span></div>
-                    <p>Use <kbd>←</kbd> <kbd>↓</kbd> <kbd>↑</kbd> <kbd>→</kbd> when each rising arrow meets its matching arrow at the top. Land 6 of 8 hits and finish the full round to repair.</p>
-                    <canvas id="keys-signal" aria-label="Four arrow lanes: left, down, up, right. Press matching arrow keys at the top targets."></canvas>
-                    <p id="keys-feedback" role="status">PRESS THE MATCHING ARROW KEY</p>
-                    <p id="keys-progress" aria-live="polite">0 / 8 HITS · 6 NEEDED</p>
-                    <button class="solo-button" id="keys-retry" type="button" hidden>RETRY KEYS REPAIR</button>
+                    <div class="panel-heading"><span>KEYS REPAIR</span><span id="keys-active-count">0 ACTIVE</span></div>
+                    <p>Each moving arrow represents an active keys decay effect. Press its matching arrow key when it reaches the top, or click the moving arrow. Missed arrows return until their effect is repaired.</p>
+                    <div class="keys-signal-wrap">
+                        <canvas id="keys-signal" aria-label="Four arrow lanes. Press a matching arrow key at the top or click a moving arrow to repair its labelled effect. Missed arrows return."></canvas>
+                        <div id="keys-target-labels" class="keys-target-labels" aria-hidden="true"></div>
+                    </div>
+                    <p id="keys-feedback" role="status">PRESS THE MATCHING KEY AT THE TOP OR CLICK A MOVING ARROW</p>
+                    <p id="keys-progress" aria-live="polite">0 REPAIRED · 0 RETRIES</p>
                 </section>
                 <section class="rhythm-panel" id="rhythm-panel" aria-label="Drums rhythm repair" hidden>
                     <div class="panel-heading"><span>RHYTHM REPAIR</span><span>KEY: F</span></div>
@@ -155,6 +158,6 @@
         </div>
         <div class="signal-lock-toast" id="repair-lock-toast" role="status" aria-live="polite" hidden>Hit 6 of 8 rhythm beats and finish the round to restore the drums.</div>
     </dialog>
-    <script src="script.js?v=20261027-guitar-target-repair"></script>
+    <script src="script.js?v=20261027-guitar-keys-interaction"></script>
 </body>
 </html>
