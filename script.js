@@ -156,8 +156,11 @@ function cacheElements() {
   els.rhythmPanel = document.getElementById('rhythm-panel');
   els.guitarPanel = document.getElementById('guitar-panel');
   els.keysPanel = document.getElementById('keys-panel');
-  els.keysRetry = document.getElementById('keys-retry');
   els.guitarTargets = document.getElementById('guitar-targets');
+  els.guitarNotices = document.getElementById('guitar-notices');
+  els.guitarStrings = document.querySelector('.guitar-strings');
+  els.keysSignal = document.getElementById('keys-signal');
+  els.keysTargetLabels = document.getElementById('keys-target-labels');
   els.rhythmStart = document.getElementById('repair-retry');
   els.repairLockToast = document.getElementById('repair-lock-toast');
 }
@@ -1629,10 +1632,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   els.guitarTargets.addEventListener('click', handleGuitarTarget);
+  els.guitarStrings.addEventListener('click', handleGuitarStringClick);
+  els.keysSignal.addEventListener('click', handleKeysRepairClick);
   els.dialog.addEventListener('close', () => { guitarRepair = null; keysRepair = null; });
-  els.keysRetry.addEventListener('click', () => {
-    if (els.dialog.open && !state.overallDialog && state.selectedTrack === 'keys') startKeysRepair();
-  });
   els.solo.addEventListener('click', toggleSolo);
   els.rhythmStart.addEventListener('click', () => restartRhythmRepair(true));
 
@@ -1873,6 +1875,7 @@ function startGuitarRepair() {
     stringOrder: shuffleGuitarValues([0, 1, 2, 3, 4, 5])
   };
   els.guitarTargets.innerHTML = '';
+  els.guitarNotices.innerHTML = '';
   document.getElementById('guitar-progress').textContent = '0 REPAIRED';
   document.getElementById('guitar-active-count').textContent = '0 ACTIVE';
   document.getElementById('guitar-feedback').textContent = trackState.guitars?.events.length
@@ -1978,6 +1981,25 @@ function vibrateGuitarString(stringIndex) {
   string.classList.add('is-vibrating');
   string.addEventListener('animationend', () => string.classList.remove('is-vibrating'), {once:true});
 }
+
+function handleGuitarStringClick(event) {
+  const string = event.target.closest('.guitar-strings span');
+  if (!string || !els.guitarStrings.contains(string)) return;
+  const stringIndex = Array.from(els.guitarStrings.querySelectorAll('span')).indexOf(string);
+  if (stringIndex < 0) return;
+  vibrateGuitarString(stringIndex);
+  const board = els.guitarPanel.querySelector('.guitar-soundboard');
+  const rect = board.getBoundingClientRect();
+  const x = Math.max(22, Math.min(78, (event.clientX - rect.left) / rect.width * 100));
+  const y = Math.max(12, Math.min(88, (event.clientY - rect.top) / rect.height * 100));
+  const notice = document.createElement('span');
+  notice.className = 'guitar-hit-label guitar-empty-notice';
+  notice.textContent = 'THERE IS NO DECAY EVENT TO FIX UP HERE';
+  notice.style.setProperty('--dot-x', x + '%');
+  notice.style.setProperty('--dot-y', y + '%');
+  els.guitarNotices.appendChild(notice);
+  notice.addEventListener('animationend', () => notice.remove(), {once:true});
+}
 function handleGuitarTarget(event) {
   if (!currentGuitarRepair()) return;
   const button = event.target.closest('[data-guitar-target]');
@@ -2007,66 +2029,127 @@ function handleGuitarTarget(event) {
 }
 
 
-// Four-lane Keys repair: arrows rise to fixed receptors over an 18-second round.
-const KEYS_ROUND_MS = 18000;
+// Four-lane Keys repair: each moving arrow is linked to a live decay-effect type.
 const KEYS_WINDOW_MS = 280;
 const KEYS_TRAVEL_MS = 1800;
-const KEYS_HITS_REQUIRED = 6;
+const KEYS_EVENT_SPACING_MS = 1650;
+const KEYS_RETRY_DELAY_MS = 700;
+const KEYS_HIT_VISUAL_MS = 760;
 const KEYS_CODES = ['ArrowLeft', 'ArrowDown', 'ArrowUp', 'ArrowRight'];
 const KEYS_COLOURS = ['#e69bd5', '#67dce6', '#9fda72', '#ed8c7e'];
 let keysRepair = null;
-function keysRepairSequence() {
-  const lanes = [0, 1, 2, 3, 0, 1, 2, 3];
-  for (let i = lanes.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [lanes[i], lanes[j]] = [lanes[j], lanes[i]];
-  }
-  return lanes.map((lane, i) => ({lane, at:2500 + i * 2000, judged:false, hit:false}));
+function keysTargetColour(typeId) {
+  const index = Math.max(0, EVENT_TYPES.findIndex(event => event.id === typeId));
+  return KEYS_COLOURS[index % KEYS_COLOURS.length];
 }
 function currentKeysRepair() {
-  return keysRepair && !keysRepair.finished && els.dialog?.open && !state.overallDialog &&
+  return keysRepair && els.dialog?.open && !state.overallDialog &&
     state.selectedTrack === 'keys' && keysRepair.song === currentSongIndex &&
     keysRepair.generation === state.songGeneration;
 }
 function startKeysRepair() {
-  keysRepair = null;
-  els.keysRetry.hidden = true;
-  document.getElementById('keys-progress').textContent = '0 / 8 HITS · 6 NEEDED';
-  document.getElementById('keys-time').textContent = '18s';
-  if (!trackState.keys?.events.length) {
-    document.getElementById('keys-feedback').textContent = 'KEYS SIGNAL RESTORED — NO REPAIR NEEDED';
-    drawKeysRepair(0);
-    return;
-  }
-  keysRepair = {song:currentSongIndex, generation:state.songGeneration, startedAt:performance.now(),
-    notes:keysRepairSequence(), hits:0, finished:false, bursts:[]};
-  document.getElementById('keys-feedback').textContent = 'PRESS THE MATCHING ARROW KEY AS THE ARROWS MEET';
+  keysRepair = {
+    song:currentSongIndex, generation:state.songGeneration,
+    startedAt:performance.now(), notes:[], nextNoteId:0, nextNoteAt:2500,
+    repairedCount:0, missCount:0, bursts:[], finished:false
+  };
+  els.keysTargetLabels.innerHTML = '';
+  document.getElementById('keys-progress').textContent = '0 REPAIRED · 0 RETRIES';
+  document.getElementById('keys-active-count').textContent = '0 ACTIVE';
+  document.getElementById('keys-feedback').textContent = trackState.keys?.events.length
+    ? 'PRESS THE MATCHING KEY AT THE TOP OR CLICK A MOVING ARROW'
+    : 'KEYS SIGNAL RESTORED — WAITING FOR DECAY';
   updateKeysRepair();
+}
+function syncKeysTargets(now, elapsed) {
+  const game = keysRepair;
+  const activeDefinitions = EVENT_TYPES.filter(definition =>
+    trackState.keys?.events.some(event => event.type === definition.id)
+  );
+  const activeTypes = new Set(activeDefinitions.map(definition => definition.id));
+  game.notes.forEach(note => {
+    if (note.status === 'active' && !activeTypes.has(note.type)) {
+      note.status = 'cleared';
+    } else if (note.status === 'hit' && now - note.hitAt >= KEYS_HIT_VISUAL_MS) {
+      note.status = 'cleared';
+    }
+  });
+  activeDefinitions.forEach(definition => {
+    const exists = game.notes.some(note => note.type === definition.id && note.status === 'active');
+    if (exists) return;
+    const at = Math.max(elapsed + KEYS_TRAVEL_MS + KEYS_RETRY_DELAY_MS, game.nextNoteAt);
+    game.notes.push({
+      id:game.nextNoteId++, type:definition.id, name:definition.name,
+      colour:keysTargetColour(definition.id), lane:Math.floor(Math.random() * 4),
+      at, status:'active', misses:0, hitAt:0
+    });
+    game.nextNoteAt = at + KEYS_EVENT_SPACING_MS;
+  });
+  return activeTypes.size;
+}
+function showKeysHitLabel(note, y) {
+  const label = document.createElement('span');
+  label.className = 'keys-hit-label';
+  label.textContent = note.name + ' REPAIRED';
+  label.style.left = (((note.lane + .5) / 4) * 100) + '%';
+  label.style.top = Math.max(18, Math.min(260, y)) + 'px';
+  label.style.setProperty('--keys-target-colour', note.colour);
+  els.keysTargetLabels.appendChild(label);
+  label.addEventListener('animationend', () => label.remove(), {once:true});
+}
+function completeKeysTarget(note, now, elapsed, y) {
+  if (!currentKeysRepair() || note.status !== 'active') return false;
+  const repairedCount = repairTrackEventType('keys', note.type);
+  if (!repairedCount) {
+    note.status = 'cleared';
+    updateKeysRepair(now);
+    return false;
+  }
+  note.status = 'hit';
+  note.hitAt = now;
+  keysRepair.repairedCount++;
+  keysRepair.bursts.push({lane:note.lane, at:elapsed, y:y, colour:note.colour});
+  showKeysHitLabel(note, y);
+  playSwitchSound('off');
+  addLog('KEYS repaired: ' + note.name + '.', 'repair');
+  document.getElementById('keys-feedback').textContent =
+    note.name + ' REPAIRED — KEYS SIGNAL RESTORED';
+  updateUI();
+  updateDialog();
+  updateKeysRepair(now);
+  return true;
 }
 function updateKeysRepair(now = performance.now()) {
   if (!currentKeysRepair()) return;
   const game = keysRepair;
   const elapsed = Math.max(0, now - game.startedAt);
+  syncKeysTargets(now, elapsed);
   game.notes.forEach(note => {
-    if (!note.judged && elapsed > note.at + KEYS_WINDOW_MS) {
-      note.judged = true;
-      document.getElementById('keys-feedback').textContent = 'MISSED ARROW — KEEP GOING; 6 OF 8 IS ENOUGH';
+    if (note.status !== 'active' || elapsed <= note.at + KEYS_WINDOW_MS) return;
+    if (!trackState.keys?.events.some(event => event.type === note.type)) {
+      note.status = 'cleared';
+      return;
     }
+    note.misses++;
+    game.missCount++;
+    note.at = elapsed + KEYS_TRAVEL_MS + KEYS_RETRY_DELAY_MS;
+    game.nextNoteAt = Math.max(game.nextNoteAt, note.at + KEYS_EVENT_SPACING_MS);
+    document.getElementById('keys-feedback').textContent =
+      'MISSED ' + note.name + ' — ITS ARROW WILL COME BACK';
   });
-  game.bursts = game.bursts.filter(burst => elapsed - burst.at < 500);
-  document.getElementById('keys-progress').textContent = game.hits + ' / 8 HITS · 6 NEEDED';
-  document.getElementById('keys-time').textContent = Math.max(0, Math.ceil((KEYS_ROUND_MS - elapsed) / 1000)) + 's';
-  drawKeysRepair(elapsed);
-  if (elapsed >= KEYS_ROUND_MS) {
-    game.finished = true;
-    if (game.hits >= KEYS_HITS_REQUIRED) {
-      document.getElementById('keys-feedback').textContent = 'KEYS REPAIR COMPLETE — SIGNAL RESTORED';
-      repairTrack('keys');
-    } else {
-      document.getElementById('keys-feedback').textContent = 'ROUND INCOMPLETE — TRY AGAIN FOR 6 OF 8 HITS';
-      els.keysRetry.hidden = false;
-    }
+  game.bursts = game.bursts.filter(burst => elapsed - burst.at < 520);
+  const activeCount = EVENT_TYPES.filter(definition =>
+    trackState.keys?.events.some(event => event.type === definition.id)
+  ).length;
+  document.getElementById('keys-active-count').textContent = activeCount + ' ACTIVE';
+  document.getElementById('keys-progress').textContent =
+    game.repairedCount + ' REPAIRED · ' + game.missCount + ' RETRIES';
+  if (activeCount === 0 && game.repairedCount === 0) {
+    document.getElementById('keys-feedback').textContent = 'KEYS SIGNAL RESTORED — WAITING FOR DECAY';
   }
+  drawKeysRepair(elapsed);
+  const activeTargetsRemain = game.notes.some(note => note.status === 'active' || note.status === 'hit');
+  if (game.repairedCount > 0 && activeCount === 0 && !activeTargetsRemain) closeTrackDialog();
 }
 function handleKeysRepairKey(event) {
   const lane = KEYS_CODES.indexOf(event.code);
@@ -2079,22 +2162,49 @@ function handleKeysRepairKey(event) {
   updateKeysRepair(now);
   if (!currentKeysRepair()) return;
   const elapsed = now - keysRepair.startedAt;
-  const note = keysRepair.notes.find(note => !note.judged && note.lane === lane &&
-    Math.abs(elapsed - note.at) <= KEYS_WINDOW_MS);
+  const note = keysRepair.notes.find(item =>
+    item.status === 'active' && item.lane === lane &&
+    Math.abs(elapsed - item.at) <= KEYS_WINDOW_MS
+  );
   if (!note) {
-    document.getElementById('keys-feedback').textContent = 'MATCH THE DIRECTION AND WAIT FOR THE TOP ARROW';
+    document.getElementById('keys-feedback').textContent =
+      'MATCH THE ARROW DIRECTION AS IT REACHES THE TOP — MISSED ARROWS RETURN';
     return;
   }
-  note.judged = true;
-  note.hit = true;
-  keysRepair.hits++;
-  keysRepair.bursts.push({lane, at:elapsed});
-  document.getElementById('keys-feedback').textContent = keysRepair.hits >= KEYS_HITS_REQUIRED
-    ? 'TARGET REACHED — FINISH THE FULL ROUND' : 'ON TIME — NICE HIT';
+  const until = note.at - elapsed;
+  const y = 44 + until / KEYS_TRAVEL_MS * (300 - 44 - 15);
+  completeKeysTarget(note, now, elapsed, Math.max(14, Math.min(280, y)));
+}
+function handleKeysRepairClick(event) {
+  if (!currentKeysRepair()) return;
+  const canvas = els.keysSignal, rect = els.keysSignal.getBoundingClientRect();
+  const width = Math.max(1, rect.width), height = Math.max(1, rect.height);
+  const x = event.clientX - rect.left, y = event.clientY - rect.top;
+  const lane = Math.max(0, Math.min(3, Math.floor(x / width * 4)));
+  const now = performance.now();
   updateKeysRepair(now);
+  if (!currentKeysRepair()) return;
+  const elapsed = now - keysRepair.startedAt;
+  const size = Math.min(28, width / 11), receptorY = 44;
+  const candidates = keysRepair.notes
+    .filter(note => note.status === 'active' && note.lane === lane)
+    .map(note => {
+      const until = note.at - elapsed;
+      if (until > KEYS_TRAVEL_MS || until < -KEYS_WINDOW_MS) return null;
+      return {note, arrowY:receptorY + until / KEYS_TRAVEL_MS * (height - receptorY - 15)};
+    }).filter(Boolean).sort((a,b) => Math.abs(y-a.arrowY) - Math.abs(y-b.arrowY));
+  const target = candidates.find(item =>
+    Math.abs(x - width * (item.note.lane + .5) / 4) <= size * 1.7 &&
+    Math.abs(y - item.arrowY) <= size * 1.7
+  );
+  if (!target) {
+    document.getElementById('keys-feedback').textContent = 'CLICK A MOVING ARROW TO REPAIR ITS EFFECT';
+    return;
+  }
+  completeKeysTarget(target.note, now, elapsed, target.arrowY);
 }
 function drawKeysRepair(elapsed) {
-  const canvas = document.getElementById('keys-signal');
+  const canvas = els.keysSignal;
   const width = Math.max(1, canvas.getBoundingClientRect().width), height = 300;
   const ratio = window.devicePixelRatio || 1;
   canvas.width = Math.round(width * ratio); canvas.height = height * ratio;
@@ -2112,27 +2222,35 @@ function drawKeysRepair(elapsed) {
     if (filled) { ctx.fillStyle = colour; ctx.shadowColor = colour; ctx.shadowBlur = 13; ctx.fill(); }
     ctx.stroke(); ctx.restore();
   }
-  for (let lane = 0; lane < 4; lane++) {
-    ctx.fillStyle = lane % 2 ? 'rgba(228,211,140,.025)' : 'rgba(228,211,140,.055)';
-    ctx.fillRect(width * lane / 4, 0, width / 4, height);
-    const flash = keysRepair?.bursts.some(burst => burst.lane === lane && elapsed - burst.at < 260);
-    arrow(lane, receptorY, flash ? KEYS_COLOURS[lane] : '#8e917f', flash, flash ? 4 : 0);
+  for(let lane=0;lane<4;lane++) {
+    ctx.fillStyle = lane%2 ? 'rgba(228,211,140,.025)' : 'rgba(228,211,140,.055)';
+    ctx.fillRect(width*lane/4,0,width/4,height);
+    const burst=keysRepair?.bursts.find(item=>item.lane===lane&&elapsed-item.at<260);
+    arrow(lane,receptorY,burst?burst.colour:'#8e917f',Boolean(burst),burst?4:0);
   }
-  if (!keysRepair) return;
-  keysRepair.notes.forEach(note => {
-    const until = note.at - elapsed;
-    if (note.judged || until > KEYS_TRAVEL_MS || until < -KEYS_WINDOW_MS) return;
-    arrow(note.lane, receptorY + until / KEYS_TRAVEL_MS * (height - receptorY - 15), KEYS_COLOURS[note.lane], true);
+  if(!keysRepair)return;
+  keysRepair.notes.forEach(note=>{
+    if(note.status!=='active')return;
+    const until=note.at-elapsed;
+    if(until>KEYS_TRAVEL_MS||until<-KEYS_WINDOW_MS)return;
+    const y=receptorY+until/KEYS_TRAVEL_MS*(height-receptorY-15);
+    arrow(note.lane,y,note.colour,true);
+    ctx.save();
+    ctx.font=width<480?'8px monospace':'9px monospace';
+    ctx.textAlign='center';ctx.textBaseline='bottom';
+    ctx.fillStyle=note.colour;ctx.shadowColor=note.colour;ctx.shadowBlur=6;
+    ctx.fillText(note.name,width*(note.lane+.5)/4,y-size-5,width/4-8);
+    ctx.restore();
   });
-  keysRepair.bursts.forEach(burst => {
-    const age = Math.max(0, elapsed - burst.at) / 500;
-    const x = width * (burst.lane + .5) / 4;
-    ctx.globalAlpha = 1 - age;
-    ctx.fillStyle = KEYS_COLOURS[burst.lane];
-    for (let i = 0; i < 12; i++) {
-      const angle = i * Math.PI / 6, distance = 15 + age * 45;
-      ctx.beginPath(); ctx.arc(x + Math.cos(angle) * distance, receptorY + Math.sin(angle) * distance, 3 * (1 - age) + 1, 0, Math.PI * 2); ctx.fill();
+  keysRepair.bursts.forEach(burst=>{
+    const age=Math.max(0,elapsed-burst.at)/520;
+    const x=width*(burst.lane+.5)/4;
+    const burstY=Number.isFinite(burst.y)?burst.y:receptorY;
+    ctx.globalAlpha=1-age;ctx.fillStyle=burst.colour||KEYS_COLOURS[burst.lane];
+    for(let i=0;i<12;i++){
+      const angle=i*Math.PI/6,distance=15+age*45;
+      ctx.beginPath();ctx.arc(x+Math.cos(angle)*distance,burstY+Math.sin(angle)*distance,3*(1-age)+1,0,Math.PI*2);ctx.fill();
     }
-    ctx.globalAlpha = 1;
+    ctx.globalAlpha=1;
   });
 }
