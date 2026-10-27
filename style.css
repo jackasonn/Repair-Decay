@@ -2590,3 +2590,68 @@ a.portfolio-card:focus-visible {
   86% { transform:translateY(-.5px) scaleY(1.1); filter:drop-shadow(0 0 2px #e35b50); }
   100% { transform:translateY(0) scaleY(1); filter:drop-shadow(0 0 0 transparent); }
 }
+
+
+/* Consistent Guitar string geometry: even centres, identical hit areas and aligned lines. */
+.guitar-strings span:nth-child(1) {
+  --string-position: 15%;
+  top: calc(var(--string-position) - 15px);
+  height: 30px;
+}
+.guitar-strings span:nth-child(2) {
+  --string-position: 29%;
+  top: calc(var(--string-position) - 15px);
+  height: 30px;
+}
+.guitar-strings span:nth-child(3) {
+  --string-position: 43%;
+  top: calc(var(--string-position) - 15px);
+  height: 30px;
+}
+.guitar-strings span:nth-child(4) {
+  --string-position: 57%;
+  top: calc(var(--string-position) - 15px);
+  height: 30px;
+}
+.guitar-strings span:nth-child(5) {
+  --string-position: 71%;
+  top: calc(var(--string-position) - 15px);
+  height: 30px;
+}
+.guitar-strings span:nth-child(6) {
+  --string-position: 85%;
+  top: calc(var(--string-position) - 15px);
+  height: 30px;
+}
+
+/* Ordinary plucks flash red; strings that repair a decay event flash green. */
+.guitar-strings span.is-vibrating:not(.is-repairing)::before {
+  background: #e35b50;
+  box-shadow: 0 0 8px #e35b50, 0 0 15px rgba(227,91,80,.72);
+}
+@keyframes guitar-string-vibrate {
+  0% { transform:translateY(0) scaleY(1); filter:drop-shadow(0 0 0 transparent); }
+  8% { transform:translateY(-3px) scaleY(2.8); filter:drop-shadow(0 0 8px #e35b50); }
+  18% { transform:translateY(3px) scaleY(2.3); filter:drop-shadow(0 0 10px #e35b50); }
+  30% { transform:translateY(-2.4px) scaleY(2); filter:drop-shadow(0 0 8px #e35b50); }
+  43% { transform:translateY(2px) scaleY(1.8); filter:drop-shadow(0 0 7px #e35b50); }
+  57% { transform:translateY(-1.3px) scaleY(1.5); filter:drop-shadow(0 0 5px #e35b50); }
+  72% { transform:translateY(1px) scaleY(1.25); filter:drop-shadow(0 0 4px #e35b50); }
+  86% { transform:translateY(-.5px) scaleY(1.1); filter:drop-shadow(0 0 2px #e35b50); }
+  100% { transform:translateY(0) scaleY(1); filter:drop-shadow(0 0 0 transparent); }
+}
+.guitar-strings span.is-vibrating.is-repairing::before {
+  background: #9fda72;
+  box-shadow: 0 0 8px #9fda72, 0 0 15px rgba(159,218,114,.75);
+}
+@keyframes guitar-string-vibrate-repair {
+  0% { transform:translateY(0) scaleY(1); filter:drop-shadow(0 0 0 transparent); }
+  8% { transform:translateY(-3px) scaleY(2.8); filter:drop-shadow(0 0 8px #9fda72); }
+  18% { transform:translateY(3px) scaleY(2.3); filter:drop-shadow(0 0 10px #9fda72); }
+  30% { transform:translateY(-2.4px) scaleY(2); filter:drop-shadow(0 0 8px #9fda72); }
+  43% { transform:translateY(2px) scaleY(1.8); filter:drop-shadow(0 0 7px #9fda72); }
+  57% { transform:translateY(-1.3px) scaleY(1.5); filter:drop-shadow(0 0 5px #9fda72); }
+  72% { transform:translateY(1px) scaleY(1.25); filter:drop-shadow(0 0 4px #9fda72); }
+  86% { transform:translateY(-.5px) scaleY(1.1); filter:drop-shadow(0 0 2px #9fda72); }
+  100% { transform:translateY(0) scaleY(1); filter:drop-shadow(0 0 0 transparent); }
+}
