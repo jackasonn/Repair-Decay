@@ -2655,3 +2655,19 @@ a.portfolio-card:focus-visible {
   86% { transform:translateY(-.5px) scaleY(1.1); filter:drop-shadow(0 0 2px #9fda72); }
   100% { transform:translateY(0) scaleY(1); filter:drop-shadow(0 0 0 transparent); }
 }
+
+
+/* The string elements are invisible hit areas; only ::before draws the narrow wire. */
+.guitar-strings span,
+.guitar-strings span:nth-child(1),
+.guitar-strings span:nth-child(2),
+.guitar-strings span:nth-child(3),
+.guitar-strings span:nth-child(4),
+.guitar-strings span:nth-child(5),
+.guitar-strings span:nth-child(6) {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.guitar-strings { pointer-events: none; }
+.guitar-strings span { pointer-events: auto; }
+.guitar-soundboard { touch-action: none; }
