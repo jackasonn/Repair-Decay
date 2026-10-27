@@ -2673,7 +2673,7 @@ a.portfolio-card:focus-visible {
 .guitar-soundboard { touch-action: none; }
 
 /* Image wordmark */
-.wordmark-image { display: block; width: min(100%, 275px); height: auto; object-fit: contain; filter: brightness(0) invert(1); }
+.wordmark-image { display: block; width: min(100%, 275px); height: auto; object-fit: contain; filter: brightness(0) saturate(100%) invert(86%) sepia(17%) saturate(786%) hue-rotate(354deg) brightness(96%) contrast(86%); }
 
 
 /* Event-linked Drum mini-game, styled to match the Keys arrow glow and bursts. */
