@@ -2526,14 +2526,29 @@ function drawKeysRepair(elapsed) {
 }
 
 
-// Pilot: There Is Love only. Lyrics follow the shared audible song position;
+// Keyword typing repair for On Time and There Is Love. Lyrics follow the shared audible song position;
 // character highlighting follows the visitor's own correctly typed prefix.
 const VOCAL_LINES_REQUIRED = 2;
 let vocalRepair = null;
-function vocalTypingAvailable() { return SONGS[currentSongIndex].id === 'there-is-love'; }
+function vocalLyricsForSong() {
+  const id = SONGS[currentSongIndex].id;
+  if (id === 'there-is-love') return THERE_IS_LOVE_LYRICS;
+  if (id === 'on-time') return ON_TIME_LYRICS;
+  return [];
+}
+function vocalTypingAvailable() { return ['there-is-love', 'on-time'].includes(SONGS[currentSongIndex].id); }
+function vocalChallenge(line) {
+  const words = Array.from(line.text.matchAll(/[A-Za-z0-9]+(?:['’][A-Za-z]+)*/g), match => ({text:match[0], start:match.index}));
+  const selected = line.keywords.map(index => words[index]);
+  const letters = [];
+  selected.forEach(word => {
+    for (let i = 0; i < word.text.length; i++) if (/[a-z]/i.test(word.text[i])) letters.push(word.start + i);
+  });
+  return {words:selected.map(word => word.text), letters, expected:selected.map(word => vocalLetters(word.text)).join('')};
+}
 function vocalLetters(text) { return text.toLowerCase().replace(/[^a-z]/g, ''); }
 function vocalLyricAt(position) {
-  return THERE_IS_LOVE_LYRICS.findIndex(line => position >= line.start && position < line.end);
+  return vocalLyricsForSong().findIndex(line => position >= line.start && position < line.end);
 }
 function currentVocalRepair() {
   return vocalRepair && !vocalRepair.finished && els.dialog?.open && !state.overallDialog &&
@@ -2546,6 +2561,7 @@ function startVocalRepair() {
   els.vocalInput.value = '';
   if (!trackState.vocals?.events.length) {
     document.getElementById('vocal-lyric').textContent = 'VOCAL SIGNAL RESTORED';
+    document.getElementById('vocal-words').textContent = 'NO WORDS REQUIRED';
     document.getElementById('vocal-feedback').textContent = 'NO REPAIR NEEDED';
     document.getElementById('vocal-progress').textContent = '0 / 2 LINES RESTORED';
     els.vocalInput.disabled = true;
@@ -2559,13 +2575,15 @@ function startVocalRepair() {
 function renderVocalLetters(line, correct) {
   const display = document.getElementById('vocal-lyric');
   display.replaceChildren();
-  let letter = 0;
+  const challenge = vocalChallenge(line);
+  const keywordLetters = new Set(challenge.letters);
+  const litLetters = new Set(challenge.letters.slice(0, correct));
+  let position = 0;
   for (const char of line.text) {
     const span = document.createElement('span');
-    const isLetter = /[a-z]/i.test(char);
-    const lit = isLetter ? letter < correct : letter > 0 && letter <= correct;
-    if (isLetter) letter++;
-    span.className = lit ? 'vocal-letter is-typed' : 'vocal-letter';
+    const selected = keywordLetters.has(position);
+    const lit = litLetters.has(position++);
+    span.className = 'vocal-letter' + (selected ? ' is-keyword' : '') + (lit ? ' is-typed' : '');
     span.textContent = char;
     display.appendChild(span);
   }
@@ -2582,9 +2600,11 @@ function updateVocalRepair() {
     els.vocalInput.value = '';
     els.vocalInput.setAttribute('aria-invalid', 'false');
     if (index >= 0) {
-      renderVocalLetters(THERE_IS_LOVE_LYRICS[index], 0);
-      document.getElementById('vocal-section').textContent = THERE_IS_LOVE_LYRICS[index].section;
+      renderVocalLetters(vocalLyricsForSong()[index], 0);
+      document.getElementById('vocal-words').textContent = vocalChallenge(vocalLyricsForSong()[index]).words.join(' · ');
+      document.getElementById('vocal-section').textContent = vocalLyricsForSong()[index].section;
     } else {
+      document.getElementById('vocal-words').textContent = 'WAITING FOR THE NEXT LYRIC';
       document.getElementById('vocal-lyric').textContent = 'LISTEN FOR THE NEXT VOCAL LINE…';
       document.getElementById('vocal-section').textContent = 'INSTRUMENTAL / BETWEEN LINES';
     }
@@ -2595,10 +2615,10 @@ function updateVocalRepair() {
   if (changed && !els.vocalInput.disabled) els.vocalInput.focus({preventScroll:true});
   document.getElementById('vocal-progress').textContent = game.completed.size + ' / 2 LINES RESTORED';
   if (!state.playing) document.getElementById('vocal-feedback').textContent = 'RESUME THE SONG TO FOLLOW THE LYRICS';
-  else if (index < 0) document.getElementById('vocal-feedback').textContent = position >= THERE_IS_LOVE_LYRICS[THERE_IS_LOVE_LYRICS.length-1].end
+  else if (index < 0) document.getElementById('vocal-feedback').textContent = position >= vocalLyricsForSong()[vocalLyricsForSong().length-1].end
     ? 'VOCALS FINISHED — REPLAY THE SONG TO CONTINUE REPAIR' : 'WAITING FOR THE NEXT SUNG LINE';
   else if (done) document.getElementById('vocal-feedback').textContent = 'LINE RESTORED — WAIT FOR THE NEXT LYRIC';
-  else if (changed) document.getElementById('vocal-feedback').textContent = 'TYPE THIS LINE — PUNCTUATION AND CAPITALS ARE OPTIONAL';
+  else if (changed) document.getElementById('vocal-feedback').textContent = 'TYPE ONLY THE 2–3 UNDERLINED WORDS — CAPITALS ARE OPTIONAL';
 }
 function handleVocalInput(event) {
   if (event?.isComposing || !currentVocalRepair()) return;
@@ -2606,8 +2626,8 @@ function handleVocalInput(event) {
   updateVocalRepair();
   if (!currentVocalRepair() || previousLine !== vocalRepair.line || els.vocalInput.disabled) return;
   const game = vocalRepair;
-  const line = THERE_IS_LOVE_LYRICS[game.line];
-  const expected = vocalLetters(line.text), typed = vocalLetters(els.vocalInput.value);
+  const line = vocalLyricsForSong()[game.line];
+  const expected = vocalChallenge(line).expected, typed = vocalLetters(els.vocalInput.value);
   let correct = 0;
   while (correct < expected.length && correct < typed.length && expected[correct] === typed[correct]) correct++;
   game.correct = correct;
@@ -2620,6 +2640,7 @@ function handleVocalInput(event) {
     game.completed.add(game.line);
     if (game.completed.size >= VOCAL_LINES_REQUIRED) {
       game.finished = true;
+      els.vocalInput.disabled = true;
       document.getElementById('vocal-feedback').textContent = 'VOCAL REPAIR COMPLETE — SIGNAL RESTORED';
       repairTrack('vocals');
     } else updateVocalRepair();

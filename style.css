@@ -2771,6 +2771,9 @@ a.portfolio-card:focus-visible {
 .track-info .track-name { display:flex; align-items:center; min-height:1.08em; }
 .track-name-art { display:block; width:auto; max-width:100%; height:24px; object-fit:contain; object-position:left center; filter:brightness(0) saturate(100%) invert(86%) sepia(17%) saturate(786%) hue-rotate(354deg) brightness(96%) contrast(86%); }
 
+/* The full lyric stays visible; only the short keyword set is required. */
+.vocal-letter.is-keyword { text-decoration:underline; text-decoration-color:#94966c; text-underline-offset:.2em; }
+.vocal-panel .vocal-words { margin:12px 0; padding:10px 12px; border-left:2px solid var(--green); color:var(--cream); font-size:1.05rem; letter-spacing:.08em; }
 /* Centre the instrument-name artwork within each instrument card. */
 .track-info .track-name { justify-content:center; text-align:center; }
 .track-name-art { margin-inline:auto; object-position:center center; }

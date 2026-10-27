@@ -1,71 +1,58 @@
-# There Is Love Vocal typing pilot
+# Vocal keyword typing repair
 
-Only There Is Love replaces its Vocal repair switches with typing. On Time is
-reserved for a later lyric/timing submission; Rainy Night's Vocal switches and
-all other instrument games remain unchanged. The existing left Vocal artwork,
-particles and diagnostics remain. Global repair controls remain available.
+On Time and There Is Love now share the same keyword typing game. The full
+current lyric remains visible, but only 2–3 selected words need typing, in
+order. Selected words are underlined in the lyric and repeated in a short
+TYPE ONLY word list. Each correct letter illuminates its corresponding letter
+in the full lyric, skipping unneeded words. For example, the bridge line
+“Look around and you will find love in everything” requires “Look find love”.
 
-## Playback synchronization
+Lyrics are selected from the current song's own table. There Is Love retains
+its existing 25 phrase timestamps; On Time adds 19 occurrences, including the
+repeated ending heard in the recording. Text comes from the user's lyrics.
+`keywords` contains zero-based word indices, ordered within each phrase.
+Only On Time and There Is Love enable typing; other Vocal controls retain
+current behavior. No other instrument game is modified by this update.
 
-`there-is-love-lyrics.js` contains 25 timed phrase occurrences in the recording's
-actual order, including repeated chorus/bridge lines. Text comes from the user.
-It is loaded before script.js; no network transcription runs in the site.
-The supplied song arrangement has a first short chorus and later repeated
-chorus/bridge phrases; the table follows the recording rather than repeating
-the printed verse/chorus headings mechanically.
+Input is case-insensitive; spaces and punctuation are optional. Wrong letters
+do not advance and can be corrected with Backspace. Line changes clear the
+input and select a new short challenge. Complete two distinct keyword sets to
+restore all current Vocal decay effects. As in current main, completed panels
+remain open; input disables and restoration feedback appears. Pausing freezes
+the displayed phrase and disables input, with a resume button in the panel.
+Closing or switching songs cancels stale input. Intro/interlude/outro gaps do
+not invent lyrics or repeat an old phrase.
 
-The table was produced locally using faster-whisper 1.2.1 / base.en, a first
-word-timestamp pass, short-chunk checks and forced alignment of the supplied
-lyrics. Silence gaps in the isolated Vocal stem were used to refine phrase
-pickups; starts have a small lead-in and tails up to 0.4 s. Ambiguous bridge
-pickups were adjusted against the aligned neighbouring words. This is a
-machine-aligned first pass, not a listening-certified transcription; sung
-pickups and long notes may need further listening adjustment. Start/end values
-are intentionally editable separately from the game.
+## Timing sources
 
-Source: assets/there-is-love-vocals.mp3, decoded length about 228.83 s.
-SHA-256: a7fa2f34b71d7287511e8a9e6a3525d161e932b24dbad276dc30a5b11716c536.
-The speech model and decoded intermediates are temporary local tooling, not
-runtime dependencies, and the audio was not uploaded for transcription.
+Both tables use `audibleSongPosition('vocals')`, the existing shared playback
+clock with output and Vocal-worklet latency compensation. No separate song
+clock, stem replacement or runtime transcription is introduced.
 
-`audibleSongPosition('vocals')` uses the existing shared Web Audio source clock,
-output timestamp/device latency and the actual Vocal pitch-worklet delay. The
-Drum timing function delegates to the same helper with its own track ID.
-Lyrics select their actual [start,end) interval at each frame. Pausing freezes
-the lyric position and disables input; the panel can resume music. Opening in
-the middle of the song selects that phrase immediately. Intros, gaps and the
-outro show a waiting/replay prompt instead of an out-of-date lyric.
+There Is Love: existing automatic word/forced alignment and silence refinement,
+about 228.83 s. Vocal SHA-256:
+a7fa2f34b71d7287511e8a9e6a3525d161e932b24dbad276dc30a5b11716c536.
 
-## Typing and completion
+On Time: local faster-whisper 1.2.1 / base.en word timestamps against the actual
+Vocal MP3. Repeated phrases are included in the recording's order. Line windows
+use detected word/phrase boundaries with up to 0.4 s of tail, clamped to the
+next phrase; the first compound segment is split at detected word boundaries.
+The first sung phrase starts at about 21 s; the ending repeat runs about
+83–105 s. Vocal SHA-256:
+331b012c83f8b02a1aa57480d802ac9621d50438f5891add8a12b0428980f408.
+The model and analysis outputs are local temporary tools; audio is not uploaded.
+Timing remains a machine-aligned first pass; weak pickups and long notes can
+benefit from a later listening pass. Tables are separately editable.
 
-Untyped characters are grey. Each matching letter in the typed prefix lights
-up in cream; spaces, punctuation and case are optional. Mistakes do not advance
-and can be corrected with Backspace. Editing recomputes the prefix so deleted
-letters turn grey again. At a lyric boundary the input resets to the newly
-sung phrase; old text cannot be submitted for the new line.
+## Validation
 
-Complete two distinct phrase occurrences to restore the Vocal. A completed
-line is disabled until playback reaches the next phrase, preventing double
-credit. Progress persists across line changes within the attempt. Success uses
-repairTrack('vocals') to clear all Vocal events/effects and close the dialog.
-Closing or changing songs cancels the attempt without falsely repairing.
+Run node --check script.js; node --check on-time-lyrics.js;
+node --check there-is-love-lyrics.js; node tests/vocal-repair.cjs;
+git diff --check. Vocal tests cover both songs, every line's 2–3 ordered words,
+exact selected-letter positions including skipped words, grey unneeded letters,
+mistakes/backspace, punctuation/case, paused input, two-set restoration,
+current-song timing, repeated occurrences, boundary submissions and cancellation.
 
-## Checks
-
-node --check script.js
-node --check there-is-love-lyrics.js
-node tests/vocal-repair.cjs
-node tests/rhythm-repair.cjs
-node tests/guitar-repair.cjs
-node tests/keys-repair.cjs
-git diff --check
-
-Tests cover current-phrase selection, sorted/nonoverlapping timing intervals,
-character highlighting, case/punctuation tolerance, wrong letters/correction,
-pause, old-line boundary submissions, repeated-line credit, two-line completion,
-audio reset, auto-close, mid-song opening and There Is Love-only scope.
-
-Browser inspection confirmed the original Vocal image on the left, the typing
-panel on the right, an instrumental waiting state followed by the current
-bridge lyrics, automatic line changes, and wrong-letter feedback. Automated
-character-level tests cover matching-letter illumination and repair completion.
+Existing unrelated game test harnesses predate subsequent main changes to Drum,
+Guitar and Keys rules. Their legacy failures are not changed by this Vocal-only
+update; current instrument implementations are preserved from latest main.
