@@ -188,7 +188,7 @@ function renderTracks() {
         '<div class="signal-bars">' + bars + '</div>' +
       '</div>' +
       '<div class="track-info">' +
-        '<span class="track-name">' + t.name + '</span>' +
+        '<span class="track-name"><img class="track-name-art" src="' + encodeURI(({drums:'assets/Drums fonts.png',bass:'assets/Bass fonts.png',guitars:'assets/Guitar fonts.png',keys:'assets/Kereys fonts.png',vocals:'assets/Vocal fonts.png'})[t.id]) + '" alt="' + t.name + '"></span>' +
         '<span class="track-status" data-status="' + t.id + '">NORMAL</span>' +
         '<span class="track-meter"><span data-meter="' + t.id + '"></span></span>' +
         '<span class="track-event-count" data-count="' + t.id + '">NO ACTIVE EVENTS</span>' +
