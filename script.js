@@ -162,6 +162,7 @@ function cacheElements() {
   els.guitarTargets = document.getElementById('guitar-targets');
   els.guitarNotices = document.getElementById('guitar-notices');
   els.guitarStrings = document.querySelector('.guitar-strings');
+  els.guitarBoard = document.querySelector('.guitar-soundboard');
   els.keysSignal = document.getElementById('keys-signal');
   els.keysTargetLabels = document.getElementById('keys-target-labels');
   els.rhythmStart = document.getElementById('repair-retry');
@@ -1662,8 +1663,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   els.vocalInput.addEventListener('input', handleVocalInput);
   els.vocalInput.addEventListener('compositionend', handleVocalInput);
-  els.guitarStrings.addEventListener('pointerdown', handleGuitarStringPointerDown);
-  els.guitarStrings.addEventListener('pointerover', handleGuitarStringPointerOver);
+  els.guitarBoard.addEventListener('pointerdown', handleGuitarStringPointerDown);
+  document.addEventListener('pointermove', handleGuitarStringPointerMove);
   document.addEventListener('pointerup', finishGuitarStringDrag);
   document.addEventListener('pointercancel', finishGuitarStringDrag);
   window.addEventListener('blur', () => finishGuitarStringDrag());
@@ -2016,13 +2017,28 @@ function vibrateGuitarString(stringIndex, repairing = false) {
 }
 
 let guitarStringDrag = {active:false, pointerId:null, lastStringIndex:-1};
-function guitarStringIndexForEvent(event) {
-  const string = event.target.closest('.guitar-strings span');
-  if (!string || !els.guitarStrings.contains(string)) return -1;
-  return Array.from(els.guitarStrings.querySelectorAll('span')).indexOf(string);
+const GUITAR_STRING_POSITIONS = [15, 29, 43, 57, 71, 85];
+function guitarStringIndexAtPoint(clientX, clientY) {
+  if (!els.guitarBoard) return -1;
+  const boardRect = els.guitarBoard.getBoundingClientRect();
+  if (clientX < boardRect.left || clientX > boardRect.right ||
+      clientY < boardRect.top || clientY > boardRect.bottom) return -1;
+  const localY = clientY - boardRect.top;
+  const hitHeight = 30;
+  let bestIndex = -1;
+  let bestDistance = Infinity;
+  GUITAR_STRING_POSITIONS.forEach((position, index) => {
+    const centreY = boardRect.height * position / 100;
+    const distance = Math.abs(localY - centreY);
+    if (distance <= hitHeight / 2 && distance < bestDistance) {
+      bestDistance = distance;
+      bestIndex = index;
+    }
+  });
+  return bestIndex;
 }
 function showGuitarNoRepairNotice(event) {
-  const board = els.guitarPanel.querySelector('.guitar-soundboard');
+  const board = els.guitarBoard;
   const rect = board.getBoundingClientRect();
   const x = Math.max(22, Math.min(78, (event.clientX - rect.left) / rect.width * 100));
   const y = Math.max(12, Math.min(88, (event.clientY - rect.top) / rect.height * 100));
@@ -2036,18 +2052,24 @@ function showGuitarNoRepairNotice(event) {
 }
 function handleGuitarStringPointerDown(event) {
   if (event.button !== 0 || event.isPrimary === false || !currentGuitarRepair()) return;
-  const stringIndex = guitarStringIndexForEvent(event);
-  if (stringIndex < 0) return;
+  // Don't steal a click that is intended to activate a glowing repair target.
+  if (event.target.closest('.guitar-dot')) return;
   event.preventDefault();
+  const stringIndex = guitarStringIndexAtPoint(event.clientX, event.clientY);
   guitarStringDrag = {active:true, pointerId:event.pointerId, lastStringIndex:stringIndex};
-  vibrateGuitarString(stringIndex);
-  showGuitarNoRepairNotice(event);
+  if (stringIndex >= 0) {
+    vibrateGuitarString(stringIndex);
+    showGuitarNoRepairNotice(event);
+  }
 }
-function handleGuitarStringPointerOver(event) {
+function handleGuitarStringPointerMove(event) {
   if (!guitarStringDrag.active || event.pointerId !== guitarStringDrag.pointerId ||
       !currentGuitarRepair()) return;
-  const stringIndex = guitarStringIndexForEvent(event);
-  if (stringIndex < 0 || stringIndex === guitarStringDrag.lastStringIndex) return;
+  const stringIndex = guitarStringIndexAtPoint(event.clientX, event.clientY);
+  if (stringIndex < 0 || stringIndex === guitarStringDrag.lastStringIndex) {
+    if (stringIndex < 0) guitarStringDrag.lastStringIndex = -1;
+    return;
+  }
   guitarStringDrag.lastStringIndex = stringIndex;
   vibrateGuitarString(stringIndex);
 }
