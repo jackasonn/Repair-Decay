@@ -2540,3 +2540,32 @@ a.portfolio-card:focus-visible {
 #vocal-feedback, #vocal-progress { color:var(--green); }
 
 #vocal-play[hidden] { display:none; }
+
+
+/* Make the decay-level dialog genuinely hide the instrument-only Solo control. */
+.solo-button[hidden] { display: none !important; }
+
+/* Error feedback is deliberately red and punchier than a successful repair pop. */
+.keys-error-label {
+  border-color: #e35b50;
+  color: #ff8174;
+  background: rgba(35, 8, 7, .96);
+  text-shadow: 0 0 10px rgba(227,91,80,.85);
+  box-shadow: 0 0 18px rgba(227,91,80,.35), 0 0 12px #0008;
+  animation: keys-error-label-pop 700ms cubic-bezier(.15,.8,.2,1) forwards;
+}
+.keys-early-label {
+  font-size: .72rem;
+  letter-spacing: .12em;
+}
+@keyframes keys-error-label-pop {
+  0% { opacity: 0; transform: translate(-50%, 8px) scale(.58) rotate(-5deg); }
+  13% { opacity: 1; transform: translate(-50%, 0) scale(1.12) rotate(3deg); }
+  24% { opacity: 1; transform: translate(-50%, -2px) scale(.96) rotate(-2deg); }
+  38% { opacity: 1; transform: translate(-50%, -4px) scale(1) rotate(0); }
+  78% { opacity: 1; transform: translate(-50%, -20px) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -34px) scale(.94); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .keys-error-label { animation-duration: 220ms; }
+}
