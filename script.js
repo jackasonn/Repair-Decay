@@ -1475,7 +1475,7 @@ function updatePlaybackClock() {
 function renderCurrentSong() {
   const song = SONGS[currentSongIndex];
   els.songTitle.textContent = song.title;
-  els.songNumber.textContent = 'SONG ' + String(song.number).padStart(2, '0');
+  els.songNumber.textContent = String(song.number).padStart(2, '0') + ' OF ' + String(SONGS.length).padStart(2, '0');
   els.songArtist.textContent = song.artist;
   els.artNoise.textContent = String(currentSongIndex + 1).padStart(3, '0');
   els.albumCoverImage.src = encodeURI(song.cover);
