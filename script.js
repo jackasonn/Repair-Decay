@@ -1760,7 +1760,9 @@ function showDrumFeedbackLabel(message, x, y, variant) {
   const rect = els.rhythmCanvas.getBoundingClientRect();
   if (!rect.width || !rect.height) return;
   const label = document.createElement('span');
-  label.className = 'keys-hit-label drum-hit-label ' + (variant === 'success' ? 'drum-label-success' : 'drum-label-error');
+  const labelClass = variant === 'success' ? 'drum-label-success'
+    : variant === 'empty' ? 'drum-label-empty' : 'drum-label-error';
+  label.className = 'keys-hit-label drum-hit-label ' + labelClass;
   label.textContent = message;
   label.style.left = Math.max(4, Math.min(96, x / rect.width * 100)) + '%';
   label.style.top = Math.max(12, Math.min(rect.height - 34, y)) + 'px';
@@ -1768,7 +1770,7 @@ function showDrumFeedbackLabel(message, x, y, variant) {
   label.addEventListener('animationend', () => label.remove(), {once:true});
 }
 function drumTargetX(note, elapsed, width) {
-  const centre = width * 0.62;
+  const centre = width * 0.5;
   const available = Math.max(20, width - centre - 22);
   const until = note.at - elapsed;
   return centre + Math.max(-DRUM_HIT_WINDOW_MS, Math.min(DRUM_TRAVEL_MS, until)) / DRUM_TRAVEL_MS * available;
@@ -1810,7 +1812,7 @@ function missDrumTarget(note, elapsed, x, y, message = 'MISSED ' + note.name + '
   // Let the red burst replace the line briefly, then send that same effect back around.
   note.at = elapsed + DRUM_TRAVEL_MS + DRUM_RETRY_DELAY_MS;
   const rect = els.rhythmCanvas.getBoundingClientRect();
-  const lineX = Number.isFinite(x) ? x : rect.width * 0.62;
+  const lineX = Number.isFinite(x) ? x : rect.width * 0.5;
   const lineY = Number.isFinite(y) ? y : rect.height * 0.5;
   burstDrumTarget(note, elapsed, lineX, lineY, '#e35b50', 'error');
   setRepairFeedback(message, 'error');
@@ -1820,11 +1822,18 @@ function missDrumTarget(note, elapsed, x, y, message = 'MISSED ' + note.name + '
 function missDrumPress(elapsed, x, y, message = 'WRONG SPOT — TRY AGAIN AS A LINE REACHES THE CENTRE') {
   if (!currentRhythmRepair()) return;
   const rect = els.rhythmCanvas.getBoundingClientRect();
-  const px = Number.isFinite(x) ? x : rect.width * 0.62;
+  const px = Number.isFinite(x) ? x : rect.width * 0.5;
   const py = Number.isFinite(y) ? y : rect.height * 0.5;
-  rhythm.bursts.push({at:elapsed, x:px, y:py, colour:'#e35b50', kind:'error'});
-  showDrumFeedbackLabel('TRY AGAIN', px, py - 18, 'error');
-  setRepairFeedback(message, 'error');
+  const hasActiveDecay = activeDrumDefinitions().length > 0;
+  if (!hasActiveDecay) {
+    rhythm.bursts.push({at:elapsed, x:px, y:py, colour:'#e4d38c', kind:'empty'});
+    showDrumFeedbackLabel('NO DECAY EVENT TO FIX', px, py - 18, 'empty');
+    setRepairFeedback('NO DECAY EVENT TO FIX — WAIT FOR A DECAY EVENT', 'neutral');
+  } else {
+    rhythm.bursts.push({at:elapsed, x:px, y:py, colour:'#e35b50', kind:'error'});
+    showDrumFeedbackLabel('TRY AGAIN', px, py - 18, 'error');
+    setRepairFeedback(message, 'error');
+  }
   void playUISound('error');
 }
 function completeDrumTarget(note, elapsed, x, y) {
@@ -1858,7 +1867,7 @@ function updateRhythmRepair(now = performance.now()) {
 
   syncDrumTargets(elapsed);
   const canvasRect = els.rhythmCanvas.getBoundingClientRect();
-  const centreX = canvasRect.width * 0.62, centreY = canvasRect.height * 0.5;
+  const centreX = canvasRect.width * 0.5, centreY = canvasRect.height * 0.5;
   game.targets.forEach(note => {
     if (note.status !== 'active' || elapsed <= note.at + DRUM_HIT_WINDOW_MS) return;
     missDrumTarget(note, elapsed, centreX, centreY, 'MISSED ' + note.name + ' — ITS LINE WILL RETURN');
@@ -1890,7 +1899,7 @@ function judgeDrumPress(clickX, clickY) {
   const game = rhythm, elapsed = game.elapsed;
   const rect = els.rhythmCanvas.getBoundingClientRect();
   const width = Math.max(1, rect.width), height = Math.max(1, rect.height);
-  const centreX = width * 0.62, centreY = height * 0.5;
+  const centreX = width * 0.5, centreY = height * 0.5;
   const active = game.targets.filter(note => note.status === 'active' &&
     note.at - elapsed <= DRUM_TRAVEL_MS && note.at - elapsed >= -DRUM_HIT_WINDOW_MS
   );
@@ -1924,8 +1933,9 @@ function judgeDrumPress(clickX, clickY) {
       'TOO EARLY — TRY AGAIN WHEN THE LINE REACHES THE CENTRE');
     return;
   }
+  const hasActiveDecay = activeDrumDefinitions().length > 0;
   missDrumPress(elapsed, centreX, centreY,
-    activeDrumDefinitions().length ? 'TOO LATE — WAIT FOR THE NEXT LINE TO RETURN' : 'NO DECAY EVENT TO FIX — WAIT FOR A LINE');
+    hasActiveDecay ? 'TOO LATE — WAIT FOR THE NEXT LINE TO RETURN' : 'NO DECAY EVENT TO FIX — WAIT FOR A DECAY EVENT');
 }
 function drawRepairSignal(elapsed) {
   const canvas = els.rhythmCanvas;
@@ -1954,7 +1964,7 @@ function drawRepairSignal(elapsed) {
     }
     ctx.stroke();
   }
-  const centreX = width * 0.62, centreY = height * 0.5;
+  const centreX = width * 0.5, centreY = height * 0.5;
   const timingWidth = Math.max(13, DRUM_HIT_WINDOW_MS / DRUM_TRAVEL_MS * (width - centreX - 22));
   const timingGlow = ctx.createLinearGradient(centreX - timingWidth, 0, centreX + timingWidth, 0);
   timingGlow.addColorStop(0, 'rgba(127,154,99,0)');
