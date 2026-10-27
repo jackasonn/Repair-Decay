@@ -1008,6 +1008,7 @@ function closeTrackDialog(fromUserAction = false) {
   guitarRepair = null;
   keysRepair = null;
   vocalRepair = null;
+  finishGuitarStringDrag();
   const wasOverallDialog = state.overallDialog;
   if (fromUserAction) void playUISound('button');
   state.soloTrack = null;
@@ -1661,7 +1662,11 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   els.vocalInput.addEventListener('input', handleVocalInput);
   els.vocalInput.addEventListener('compositionend', handleVocalInput);
-  els.guitarStrings.addEventListener('click', handleGuitarStringClick);
+  els.guitarStrings.addEventListener('pointerdown', handleGuitarStringPointerDown);
+  els.guitarStrings.addEventListener('pointerover', handleGuitarStringPointerOver);
+  document.addEventListener('pointerup', finishGuitarStringDrag);
+  document.addEventListener('pointercancel', finishGuitarStringDrag);
+  window.addEventListener('blur', () => finishGuitarStringDrag());
   els.keysSignal.addEventListener('click', handleKeysRepairClick);
   els.solo.addEventListener('click', toggleSolo);
   els.rhythmStart.addEventListener('click', () => restartRhythmRepair(true));
@@ -2010,12 +2015,13 @@ function vibrateGuitarString(stringIndex, repairing = false) {
   }, {once:true});
 }
 
-function handleGuitarStringClick(event) {
+let guitarStringDrag = {active:false, pointerId:null, lastStringIndex:-1};
+function guitarStringIndexForEvent(event) {
   const string = event.target.closest('.guitar-strings span');
-  if (!string || !els.guitarStrings.contains(string)) return;
-  const stringIndex = Array.from(els.guitarStrings.querySelectorAll('span')).indexOf(string);
-  if (stringIndex < 0) return;
-  vibrateGuitarString(stringIndex);
+  if (!string || !els.guitarStrings.contains(string)) return -1;
+  return Array.from(els.guitarStrings.querySelectorAll('span')).indexOf(string);
+}
+function showGuitarNoRepairNotice(event) {
   const board = els.guitarPanel.querySelector('.guitar-soundboard');
   const rect = board.getBoundingClientRect();
   const x = Math.max(22, Math.min(78, (event.clientX - rect.left) / rect.width * 100));
@@ -2027,6 +2033,28 @@ function handleGuitarStringClick(event) {
   notice.style.setProperty('--dot-y', y + '%');
   els.guitarNotices.appendChild(notice);
   notice.addEventListener('animationend', () => notice.remove(), {once:true});
+}
+function handleGuitarStringPointerDown(event) {
+  if (event.button !== 0 || event.isPrimary === false || !currentGuitarRepair()) return;
+  const stringIndex = guitarStringIndexForEvent(event);
+  if (stringIndex < 0) return;
+  event.preventDefault();
+  guitarStringDrag = {active:true, pointerId:event.pointerId, lastStringIndex:stringIndex};
+  vibrateGuitarString(stringIndex);
+  showGuitarNoRepairNotice(event);
+}
+function handleGuitarStringPointerOver(event) {
+  if (!guitarStringDrag.active || event.pointerId !== guitarStringDrag.pointerId ||
+      !currentGuitarRepair()) return;
+  const stringIndex = guitarStringIndexForEvent(event);
+  if (stringIndex < 0 || stringIndex === guitarStringDrag.lastStringIndex) return;
+  guitarStringDrag.lastStringIndex = stringIndex;
+  vibrateGuitarString(stringIndex);
+}
+function finishGuitarStringDrag(event) {
+  if (!guitarStringDrag.active) return;
+  if (event && event.pointerId !== guitarStringDrag.pointerId) return;
+  guitarStringDrag = {active:false, pointerId:null, lastStringIndex:-1};
 }
 function handleGuitarTarget(event) {
   if (!currentGuitarRepair()) return;
