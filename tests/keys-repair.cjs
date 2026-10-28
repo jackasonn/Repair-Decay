@@ -7,7 +7,7 @@ const c=vm.createContext({document,console,Math,Date,Set,Map,WeakMap,Float32Arra
 vm.runInContext(fs.readFileSync('js/app.js','utf8'),c);const run=s=>vm.runInContext(s,c);
 run(`drawKeysRepair=()=>{};showKeysHitLabel=()=>{};updateUI=()=>{};updateDialog=()=>{};
 updateTrackAudioVisuals=()=>{};addLog=()=>{};playUISound=()=>{};playSwitchSound=()=>{};startSources=()=>{};
-els.dialog={open:false,showModal(){this.open=true;},close(){this.open=false;}};els.keysTargetLabels=element();
+els.dialog={open:false,showModal(){this.open=true;},close(){this.open=false;}};els.keysTargetLabels=document.createElement('div');
 function press(lane,extra={}){handleKeysRepairKey({code:KEYS_CODES[lane],target:{tagName:'BODY'},preventDefault(){},...extra});}`);
 for(let song=0;song<4;song++){
  now=0;run(`currentSongIndex=${song};TRACKS=SONGS[currentSongIndex].tracks;trackState=songTrackStates[SONGS[currentSongIndex].id];
