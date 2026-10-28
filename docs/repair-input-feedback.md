@@ -1,21 +1,7 @@
-# Empty repair feedback and Drum keyboard ownership
+# Repair input and feedback
 
-Bass idle pegs have no permanent label and remain enabled. Clicking one displays
-`NO DECAY EVENT TO FIX` at the peg, without changing decay or repair progress.
-Drum provides the same notice on an empty canvas click or Space press. Bass,
-Drum, Guitar and Keys share the gold bordered floating/shaking empty notice.
-Reduced-motion mode retains a gentle float without the horizontal shake.
+Successful repairs play `assets/audio/ui/success.mp3`, alongside the existing switch-off sound. Failed and empty actions play the error sound without clearing decay. Bass's idle peg and Drum's empty input show a short floating notice.
 
-Opening the Drum dialog focuses Close by default. Previously the Space handler
-skipped buttons, so the browser activated Close. The game now handles Space in
-the capture phase, cancels native button activation on both press and release,
-and judges once per fresh press. Held repeats are consumed even if the final
-successful hit has already closed the panel and returned focus to the track
-card. Text inputs, other keys and Space outside Drum retain normal behavior.
-Window blur clears the held-key latch. Successful final repair still auto-closes.
+Drum Space is handled in the capture phase even if a native dialog button has focus. The handler cancels button activation during the game, filters repeated holds and preserves normal text input behavior. Global switches are accessible independently of the decay percentage. The instrument games generally remain open for successful visual feedback; the global repair dialog can close once all events are cleared.
 
-Regression coverage: `node tests/repair-input.cjs` covers all four songs, focused
-buttons, repeat/release ownership, partial versus final repairs, input controls,
-and all four clickable empty Bass pegs. Existing Bass, dialog and Vocal repair
-tests remain passing. Browser verification checks empty Bass clicks and Space
-while the native Close button has focus.
+Source: `js/app.js`. Tests: `tests/repair-input.cjs`, `tests/repair-dialogs.cjs`.

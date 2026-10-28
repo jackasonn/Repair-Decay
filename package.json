@@ -1,0 +1,11 @@
+{
+  "name": "repair-decay",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Interactive music installation",
+  "scripts": {
+    "check": "node --check js/app.js && node --check js/audio/pitch-shifter.js && node --check js/lyrics/on-time.js && node --check js/lyrics/there-is-love.js && node tools/verify-assets.cjs",
+    "test:repairs": "node tests/bass-repair.cjs && node tests/guitar-repair.cjs && node tests/keys-repair.cjs && node tests/repair-dialogs.cjs && node tests/repair-input.cjs && node tests/vocal-repair.cjs",
+    "test": "npm run check && npm run test:repairs"
+  }
+}
