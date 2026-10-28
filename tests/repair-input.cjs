@@ -41,6 +41,8 @@ for(var song=0;song<4;song++){
  var up=key('A');handleRepairKeyUp(up);`);
  assert.equal(run('els.dialog.open'),true,'completed Drum mini-game stays open');assert.equal(run('trackState.drums.events.length'),0);
  assert.equal(run('after.prevented&&after.stopped&&up.prevented&&up.stopped'),true);
+ // Completed minigames remain open for visual feedback: Space is still captured until Close.
+ run('closeTrackDialog()');
  run('var outside=key();handleRepairKey(outside)');assert.equal(run('outside.prevented'),false,'normal page shortcuts stay intact');
  run('setupDrum();var typing=key("INPUT");handleRepairKey(typing)');assert.equal(run('typing.prevented'),false);
  run('var other=key("BUTTON",false,"Enter");handleRepairKey(other)');assert.equal(run('other.prevented'),false,'Enter still operates normal controls');
