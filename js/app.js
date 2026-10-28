@@ -98,7 +98,7 @@ const state= {
   }
   ,offsets: {
   }
-  ,analyser:null,masterGain:null,loaded:false,loadedSongIndex:null,loading:false,loadingPromise:null,songGeneration:0,demoMode:false,noiseBuffer:null,pitchReady:false,waveformCtx:null,waveformData:null,waveformPixelWidth:0,waveformPixelHeight:0,waveformDrawAt:0,lastTrackVisualAt:0,lastClockTextAt:0,waveformColour:'#7f9a63',particlePulse:0,lastParticlePulseAt:0,repairLockToastTimer:null,decayTimer:null,switchSoundBuffers:{},switchSoundLoadPromise:null,switchSoundAssetsLoaded:false
+  ,analyser:null,masterGain:null,loaded:false,loadedSongIndex:null,loading:false,loadingPromise:null,stemLoadController:null,stemLoadingGeneration:null,songGeneration:0,demoMode:false,noiseBuffer:null,pitchReady:false,waveformCtx:null,waveformData:null,waveformPixelWidth:0,waveformPixelHeight:0,waveformDrawAt:0,lastTrackVisualAt:0,lastClockTextAt:0,waveformColour:'#7f9a63',particlePulse:0,lastParticlePulseAt:0,repairLockToastTimer:null,decayTimer:null,switchSoundBuffers:{},switchSoundLoadPromise:null,switchSoundAssetsLoaded:false
 }
 ;
 function createTrackState(tracks) {
@@ -588,13 +588,16 @@ async function loadAudio() {
   const requestedTracks = TRACKS.slice();
 
   if (state.loaded && state.loadedSongIndex === requestedSongIndex) return true;
-  if (state.loadingPromise) {
-    try { await state.loadingPromise; } catch (_) {}
-    if (generation !== state.songGeneration) return false;
-    if (state.loaded && state.loadedSongIndex === requestedSongIndex) return true;
+  // Share a request within one song; never wait for a cancelled previous song.
+  if (state.loadingPromise && state.stemLoadingGeneration === generation) {
+    return state.loadingPromise;
   }
   if (generation !== state.songGeneration) return false;
 
+  state.stemLoadController?.abort();
+  const controller = new AbortController();
+  state.stemLoadController = controller;
+  state.stemLoadingGeneration = generation;
   state.loading = true;
   let operation;
   operation = (async () => {
@@ -609,25 +612,21 @@ async function loadAudio() {
       // Load UI effects in the background; they must never delay the music stems.
       void loadSwitchSounds();
 
-      els.playbackState.textContent = 'LOADING TRACKS…';
-      const loadedBuffers = {};
-      let loaded = 0;
-      for (const track of requestedTracks) {
-        if (generation !== state.songGeneration) return false;
-        try {
-          const response = await fetch(track.file);
-          if (!response.ok) throw new Error('HTTP ' + response.status);
-          const buffer = await state.audio.decodeAudioData(await response.arrayBuffer());
-          if (generation !== state.songGeneration) return false;
-          loadedBuffers[track.id] = buffer;
-          loaded++;
-        } catch (error) {
-          if (generation === state.songGeneration) console.warn('Could not load ' + track.file, error);
+      els.playbackState.textContent = 'LOADING TRACKS… 0/' + requestedTracks.length;
+      // Two concurrent fetch/decode workers give faster loading without running
+      // four or five large audio decodes simultaneously on exhibition hardware.
+      const { buffers, failed, loaded, aborted } = await loadStemBuffers(requestedTracks, state.audio, {
+        signal: controller.signal,
+        concurrency: 2,
+        onProgress({ loaded, total }) {
+          if (generation === state.songGeneration && !controller.signal.aborted) {
+            els.playbackState.textContent = 'LOADING TRACKS… ' + loaded + '/' + total;
+          }
         }
-      }
-
-      if (generation !== state.songGeneration) return false;
-      state.buffers = loadedBuffers;
+      });
+      if (generation !== state.songGeneration || aborted) return false;
+      failed.forEach(({ track, error }) => console.warn('Could not load ' + track.file, error));
+      state.buffers = buffers;
       state.offsets = Object.fromEntries(requestedTracks.map(t => [t.id, 0]));
       state.loaded = loaded === requestedTracks.length;
       state.loadedSongIndex = state.loaded ? requestedSongIndex : null;
@@ -637,8 +636,8 @@ async function loadAudio() {
         els.playbackState.textContent = 'READY TO PLAY';
         addLog('All ' + requestedTracks.length + ' stems for ' + SONGS[requestedSongIndex].title + ' loaded successfully.', 'repair');
       } else {
-        els.playbackState.textContent = 'ADD STEMS TO BEGIN';
-        addLog('Audio setup waiting: ' + loaded + '/' + requestedTracks.length + ' track stems found for ' + SONGS[requestedSongIndex].title + '.', 'event');
+        els.playbackState.textContent = 'AUDIO LOAD FAILED — PRESS PLAY TO RETRY';
+        addLog('Audio loading incomplete: ' + loaded + '/' + requestedTracks.length + ' stems. Press play to retry.', 'event');
       }
       updateUI();
       return state.loaded;
@@ -660,6 +659,7 @@ async function loadAudio() {
       state.loadingPromise = null;
       state.loading = false;
     }
+    if (state.stemLoadController === controller) state.stemLoadController = null;
   }
 }
 // Build the audio effects chain and a small analyser for each individual stem.
@@ -1586,6 +1586,11 @@ async function switchSong(nextIndex, finishedNaturally = false, fromUserAction =
   if (fromUserAction) void playUISound('button');
 
   if (els.dialog && els.dialog.open) closeTrackDialog();
+  // Cancel outstanding downloads before selecting a new song.
+  state.stemLoadController?.abort();
+  state.stemLoadController = null;
+  state.loadingPromise = null;
+  state.loading = false;
   if (state.playing) stopPlayback(finishedNaturally);
 
   rhythm = null;
