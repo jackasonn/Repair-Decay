@@ -481,6 +481,22 @@ async function loadSwitchSounds() {
       const response = await fetch(url);
       if (!response.ok) throw new Error('HTTP ' + response.status);
       const buffer = await context.decodeAudioData(await response.arrayBuffer());
+      // The pluck recordings are quiet source files. Peak-normalise only these six
+      // samples so their transients come through clearly above the backing track.
+      if (name.startsWith('guitar')) {
+        let peak = 0;
+        for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+          const samples = buffer.getChannelData(channel);
+          for (let i = 0; i < samples.length; i++) peak = Math.max(peak, Math.abs(samples[i]));
+        }
+        if (peak > 0 && peak < 0.985) {
+          const scale = 0.985 / peak;
+          for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+            const samples = buffer.getChannelData(channel);
+            for (let i = 0; i < samples.length; i++) samples[i] *= scale;
+          }
+        }
+      }
       return [name, buffer];
     } catch (error) {
       console.warn('Could not load switch sound ' + url, error);
@@ -560,7 +576,7 @@ function playSwitchSound(direction) {
 function playGuitarStringSound(stringIndex) {
   const stringSounds = ['guitarLowE', 'guitarA', 'guitarD', 'guitarG', 'guitarB', 'guitarHighE'];
   const sound = stringSounds[stringIndex];
-  if (sound) void playUISound(sound, 0.82);
+  if (sound) void playUISound(sound, 1.0);
 }
 async function loadAudio() {
   const requestedSongIndex = currentSongIndex;
@@ -1536,7 +1552,9 @@ function renderCurrentSong() {
     'there-is-love': 'assets/love cover copy BG.png'
   };
   document.body.style.setProperty('--song-background', 'url("' + encodeURI(songBackgrounds[song.id]) + '")');
-  els.songTitle.innerHTML = '<img class="song-title-image" src="' + encodeURI(song.titleImage) + '" alt="' + song.title + '">';
+  els.songTitle.innerHTML = song.id === 'there-is-love'
+    ? '<span class="song-title-text">THERE IS LOVE</span>'
+    : '<img class="song-title-image" src="' + encodeURI(song.titleImage) + '" alt="' + song.title + '">';
   els.songNumber.textContent = String(song.number).padStart(2, '0') + ' OF ' + String(SONGS.length).padStart(2, '0');
   els.songArtist.textContent = song.artist;
   els.artNoise.textContent = String(currentSongIndex + 1).padStart(3, '0');
@@ -2136,7 +2154,7 @@ function renderGuitarTargets() {
       const hit = target.status === 'hit';
       const colour = guitarTargetColour(target.type);
       return '<span class="guitar-target-wrap" style="--dot-x:' + target.x +
-        '%;--dot-y:' + GUITAR_STRING_POSITIONS[target.string] + '%;--target-colour:' + colour + '">' +
+        '%;--dot-y:' + guitarStringCentrePercent(target.string) + '%;--target-colour:' + colour + '">' +
         '<button type="button" class="guitar-dot' + (hit ? ' is-exploding' : '') +
         '" data-guitar-target="' + target.id + '" aria-label="' +
         (hit ? target.name + ' repaired' : 'Repair ' + target.name) +
@@ -2214,19 +2232,35 @@ function vibrateGuitarString(stringIndex, repairing = false) {
 }
 
 let guitarStringDrag = {active:false, pointerId:null, lastStringIndex:-1};
-const GUITAR_STRING_POSITIONS = [13, 28, 43, 58, 73, 88];
+// Read the actual rendered line geometry (including pixel thickness) rather than
+// approximating string centres with fixed percentages.
+function guitarStringCentrePercent(index) {
+  const string = els.guitarStrings?.querySelectorAll('span')[index];
+  const stringLayer = els.guitarStrings;
+  if (string && stringLayer && typeof getComputedStyle === 'function') {
+    const layerRect = stringLayer.getBoundingClientRect();
+    const lineStyle = getComputedStyle(string);
+    const top = parseFloat(lineStyle.top);
+    const height = parseFloat(lineStyle.height);
+    if (layerRect.height > 0 && Number.isFinite(top) && Number.isFinite(height)) {
+      return (top + height / 2) / layerRect.height * 100;
+    }
+  }
+  return [12.8, 27.7, 42.5, 57.5, 72.3, 87.3][index] ?? 50;
+}
 function guitarStringIndexAtPoint(clientX, clientY) {
   if (!els.guitarBoard) return -1;
   const boardRect = els.guitarBoard.getBoundingClientRect();
   if (clientX < boardRect.left || clientX > boardRect.right ||
       clientY < boardRect.top || clientY > boardRect.bottom) return -1;
-  const localY = clientY - boardRect.top;
   const hitHeight = 30;
   let bestIndex = -1;
   let bestDistance = Infinity;
-  GUITAR_STRING_POSITIONS.forEach((position, index) => {
-    const centreY = boardRect.height * position / 100;
-    const distance = Math.abs(localY - centreY);
+  const strings = els.guitarStrings?.querySelectorAll('span') || [];
+  strings.forEach((string, index) => {
+    const lineRect = string.getBoundingClientRect();
+    const centreY = lineRect.top + lineRect.height / 2;
+    const distance = Math.abs(clientY - centreY);
     if (distance <= hitHeight / 2 && distance < bestDistance) {
       bestDistance = distance;
       bestIndex = index;
@@ -2710,7 +2744,7 @@ function handleVocalInput(event) {
 // Bass: four physical pegs share a queue of the stem's actual decay effects.
 const BASS_TURN_MS = 600;
 const BASS_FEEDBACK_MS = 900;
-const BASS_PEG_POSITIONS = [[56.4,22.9],[49.1,39.1],[42.9,54.7],[36.7,71.2]];
+const BASS_PEG_POSITIONS = [[50.9,22.9],[43.6,39.1],[37.4,54.7],[31.2,71.2]];
 // Crop transparent margins in SVG, leaving the supplied PNGs untouched.
 // Each viewBox aligns the shaft end to the same point as its angle changes.
 const BASS_TUNER_FRAMES = [
