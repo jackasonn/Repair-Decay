@@ -66,7 +66,10 @@ assert.equal(run('sourceRestarts'),1);
 assert.equal(run('state.offsets.drums'),12.25);
 assert.equal(run('trackState.bass.events.length'),1);
 assert.equal(run('trackState.bass.lowpass'),500);
-assert.equal(run('els.dialog.open'),false,'successful Drum round auto closes');
+assert.equal(run('els.dialog.open'),true,'successful Drum round remains open for its final visual feedback');
+assert.equal(run('closeCalls'),0);
+run('closeTrackDialog()');
+assert.equal(run('els.dialog.open'),false,'visitor can close the completed game');
 assert.equal(run('closeCalls'),1);
 assert.equal(run('state.playing'),true,'closing does not pause song');
 assert.match(elements.get('repair-feedback').textContent,/RHYTHM REPAIR COMPLETE.*DRUM SIGNAL RESTORED/);
@@ -83,7 +86,7 @@ assert.equal(run('trackState.drums.events.length'),1);
 assert.match(elements.get('repair-feedback').textContent,/TARGET REACHED/);
 run('position=12.25;updateRhythmRepair()');
 assert.equal(run('rhythm.finished'),true);
-assert.equal(run('els.dialog.open'),false);
+assert.equal(run('els.dialog.open'),true,'completed Drum game stays open');
 assert.equal(run('trackState.drums.events.length'),0,'two misses allowed after full round');
 // Seven hits also pass; five hits must fail and expose retry.
 for (const hits of [7,5]) {
@@ -92,7 +95,7 @@ for (const hits of [7,5]) {
   position=12.25;updateRhythmRepair();`);
   assert.equal(run('rhythm.hits'),hits);
   assert.equal(run('rhythm.finished'),hits>=6);
-  assert.equal(run('els.dialog.open'),hits<6);
+  assert.equal(run('els.dialog.open'),true,'completed or incomplete round remains in the dialog for feedback');
   assert.equal(run('trackState.drums.events.length'),hits<6?1:0);
 }
 assert.equal(run('rhythm.active'),false);
