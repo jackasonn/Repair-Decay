@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0b0906">
     <title>REPAIR / DECAY — Interactive Music</title>
-    <link rel="stylesheet" href="style.css?v=20261028-repair-input">
+    <link rel="stylesheet" href="style.css?v=20261028-decay-state">
 </head>
 <body>
     <div class="scanlines" aria-hidden="true"></div>
@@ -156,14 +156,14 @@
                 </section>
                 <section class="vocal-panel" id="vocal-panel" aria-label="Vocal lyric typing repair" hidden>
                     <div class="panel-heading"><span>VOCAL REPAIR</span><span id="vocal-section">LIVE LYRICS</span></div>
-                    <p>Type only the 2–3 underlined words from the current lyric, in order. Correct letters light up. Complete 2 keyword sets to restore the vocal. Capitals, spaces and punctuation are optional.</p>
+                    <p>Type the underlined keywords while each lyric is being sung. Each completed lyric repairs one active vocal decay event. Capitals, spaces and punctuation are optional.</p>
                     <p class="vocal-lyric" id="vocal-lyric" aria-live="polite"></p>
                     <p class="vocal-words" id="vocal-words">WAITING FOR THE NEXT LYRIC</p>
                     <label for="vocal-input">TYPE ONLY THE WORDS ABOVE</label>
                     <input id="vocal-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type the short keyword set…" aria-describedby="vocal-feedback">
                     <button class="solo-button" id="vocal-play" type="button" hidden>RESUME SONG</button>
                     <p id="vocal-feedback" role="status">FOLLOW THE CURRENT VOCAL LINE</p>
-                    <p id="vocal-progress">0 / 2 LINES RESTORED</p>
+                    <p id="vocal-progress">0 DECAY EVENTS REPAIRED</p>
                 </section>
                 <section class="rhythm-panel" id="rhythm-panel" aria-label="Drums decay repair" hidden>
                     <div class="panel-heading"><span>DRUM REPAIR</span><span id="repair-active-count">0 ACTIVE</span></div>
@@ -181,6 +181,6 @@
     </dialog>
     <script src="there-is-love-lyrics.js?v=20261027-keywords"></script>
     <script src="on-time-lyrics.js?v=20261027-keywords"></script>
-    <script src="script.js?v=20261028-repair-input"></script>
+    <script src="script.js?v=20261028-decay-state"></script>
 </body>
 </html>
