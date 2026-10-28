@@ -468,6 +468,7 @@ async function loadSwitchSounds() {
     off: 'assets/click-off.mp3',
     button: 'assets/button-press.mp3',
     error: 'assets/error.mp3',
+    success: 'assets/success.mp3',
     plink: 'assets/plink.mp3',
     guitarLowE: 'assets/guitar%20low%20e.mp3',
     guitarA: 'assets/guitar%20a.mp3',
@@ -552,7 +553,7 @@ async function playUISound(name, volume) {
     }
     if (context.state !== 'running') return;
 
-    const defaultVolumes = { on: 0.62, off: 0.62, button: 0.62, error: 0.72, plink: 0.05 };
+    const defaultVolumes = { on: 0.62, off: 0.62, button: 0.62, error: 0.72, success: 0.85, plink: 0.05 };
     const outputVolume = Number.isFinite(volume) ? volume : (defaultVolumes[name] ?? 0.62);
     const source = context.createBufferSource();
     const gain = context.createGain();
@@ -571,6 +572,10 @@ async function playUISound(name, volume) {
 }
 function playSwitchSound(direction) {
   return playUISound(direction, 0.62);
+}
+// One confirmation per completed repair action (including a global repair).
+function playRepairSuccess() {
+  void playUISound('success');
 }
 // String sound files are ordered exactly like the six visible strings, top to bottom.
 function playGuitarStringSound(stringIndex) {
@@ -1000,6 +1005,7 @@ function repairTrack(id) {
     startSources();
   }
 
+  playRepairSuccess();
   const track = TRACKS.find(item => item.id === id);
   addLog((track ? track.name : id.toUpperCase()) + ' repaired by visitor / ' +
     eventCount + ' event' + (eventCount === 1 ? '' : 's') + ' cleared. All stems remain synchronised.', 'repair');
@@ -1204,6 +1210,8 @@ function repairEventType(typeId) {
   if (!repairedCount) return;
 
   playSwitchSound('off');
+
+  playRepairSuccess();
   const definition = EVENT_TYPES.find(event => event.id === typeId);
   addLog((TRACKS.find(track => track.id === id)?.name || id.toUpperCase()) +
     ' repaired: ' + (definition ? definition.name : typeId.toUpperCase()) + '.', 'repair');
@@ -1225,6 +1233,7 @@ function repairGlobalEventType(typeId) {
     repairedEvents += repairTrackEventType(track.id, typeId);
   });
   playSwitchSound('off');
+  playRepairSuccess();
   const definition = EVENT_TYPES.find(event => event.id === typeId);
   addLog('GLOBAL REPAIR: ' + (definition ? definition.name : typeId.toUpperCase()) +
     ' cleared from ' + affectedTracks.length + ' instrument' +
@@ -1328,7 +1337,11 @@ function updateDialog() {
   els.dialogParticles.hidden = false;
   els.dialogOverallArt.hidden = true;
   els.solo.hidden = false;
-  els.dialogTitle.textContent = track.name;
+  // Use the same custom instrument lettering as the player cards.
+  const titleArt = ({drums:'assets/Drums fonts.png',bass:'assets/Bass fonts.png',guitars:'assets/Guitar fonts.png',keys:'assets/Kereys fonts.png',vocals:'assets/Vocal fonts.png'})[track.id];
+  els.dialogTitle.innerHTML = titleArt
+    ? '<img class="dialog-title-art" src="' + encodeURI(titleArt) + '" alt="' + track.name + '">'
+    : track.name;
   els.dialogStatus.textContent = status.text;
   els.dialogStatus.className = 'dialog-status ' + status.className;
   els.dialogDecay.textContent = decay + '%';
@@ -1913,6 +1926,7 @@ function completeDrumTarget(note, elapsed, x, y) {
   rhythm.repairedCount++;
   burstDrumTarget(note, elapsed, x, y, '#9fda72', 'success');
   playSwitchSound('off');
+  playRepairSuccess();
   addLog('DRUMS repaired: ' + note.name + '.', 'repair');
   setRepairFeedback(note.name + ' REPAIRED — DRUM SIGNAL RESTORED', 'success');
   updateRhythmPanel();
@@ -2328,6 +2342,7 @@ function handleGuitarTarget(event) {
   guitarRepair.repairedCount++;
   vibrateGuitarString(target.string, true);
   playSwitchSound('off');
+  playRepairSuccess();
   addLog('GUITARS repaired: ' + target.name + '.', 'repair');
   document.getElementById('guitar-feedback').textContent =
     target.name + ' REPAIRED — GUITAR SIGNAL RESTORED';
@@ -2452,6 +2467,7 @@ function completeKeysTarget(note, now, elapsed, y) {
   keysRepair.bursts.push({lane:note.lane, at:elapsed, y:y, colour:note.colour, kind:'hit'});
   showKeysHitLabel(note, y);
   playSwitchSound('off');
+  playRepairSuccess();
   addLog('KEYS repaired: ' + note.name + '.', 'repair');
   document.getElementById('keys-feedback').textContent =
     note.name + ' REPAIRED — KEYS SIGNAL RESTORED';
@@ -2730,6 +2746,7 @@ function handleVocalInput(event) {
     game.correct = 0;
     els.vocalInput.value = '';
     playSwitchSound('off');
+    playRepairSuccess();
     addLog('VOCALS repaired: ' + repairedEvent.name + '.', 'repair');
     document.getElementById('vocal-feedback').textContent =
       repairedEvent.name + ' REPAIRED — ONE VOCAL DECAY EVENT RESTORED';
@@ -2761,11 +2778,11 @@ function currentBassRepair() {
 }
 function startBassRepair() {
   bassRepair = {song:currentSongIndex, generation:state.songGeneration,
-    repairedCount:0, hadDecay:false, signature:'', slots:Array.from({length:4},()=>({status:'idle',type:null,frame:3}))};
+    repairedCount:0, hadDecay:false, signature:'', slots:Array.from({length:4},()=>({status:'idle',type:null,frame:0}))};
   els.bassTuners.innerHTML = BASS_PEG_POSITIONS.map(([x,y],index) =>
     '<div class="bass-peg" style="--peg-x:'+x+'%;--peg-y:'+y+'%">'+
       '<button class="bass-tuner" type="button" data-bass-peg="'+index+'" disabled>'+
-        BASS_TUNER_FRAMES.map((frame,i)=>'<svg data-bass-frame="'+i+'" viewBox="'+frame.box+'" aria-hidden="true"'+(i===3?'':' hidden')+'><image href="assets/bass-tuner-'+frame.angle+'.png" width="2048" height="2048" /></svg>').join('')+
+        BASS_TUNER_FRAMES.map((frame,i)=>'<svg data-bass-frame="'+i+'" viewBox="'+frame.box+'" aria-hidden="true"'+(i===0?'':' hidden')+'><image href="assets/bass-tuner-'+frame.angle+'.png" width="2048" height="2048" /></svg>').join('')+
       '</button><span class="bass-effect-name"></span><span class="bass-hit-label" role="status"></span></div>'
   ).join('');
   document.getElementById('bass-feedback').textContent = 'CLICK A RED GLOWING PEG TO TUNE';
@@ -2777,18 +2794,19 @@ function updateBassRepair(now = performance.now()) {
   game.slots.forEach(slot => {
     if (slot.status !== 'turning') return;
     const progress = Math.max(0, now - slot.startedAt) / BASS_TURN_MS;
-    slot.frame = Math.min(3, Math.floor(progress * 4));
+    slot.frame = Math.max(0, 3 - Math.floor(progress * 4));
     if (progress < 1) return;
     const removed = repairTrackEventType('bass', slot.type);
     slot.status = removed ? 'repaired' : 'idle';
     slot.until = now + BASS_FEEDBACK_MS;
-    slot.frame = 3;
+    slot.frame = 0;
     if (removed) {
       game.repairedCount++;
       const name = EVENT_TYPES.find(event => event.id === slot.type).name;
       slot.message = name + ' REPAIRED';
       document.getElementById('bass-feedback').textContent = slot.message + (trackState.bass.events.length ? ' — TUNE THE REMAINING GLOWING PEGS' : ' — BASS SIGNAL RESTORED');
       playSwitchSound('off');
+      playRepairSuccess();
       addLog('BASS repaired: ' + name + '.', 'repair');
       updateUI();
       updateDialog();
@@ -2807,7 +2825,7 @@ function updateBassRepair(now = performance.now()) {
     if (assigned.has(effect.id)) continue;
     const slot = game.slots.find(item => item.status === 'idle');
     if (!slot) break;
-    Object.assign(slot, {type:effect.id, status:'active', frame:0, message:''});
+    Object.assign(slot, {type:effect.id, status:'active', frame:3, message:''});
     assigned.add(effect.id);
   }
   renderBassRepair(game, active.length);
@@ -2853,7 +2871,7 @@ function handleBassTuner(event) {
   if (!trackState.bass.events.some(item => item.type === slot.type)) { updateBassRepair(); return; }
   slot.status = 'turning';
   slot.startedAt = performance.now();
-  slot.frame = 0;
+  slot.frame = 3;
   void playUISound('button');
   updateBassRepair(slot.startedAt);
 }
