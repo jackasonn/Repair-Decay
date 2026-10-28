@@ -32,6 +32,7 @@ function tick(time){c.now=time;run('updateBassRepair()');}
 for(let song=0;song<4;song++){
  c.now=0;run(`setup(${song})`);
  assert.equal(run("bassRepair.slots.filter(s=>s.status==='active').length"),4);
+ assert.equal(run('bassRepair.slots[0].frame'),3,'active decay shows the turned peg');
  const repaired=new Set();
  for(let round=0;round<2;round++){
   for(let i=0;i<4;i++){
@@ -40,12 +41,13 @@ for(let song=0;song<4;song++){
   }
   const start=c.now;
   assert.equal(run('trackState.bass.events.length'),8-round*4,'not repaired before turning finishes');
-  for(const [delta,frame] of [[0,0],[170,1],[330,2],[500,3]]){
+  for(const [delta,frame] of [[0,3],[170,2],[330,1],[500,0]]){
    tick(start+delta);assert.equal(run('bassRepair.slots[0].frame'),frame);
    assert.equal(run(`Object.hasOwn(pegs[0].frames[${frame}].attrs,'hidden')`),false,'current SVG frame is visible');
    assert.equal(run('pegs[0].frames.filter(f=>!Object.hasOwn(f.attrs,"hidden")).length'),1);
   }
   tick(start+600);
+  assert.equal(run('bassRepair.slots[0].frame'),0,'completed repair restores the default peg image');
   assert.equal(run('trackState.bass.events.length'),4-round*4);
   assert.equal(run('bassRepair.repairedCount'),(round+1)*4);
   assert.equal(run('els.dialog.open'),true,'last success label remains visible before close');
