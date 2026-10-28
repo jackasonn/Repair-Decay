@@ -30,10 +30,13 @@ for(let song=0;song<4;song++){
  assert.equal(run('trackState.bass.events.length'),1);
  assert.equal(run('els.dialog.open'),true,'hit feedback finishes before closing');
  now+=800;run('updateKeysRepair()');
+ assert.equal(run('els.dialog.open'),true,'completed Keys game stays open after the animation');
+ assert.notEqual(run('keysRepair'),null);
+ run('closeTrackDialog()');
  assert.equal(run('els.dialog.open'),false);
  assert.equal(run('keysRepair'),null);
 }
 now=0;run("trackState.keys.events=[{type:'crackle',severity:10}];openTrackDialog('keys');closeTrackDialog()");
 now=10000;run('updateKeysRepair()');
 assert.equal(run('trackState.keys.events.length'),1);
-console.log('PASS: current live-effect Keys game on all four songs, correct direction, held-input rejection, returning misses, particles, audio reset, auto-close and cancellation');
+console.log('PASS: current live-effect Keys game on all four songs, correct direction, held-input rejection, returning misses, particles, audio reset, manual close and cancellation');
