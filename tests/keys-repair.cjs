@@ -21,7 +21,7 @@ for(let song=0;song<4;song++){
  assert.equal(run('keysRepair.repairedCount'),1);
  assert.equal(run('trackState.keys.lowpass'),20000);
  assert.equal(run('trackState.keys.events.length'),1);
- assert.equal(run('keysRepair.bursts.length'),1);
+ assert.equal(run("keysRepair.bursts.filter(b=>b.kind==='hit').length"),1,'one successful burst despite extra feedback');
  now=5000;run('updateKeysRepair()');
  assert.equal(run('keysRepair.missCount'),1,'missed live effect returns as an arrow');
  assert.equal(run('trackState.keys.events.length'),1);
