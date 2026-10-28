@@ -42,7 +42,8 @@ const SONGS = [
       { id: 'drums', name: 'DRUMS', file: 'assets/rainy-night-drums.mp3' },
       { id: 'bass', name: 'BASS', file: 'assets/rainy-night-bass.mp3' },
       { id: 'guitars', name: 'GUITARS', file: 'assets/rainy-night-guitars.mp3' },
-      { id: 'keys', name: 'KEYS', file: 'assets/rainy-night-keys.mp3' }
+      { id: 'keys', name: 'KEYS', file: 'assets/rainy-night-keys.mp3' },
+      { id: 'vocals', name: 'VOCALS', file: 'assets/rainy-night-vocals.mp3' }
     ]
   },
   {
@@ -994,6 +995,9 @@ function repairTrack(id) {
 function closeRepairedDialog(expectedTrack = null) {
   if (!els.dialog?.open) return;
   if (expectedTrack && (state.overallDialog || state.selectedTrack !== expectedTrack)) return;
+  const selectedIsMiniGame = ['bass', 'drums', 'guitars', 'keys'].includes(state.selectedTrack) ||
+    (state.selectedTrack === 'vocals' && vocalTypingAvailable());
+  if (!state.overallDialog && selectedIsMiniGame) return;
   const repaired = state.overallDialog
     ? TRACKS.every(track => trackState[track.id].events.length === 0)
     : state.selectedTrack && trackState[state.selectedTrack]?.events.length === 0;
@@ -1114,13 +1118,9 @@ function renderDialogParticles(trackId, decay) {
   els.dialogArtStage.classList.toggle('instrument-warning', decay >= 30 && decay < 70);
   els.dialogArtStage.classList.toggle('instrument-critical', decay >= 70);
 }
-function repairTrackEventType(trackId, typeId) {
+function resetTrackEventEffect(trackId, typeId) {
   const s = trackState[trackId];
-  if (!s) return 0;
-  const activeEvents = s.events.filter(event => event.type === typeId);
-  if (!activeEvents.length) return 0;
-
-  s.events = s.events.filter(event => event.type !== typeId);
+  if (!s) return;
   const chain = state.sources[trackId];
   const now = state.audio ? state.audio.currentTime : 0;
 
@@ -1160,7 +1160,26 @@ function repairTrackEventType(trackId, typeId) {
       s.crackleDepth = 0;
       break;
   }
+}
+function repairTrackEventType(trackId, typeId) {
+  const s = trackState[trackId];
+  if (!s) return 0;
+  const activeEvents = s.events.filter(event => event.type === typeId);
+  if (!activeEvents.length) return 0;
+  s.events = s.events.filter(event => event.type !== typeId);
+  resetTrackEventEffect(trackId, typeId);
   return activeEvents.length;
+}
+function repairSingleTrackEvent(trackId, eventToRemove) {
+  const s = trackState[trackId];
+  if (!s || !eventToRemove) return null;
+  const eventIndex = s.events.indexOf(eventToRemove);
+  if (eventIndex < 0) return null;
+  s.events.splice(eventIndex, 1);
+  if (!s.events.some(event => event.type === eventToRemove.type)) {
+    resetTrackEventEffect(trackId, eventToRemove.type);
+  }
+  return eventToRemove;
 }
 function repairEventType(typeId) {
   const id = state.selectedTrack;
@@ -2117,7 +2136,7 @@ function renderGuitarTargets() {
       const hit = target.status === 'hit';
       const colour = guitarTargetColour(target.type);
       return '<span class="guitar-target-wrap" style="--dot-x:' + target.x +
-        '%;--dot-y:' + (12 + target.string * 15) + '%;--target-colour:' + colour + '">' +
+        '%;--dot-y:' + GUITAR_STRING_POSITIONS[target.string] + '%;--target-colour:' + colour + '">' +
         '<button type="button" class="guitar-dot' + (hit ? ' is-exploding' : '') +
         '" data-guitar-target="' + target.id + '" aria-label="' +
         (hit ? target.name + ' repaired' : 'Repair ' + target.name) +
@@ -2195,7 +2214,7 @@ function vibrateGuitarString(stringIndex, repairing = false) {
 }
 
 let guitarStringDrag = {active:false, pointerId:null, lastStringIndex:-1};
-const GUITAR_STRING_POSITIONS = [15, 29, 43, 57, 71, 85];
+const GUITAR_STRING_POSITIONS = [13, 28, 43, 58, 73, 88];
 function guitarStringIndexAtPoint(clientX, clientY) {
   if (!els.guitarBoard) return -1;
   const boardRect = els.guitarBoard.getBoundingClientRect();
@@ -2558,8 +2577,7 @@ function drawKeysRepair(elapsed) {
 
 
 // Keyword typing repair for On Time and There Is Love. Lyrics follow the shared audible song position;
-// character highlighting follows the visitor's own correctly typed prefix.
-const VOCAL_LINES_REQUIRED = 2;
+// each correctly completed lyric repairs exactly one active vocal decay event.
 let vocalRepair = null;
 function vocalLyricsForSong() {
   const id = SONGS[currentSongIndex].id;
@@ -2590,14 +2608,6 @@ function startVocalRepair() {
   vocalRepair = null;
   els.vocalPlay.hidden = state.playing;
   els.vocalInput.value = '';
-  if (!trackState.vocals?.events.length) {
-    document.getElementById('vocal-lyric').textContent = 'VOCAL SIGNAL RESTORED';
-    document.getElementById('vocal-words').textContent = 'NO WORDS REQUIRED';
-    document.getElementById('vocal-feedback').textContent = 'NO REPAIR NEEDED';
-    document.getElementById('vocal-progress').textContent = '0 / 2 LINES RESTORED';
-    els.vocalInput.disabled = true;
-    return;
-  }
   vocalRepair = {song:currentSongIndex, generation:state.songGeneration, line:-2,
     completed:new Set(), correct:0, finished:false};
   updateVocalRepair();
@@ -2641,15 +2651,18 @@ function updateVocalRepair() {
     }
   }
   const done = game.completed.has(index);
+  const activeEvents = trackState.vocals?.events.length || 0;
+  const wasDisabled = els.vocalInput.disabled;
   els.vocalPlay.hidden = state.playing;
-  els.vocalInput.disabled = !state.playing || index < 0 || done;
-  if (changed && !els.vocalInput.disabled) els.vocalInput.focus({preventScroll:true});
-  document.getElementById('vocal-progress').textContent = game.completed.size + ' / 2 LINES RESTORED';
+  els.vocalInput.disabled = !state.playing || index < 0 || done || activeEvents === 0;
+  if ((changed || wasDisabled) && !els.vocalInput.disabled) els.vocalInput.focus({preventScroll:true});
+  document.getElementById('vocal-progress').textContent = game.completed.size + ' DECAY EVENT' + (game.completed.size === 1 ? '' : 'S') + ' REPAIRED';
   if (!state.playing) document.getElementById('vocal-feedback').textContent = 'RESUME THE SONG TO FOLLOW THE LYRICS';
   else if (index < 0) document.getElementById('vocal-feedback').textContent = position >= vocalLyricsForSong()[vocalLyricsForSong().length-1].end
     ? 'VOCALS FINISHED — REPLAY THE SONG TO CONTINUE REPAIR' : 'WAITING FOR THE NEXT SUNG LINE';
-  else if (done) document.getElementById('vocal-feedback').textContent = 'LINE RESTORED — WAIT FOR THE NEXT LYRIC';
-  else if (changed) document.getElementById('vocal-feedback').textContent = 'TYPE ONLY THE 2–3 UNDERLINED WORDS — CAPITALS ARE OPTIONAL';
+  else if (!activeEvents) document.getElementById('vocal-feedback').textContent = 'NO DECAY EVENT TO FIX — WAIT FOR AN ACTIVE EVENT';
+  else if (done) document.getElementById('vocal-feedback').textContent = 'LYRIC RESTORED — WAIT FOR THE NEXT LYRIC';
+  else if (changed) document.getElementById('vocal-feedback').textContent = 'TYPE THE UNDERLINED KEYWORDS WHILE THIS LYRIC IS SUNG';
 }
 function handleVocalInput(event) {
   if (event?.isComposing || !currentVocalRepair()) return;
@@ -2668,13 +2681,28 @@ function handleVocalInput(event) {
     ? 'CHECK THE NEXT LETTER — BACKSPACE TO CORRECT IT' : 'KEEP TYPING — FOLLOW THE HIGHLIGHTED LETTERS';
   els.vocalInput.setAttribute('aria-invalid', wrong ? 'true' : 'false');
   if (correct === expected.length && !wrong) {
+    const nextEvent = trackState.vocals?.events[0];
+    if (!nextEvent) {
+      document.getElementById('vocal-feedback').textContent = 'NO DECAY EVENT TO FIX — WAIT FOR AN ACTIVE EVENT';
+      updateVocalRepair();
+      return;
+    }
+    const repairedEvent = repairSingleTrackEvent('vocals', nextEvent);
+    if (!repairedEvent) {
+      updateVocalRepair();
+      return;
+    }
     game.completed.add(game.line);
-    if (game.completed.size >= VOCAL_LINES_REQUIRED) {
-      game.finished = true;
-      els.vocalInput.disabled = true;
-      document.getElementById('vocal-feedback').textContent = 'VOCAL REPAIR COMPLETE — SIGNAL RESTORED';
-      repairTrack('vocals');
-    } else updateVocalRepair();
+    game.correct = 0;
+    els.vocalInput.value = '';
+    playSwitchSound('off');
+    addLog('VOCALS repaired: ' + repairedEvent.name + '.', 'repair');
+    document.getElementById('vocal-feedback').textContent =
+      repairedEvent.name + ' REPAIRED — ONE VOCAL DECAY EVENT RESTORED';
+    updateUI();
+    updateTrackAudioVisuals();
+    updateDialog();
+    updateVocalRepair();
   }
 }
 
@@ -2682,7 +2710,7 @@ function handleVocalInput(event) {
 // Bass: four physical pegs share a queue of the stem's actual decay effects.
 const BASS_TURN_MS = 600;
 const BASS_FEEDBACK_MS = 900;
-const BASS_PEG_POSITIONS = [[61.9,22.9],[54.6,39.1],[48.4,54.7],[42.2,71.2]];
+const BASS_PEG_POSITIONS = [[56.4,22.9],[49.1,39.1],[42.9,54.7],[36.7,71.2]];
 // Crop transparent margins in SVG, leaving the supplied PNGs untouched.
 // Each viewBox aligns the shaft end to the same point as its angle changes.
 const BASS_TUNER_FRAMES = [
