@@ -4,61 +4,60 @@
 const SONGS = [
   {
     id: 'on-time',
-    titleImage: 'assets/On time fonts.png',
-    cover: 'On time cover.png',
+    titleImage: 'assets/images/lettering/on-time.png',
+    cover: 'assets/images/covers/on-time.png',
     title: 'ON TIME',
     number: 1,
     artist: 'TAYLA KANE AND JACKSON MOORE',
     tracks: [
-      { id: 'drums', name: 'DRUMS', file: 'assets/on-time-drums.mp3' },
-      { id: 'bass', name: 'BASS', file: 'assets/on-time-bass.mp3' },
-      { id: 'guitars', name: 'GUITARS', file: 'assets/on-time-guitars.mp3' },
-      { id: 'keys', name: 'KEYS', file: 'assets/on-time-keys.mp3' },
-      { id: 'vocals', name: 'VOCALS', file: 'assets/on-time-vocals.mp3' }
+      { id: 'drums', name: 'DRUMS', file: 'assets/audio/stems/on-time-drums.mp3' },
+      { id: 'bass', name: 'BASS', file: 'assets/audio/stems/on-time-bass.mp3' },
+      { id: 'guitars', name: 'GUITARS', file: 'assets/audio/stems/on-time-guitars.mp3' },
+      { id: 'keys', name: 'KEYS', file: 'assets/audio/stems/on-time-keys.mp3' },
+      { id: 'vocals', name: 'VOCALS', file: 'assets/audio/stems/on-time-vocals.mp3' }
     ]
   },
   {
     id: 'reconcile',
-    titleImage: 'assets/Reconcile fonts.png',
-    cover: 'Reconcile cover.png',
+    titleImage: 'assets/images/lettering/reconcile.png',
+    cover: 'assets/images/covers/reconcile.png',
     title: 'RECONCILE',
     number: 2,
     artist: 'JACKSON MOORE',
     tracks: [
-      { id: 'drums', name: 'DRUMS', file: 'assets/reconcile-drums.mp3' },
-      { id: 'bass', name: 'BASS', file: 'assets/reconcile-bass.mp3' },
-      { id: 'guitars', name: 'GUITARS', file: 'assets/reconcile-guitars.mp3' },
-      { id: 'keys', name: 'KEYS', file: 'assets/reconcile-keys.mp3' }
+      { id: 'drums', name: 'DRUMS', file: 'assets/audio/stems/reconcile-drums.mp3' },
+      { id: 'bass', name: 'BASS', file: 'assets/audio/stems/reconcile-bass.mp3' },
+      { id: 'guitars', name: 'GUITARS', file: 'assets/audio/stems/reconcile-guitars.mp3' },
+      { id: 'keys', name: 'KEYS', file: 'assets/audio/stems/reconcile-keys.mp3' }
     ]
   },
   {
     id: 'rainy-night',
-    titleImage: 'assets/Rainy night fonts.png',
-    cover: 'Riany n cover copy.png',
+    titleImage: 'assets/images/lettering/rainy-night.png',
+    cover: 'assets/images/covers/rainy-night.png',
     title: 'RAINY NIGHT',
     number: 3,
     artist: 'TAYLA KANE',
     tracks: [
-      { id: 'drums', name: 'DRUMS', file: 'assets/rainy-night-drums.mp3' },
-      { id: 'bass', name: 'BASS', file: 'assets/rainy-night-bass.mp3' },
-      { id: 'guitars', name: 'GUITARS', file: 'assets/rainy-night-guitars.mp3' },
-      { id: 'keys', name: 'KEYS', file: 'assets/rainy-night-keys.mp3' },
-      { id: 'vocals', name: 'VOCALS', file: 'assets/rainy-night-vocals.mp3' }
+      { id: 'drums', name: 'DRUMS', file: 'assets/audio/stems/rainy-night-drums.mp3' },
+      { id: 'bass', name: 'BASS', file: 'assets/audio/stems/rainy-night-bass.mp3' },
+      { id: 'guitars', name: 'GUITARS', file: 'assets/audio/stems/rainy-night-guitars.mp3' },
+      { id: 'keys', name: 'KEYS', file: 'assets/audio/stems/rainy-night-keys.mp3' },
+      { id: 'vocals', name: 'VOCALS', file: 'assets/audio/stems/rainy-night-vocals.mp3' }
     ]
   },
   {
     id: 'there-is-love',
-    titleImage: 'assets/This is love fonts.png',
-    cover: 'love cover copy 2.png',
+    cover: 'assets/images/covers/there-is-love.png',
     title: 'THERE IS LOVE',
     number: 4,
     artist: 'JACKSON MOORE',
     tracks: [
-      { id: 'drums', name: 'DRUMS', file: 'assets/there-is-love-drums.mp3' },
-      { id: 'bass', name: 'BASS', file: 'assets/there-is-love-bass.mp3' },
-      { id: 'guitars', name: 'GUITARS', file: 'assets/there-is-love-guitars.mp3' },
-      { id: 'keys', name: 'KEYS', file: 'assets/there-is-love-keys.mp3' },
-      { id: 'vocals', name: 'VOCALS', file: 'assets/there-is-love-vocals.mp3' }
+      { id: 'drums', name: 'DRUMS', file: 'assets/audio/stems/there-is-love-drums.mp3' },
+      { id: 'bass', name: 'BASS', file: 'assets/audio/stems/there-is-love-bass.mp3' },
+      { id: 'guitars', name: 'GUITARS', file: 'assets/audio/stems/there-is-love-guitars.mp3' },
+      { id: 'keys', name: 'KEYS', file: 'assets/audio/stems/there-is-love-keys.mp3' },
+      { id: 'vocals', name: 'VOCALS', file: 'assets/audio/stems/there-is-love-vocals.mp3' }
     ]
   }
 ];
@@ -184,13 +183,13 @@ function renderTracks() {
     return '<button class="track-card healthy" type="button" data-track="' + t.id + '" aria-label="Open ' + t.name + ' track diagnostics">' +
       '<div class="track-visual" aria-hidden="true"></div>' +
       '<div class="track-artwork-stage">' +
-        '<img class="track-instrument-image" src="assets/' + (t.id === 'vocals' ? 'vocal' : t.id) + '.png" alt="" loading="lazy" decoding="async">' +
+        '<img class="track-instrument-image" src="assets/images/instruments/' + (t.id === 'vocals' ? 'vocal' : t.id) + '.png" alt="" loading="lazy" decoding="async">' +
       '</div>' +
       '<div class="track-signal" aria-hidden="true">' +
         '<div class="signal-bars">' + bars + '</div>' +
       '</div>' +
       '<div class="track-info">' +
-        '<span class="track-name"><img class="track-name-art" src="' + encodeURI(({drums:'assets/Drums fonts.png',bass:'assets/Bass fonts.png',guitars:'assets/Guitar fonts.png',keys:'assets/Kereys fonts.png',vocals:'assets/Vocal fonts.png'})[t.id]) + '" alt="' + t.name + '"></span>' +
+        '<span class="track-name"><img class="track-name-art" src="' + encodeURI(({drums:'assets/images/lettering/drums.png',bass:'assets/images/lettering/bass.png',guitars:'assets/images/lettering/guitars.png',keys:'assets/images/lettering/keys.png',vocals:'assets/images/lettering/vocals.png'})[t.id]) + '" alt="' + t.name + '"></span>' +
         '<span class="track-status" data-status="' + t.id + '">NORMAL</span>' +
         '<span class="track-meter"><span data-meter="' + t.id + '"></span></span>' +
         '<span class="track-event-count" data-count="' + t.id + '">NO ACTIVE EVENTS</span>' +
@@ -464,18 +463,18 @@ async function loadSwitchSounds() {
 
   const context = state.audio;
   const files = {
-    on: 'assets/click-on.mp3',
-    off: 'assets/click-off.mp3',
-    button: 'assets/button-press.mp3',
-    error: 'assets/error.mp3',
-    success: 'assets/success.mp3',
-    plink: 'assets/plink.mp3',
-    guitarLowE: 'assets/guitar%20low%20e.mp3',
-    guitarA: 'assets/guitar%20a.mp3',
-    guitarD: 'assets/guitar%20d.mp3',
-    guitarG: 'assets/guitar%20g.mp3',
-    guitarB: 'assets/guitar%20b.mp3',
-    guitarHighE: 'assets/guitar%20high%20e.mp3'
+    on: 'assets/audio/ui/click-on.mp3',
+    off: 'assets/audio/ui/click-off.mp3',
+    button: 'assets/audio/ui/button-press.mp3',
+    error: 'assets/audio/ui/error.mp3',
+    success: 'assets/audio/ui/success.mp3',
+    plink: 'assets/audio/ui/plink.mp3',
+    guitarLowE: 'assets/audio/guitar-strings/low-e.mp3',
+    guitarA: 'assets/audio/guitar-strings/a.mp3',
+    guitarD: 'assets/audio/guitar-strings/d.mp3',
+    guitarG: 'assets/audio/guitar-strings/g.mp3',
+    guitarB: 'assets/audio/guitar-strings/b.mp3',
+    guitarHighE: 'assets/audio/guitar-strings/high-e.mp3'
   };
   const operation = Promise.all(Object.entries(files).map(async ([name, url]) => {
     try {
@@ -1338,7 +1337,7 @@ function updateDialog() {
   els.dialogOverallArt.hidden = true;
   els.solo.hidden = false;
   // Use the same custom instrument lettering as the player cards.
-  const titleArt = ({drums:'assets/Drums fonts.png',bass:'assets/Bass fonts.png',guitars:'assets/Guitar fonts.png',keys:'assets/Kereys fonts.png',vocals:'assets/Vocal fonts.png'})[track.id];
+  const titleArt = ({drums:'assets/images/lettering/drums.png',bass:'assets/images/lettering/bass.png',guitars:'assets/images/lettering/guitars.png',keys:'assets/images/lettering/keys.png',vocals:'assets/images/lettering/vocals.png'})[track.id];
   els.dialogTitle.innerHTML = titleArt
     ? '<img class="dialog-title-art" src="' + encodeURI(titleArt) + '" alt="' + track.name + '">'
     : track.name;
@@ -1352,7 +1351,7 @@ function updateDialog() {
   els.switchesHeadingHelp.textContent = 'FLIP ACTIVE SWITCHES OFF TO REPAIR';
 
   if (els.dialogInstrumentImage.dataset.track !== track.id) {
-    els.dialogInstrumentImage.src = 'assets/' + (track.id === 'vocals' ? 'vocal' : track.id) + '.png';
+    els.dialogInstrumentImage.src = 'assets/images/instruments/' + (track.id === 'vocals' ? 'vocal' : track.id) + '.png';
     els.dialogInstrumentImage.alt = track.name.toLowerCase() + ' instrument illustration';
     els.dialogInstrumentImage.dataset.track = track.id;
   }
@@ -1530,11 +1529,7 @@ function formatTime(seconds) {
 function updatePlaybackClock() {
   const now = performance.now();
   if (state.audio) {
-    const position = currentMasterOffset();
-    const masterTrack = TRACKS.find(t => t.id === 'drums') || TRACKS[0];
-    const duration = masterTrack && state.buffers[masterTrack.id] ? state.buffers[masterTrack.id].duration : 0;
-    els.playbackTime.textContent = formatTime(position) + ' / ' + (duration ? formatTime(duration) : '--:--');
-    updateTrackAudioVisuals();
+    // Avoid duplicate playback clock reads and expensive analyser/DOM work per frame.
     updateDialogAudioPulse(now);
     updateRhythmRepair();
     if (now - state.lastClockTextAt >= 250) {
@@ -1544,7 +1539,7 @@ function updatePlaybackClock() {
       els.playbackTime.textContent = formatTime(position) + ' / ' + (duration ? formatTime(duration) : '--:--');
       state.lastClockTextAt = now;
     }
-    if (state.playing && now - state.lastTrackVisualAt >= 100) {
+    if (now - state.lastTrackVisualAt >= 100) {
       updateTrackAudioVisuals();
       state.lastTrackVisualAt = now;
     }
@@ -1559,10 +1554,10 @@ function updatePlaybackClock() {
 function renderCurrentSong() {
   const song = SONGS[currentSongIndex];
   const songBackgrounds = {
-    'on-time': 'assets/On time cover BW.png',
-    'reconcile': 'assets/Reconcile cover BW.png',
-    'rainy-night': 'assets/Riany n cover copy BW.png',
-    'there-is-love': 'assets/love cover copy BG.png'
+    'on-time': 'assets/images/backgrounds/on-time.png',
+    'reconcile': 'assets/images/backgrounds/reconcile.png',
+    'rainy-night': 'assets/images/backgrounds/rainy-night.png',
+    'there-is-love': 'assets/images/backgrounds/there-is-love.png'
   };
   document.body.style.setProperty('--song-background', 'url("' + encodeURI(songBackgrounds[song.id]) + '")');
   els.songTitle.innerHTML = song.id === 'there-is-love'
@@ -2782,7 +2777,7 @@ function startBassRepair() {
   els.bassTuners.innerHTML = BASS_PEG_POSITIONS.map(([x,y],index) =>
     '<div class="bass-peg" style="--peg-x:'+x+'%;--peg-y:'+y+'%">'+
       '<button class="bass-tuner" type="button" data-bass-peg="'+index+'" disabled>'+
-        BASS_TUNER_FRAMES.map((frame,i)=>'<svg data-bass-frame="'+i+'" viewBox="'+frame.box+'" aria-hidden="true"'+(i===0?'':' hidden')+'><image href="assets/bass-tuner-'+frame.angle+'.png" width="2048" height="2048" /></svg>').join('')+
+        BASS_TUNER_FRAMES.map((frame,i)=>'<svg data-bass-frame="'+i+'" viewBox="'+frame.box+'" aria-hidden="true"'+(i===0?'':' hidden')+'><image href="assets/images/instruments/bass-tuner-'+frame.angle+'.png" width="2048" height="2048" /></svg>').join('')+
       '</button><span class="bass-effect-name"></span><span class="bass-hit-label" role="status"></span></div>'
   ).join('');
   document.getElementById('bass-feedback').textContent = 'CLICK A RED GLOWING PEG TO TUNE';

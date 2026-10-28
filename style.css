@@ -22,7 +22,7 @@ html {
 body {
   margin:0;
   min-height:100vh;
-  background-image:linear-gradient(135deg,rgba(12,10,7,.7),rgba(16,13,8,.7) 52%,rgba(8,7,5,.7)),var(--song-background, url('assets/On%20time%20cover%20BW.png'));
+  background-image:linear-gradient(135deg,rgba(12,10,7,.7),rgba(16,13,8,.7) 52%,rgba(8,7,5,.7)),var(--song-background, url('assets/images/backgrounds/on-time.png'));
   background-position:center center;
   background-size:cover;
   background-attachment:fixed;
@@ -895,21 +895,21 @@ body {
   transition: background .45s ease;
 }
 body.decay-calm {
-  background-image: linear-gradient(135deg,rgba(8,13,8,.7),rgba(13,18,11,.7) 52%,rgba(7,9,6,.7)),var(--song-background, url('assets/On%20time%20cover%20BW.png'));
+  background-image: linear-gradient(135deg,rgba(8,13,8,.7),rgba(13,18,11,.7) 52%,rgba(7,9,6,.7)),var(--song-background, url('assets/images/backgrounds/on-time.png'));
   background-position:center;
   background-size:cover;
   background-attachment:fixed;
   background-repeat:no-repeat;
 }
 body.decay-warning {
-  background-image: linear-gradient(135deg,rgba(16,12,5,.7),rgba(24,17,6,.7) 52%,rgba(11,8,5,.7)),var(--song-background, url('assets/On%20time%20cover%20BW.png'));
+  background-image: linear-gradient(135deg,rgba(16,12,5,.7),rgba(24,17,6,.7) 52%,rgba(11,8,5,.7)),var(--song-background, url('assets/images/backgrounds/on-time.png'));
   background-position:center;
   background-size:cover;
   background-attachment:fixed;
   background-repeat:no-repeat;
 }
 body.decay-critical {
-  background-image: linear-gradient(135deg,rgba(18,6,5,.7),rgba(28,9,8,.7) 52%,rgba(9,5,4,.7)),var(--song-background, url('assets/On%20time%20cover%20BW.png'));
+  background-image: linear-gradient(135deg,rgba(18,6,5,.7),rgba(28,9,8,.7) 52%,rgba(9,5,4,.7)),var(--song-background, url('assets/images/backgrounds/on-time.png'));
   background-position:center;
   background-size:cover;
   background-attachment:fixed;
@@ -2685,10 +2685,6 @@ a.portfolio-card:focus-visible {
 .guitar-strings span { pointer-events: auto; }
 .guitar-soundboard { touch-action: none; }
 
-/* Image wordmark */
-.wordmark-image { display: block; width: min(100%, 275px); height: auto; object-fit: contain; filter: brightness(0) saturate(100%) invert(86%) sepia(17%) saturate(786%) hue-rotate(354deg) brightness(96%) contrast(86%); }
-
-
 /* Event-linked Drum mini-game, styled to match the Keys arrow glow and bursts. */
 .rhythm-panel[hidden] { display: none !important; }
 .rhythm-signal-wrap { position: relative; width: 100%; }
@@ -2837,7 +2833,7 @@ body.decay-critical {
   background-color: #030302;
   background-image:
     linear-gradient(135deg, rgba(2,2,2,.94), rgba(3,3,3,.92) 52%, rgba(1,1,1,.95)),
-    var(--song-background, url('assets/On%20time%20cover%20BW.png'));
+    var(--song-background, url('assets/images/backgrounds/on-time.png'));
   background-position: center center;
   background-size: cover;
   background-attachment: fixed;

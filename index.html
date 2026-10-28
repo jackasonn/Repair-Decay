@@ -5,17 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0b0906">
     <title>REPAIR / DECAY — Interactive Music</title>
-    <link rel="stylesheet" href="style.css?v=20261028-share-tech-mono">
+    <link rel="stylesheet" href="style.css?v=20261028-audit-asset-move">
 </head>
 <body>
     <div class="scanlines" aria-hidden="true"></div>
     <nav class="song-navigation" aria-label="Song navigation">
         <button class="song-arrow song-arrow-left" id="previous-song" type="button" aria-label="Previous song" title="Previous song" disabled>
-            <img class="nav-button-image" src="assets/Botton.png" alt="" aria-hidden="true">
+            <img class="nav-button-image" src="assets/images/ui/navigation-button.png" alt="" aria-hidden="true">
             <span class="nav-label">PREV</span>
         </button>
         <button class="song-arrow song-arrow-right" id="next-song" type="button" aria-label="Next song" title="Next song">
-            <img class="nav-button-image" src="assets/Botton.png" alt="" aria-hidden="true">
+            <img class="nav-button-image" src="assets/images/ui/navigation-button.png" alt="" aria-hidden="true">
             <span class="nav-label">NEXT</span>
         </button>
     </nav>
@@ -29,7 +29,7 @@
     <main>
         <section class="player-section" id="player-section" aria-label="Song player">
             <div class="album-art" id="album-art" role="img" aria-label="On Time cover artwork">
-                <img class="album-cover-image" id="album-cover-image" src="On time cover.png" alt="" decoding="async">
+                <img class="album-cover-image" id="album-cover-image" src="assets/images/covers/on-time.png" alt="" decoding="async">
                 <span class="art-label">SONG<br>IMAGE</span>
                 <span class="art-noise" id="art-noise">001</span>
             </div>
@@ -37,7 +37,7 @@
                 <div class="song-heading">
                     <div>
                         <p class="eyebrow" id="song-number">01 OF 04</p>
-                        <h1 id="song-title"><img class="song-title-image" src="assets/On%20time%20fonts.png" alt="ON TIME"></h1>
+                        <h1 id="song-title"><img class="song-title-image" src="assets/images/lettering/on-time.png" alt="ON TIME"></h1>
                         <p class="artist" id="song-artist">TAYLA KANE AND JACKSON MOORE</p>
                     </div>
                     <button class="play-button" id="play-button" type="button" aria-label="Play song">
@@ -87,7 +87,7 @@
         <div class="dialog-layout">
             <div class="dialog-art-stage" id="dialog-art-stage" aria-hidden="true">
                 <div class="particle-field" id="dialog-particles"></div>
-                <img class="dialog-instrument-image" id="dialog-instrument-image" src="assets/drums.png" alt="" decoding="async">
+                <img class="dialog-instrument-image" id="dialog-instrument-image" src="assets/images/instruments/drums.png" alt="" decoding="async">
                 <div class="dialog-overall-art" id="dialog-overall-art" hidden>
                     <span class="mini-label">OVERALL DECAY</span>
                     <strong id="dialog-overall-percent">0%</strong>
@@ -123,7 +123,7 @@
                     <div class="panel-heading"><span>BASS TUNING REPAIR</span><span id="bass-active-count">0 ACTIVE</span></div>
                     <p>Click a red glowing tuning peg to turn it and repair its labelled effect. Repair every active effect to restore the bass.</p>
                     <div class="bass-headstock" id="bass-headstock">
-                        <svg class="bass-headstock-art" viewBox="400 0 1250 2048" aria-hidden="true"><image href="assets/bass-headstock.png" width="2048" height="2048" /></svg>
+                        <svg class="bass-headstock-art" viewBox="400 0 1250 2048" aria-hidden="true"><image href="assets/images/instruments/bass-headstock.png" width="2048" height="2048" /></svg>
                         <div id="bass-tuners" class="bass-tuners"></div>
                     </div>
                     <p id="bass-feedback" role="status">CLICK A RED GLOWING PEG TO TUNE</p>
@@ -181,6 +181,6 @@
     </dialog>
     <script src="there-is-love-lyrics.js?v=20261027-keywords"></script>
     <script src="on-time-lyrics.js?v=20261027-keywords"></script>
-    <script src="script.js?v=20261028-share-tech-mono"></script>
+    <script src="script.js?v=20261028-audit-asset-move"></script>
 </body>
 </html>
