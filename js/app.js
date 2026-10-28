@@ -268,8 +268,8 @@ function updateUI() {
   document.body.style.setProperty('--decay-accent', decayAccent);
   state.waveformColour = decayAccent;
   document.body.style.setProperty('--screen-flash-low', Math.max(0.01, state.overallDecay / 100 * 0.08).toFixed(3));
-  document.body.style.setProperty('--screen-flash-high', Math.max(0.025, state.overallDecay / 100 * 0.44).toFixed(3));
-  document.body.style.setProperty('--screen-flash-duration', (3.6 - state.overallDecay / 100 * 2.4).toFixed(2) + 's');
+  document.body.style.setProperty('--screen-flash-high', Math.min(0.85, 0.26 + state.overallDecay / 100 * 0.58).toFixed(3));
+  document.body.style.setProperty('--screen-flash-duration', (3.2 - state.overallDecay / 100 * 2.0).toFixed(2) + 's');
 
   els.systemStatus.textContent = state.demoMode
     ? 'AUDIO FILES NOT INSTALLED'
@@ -1629,41 +1629,12 @@ async function switchSong(nextIndex, finishedNaturally = false, fromUserAction =
   updateTrackAudioVisuals();
 }
 
-// Keep the cover square and align its outer height precisely with the player
-// panel on desktop. A stacked mobile layout keeps the cover square on its own.
-function syncAlbumCoverToPlayerPanel() {
-  if (!els.playerSection || !els.playerPanel || !els.albumArt) return;
-  if (window.matchMedia && window.matchMedia('(max-width: 850px)').matches) {
-    els.playerSection.style.removeProperty('grid-template-columns');
-    els.albumArt.style.removeProperty('width');
-    els.albumArt.style.removeProperty('height');
-    return;
-  }
-  const target = Math.ceil(els.playerPanel.getBoundingClientRect().height);
-  if (!target) return;
-  const current = Math.round(parseFloat(els.albumArt.style.width) || 0);
-  if (Math.abs(current - target) <= 1) return;
-  els.playerSection.style.gridTemplateColumns = target + 'px minmax(0, 1fr)';
-  els.albumArt.style.width = target + 'px';
-  els.albumArt.style.height = target + 'px';
-}
-function setupAlbumCoverSizing() {
-  syncAlbumCoverToPlayerPanel();
-  if (typeof ResizeObserver !== 'undefined' && els.playerPanel) {
-    const observer = new ResizeObserver(() => requestAnimationFrame(syncAlbumCoverToPlayerPanel));
-    observer.observe(els.playerPanel);
-    state.albumResizeObserver = observer;
-  }
-  window.addEventListener('resize', () => requestAnimationFrame(syncAlbumCoverToPlayerPanel), { passive: true });
-}
-
 // Initialise the interface and audio system.
 document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('pointerdown', unlockAudioFromGesture, true);
   document.addEventListener('keydown', unlockAudioFromGesture, true);
   cacheElements();
   renderCurrentSong();
-  setupAlbumCoverSizing();
   updateSongNavigation();
   renderTracks();
   addLog('Maintenance system initialised.', 'repair');

@@ -68,7 +68,6 @@ button {
   justify-content:space-between;
   align-items:center;
   padding:28px 0 18px;
-  border-bottom:1px solid rgba(228,211,140,.16)
 }
 .wordmark {
   font-family:'Share Tech Mono','Courier New',monospace;
@@ -443,7 +442,6 @@ h2 {
   gap:20px;
   padding:42px 0 32px;
   margin-top:35px;
-  border-top:1px solid rgba(228,211,140,.16);
   color:var(--muted);
   font-size:.64rem;
   letter-spacing:.1em
@@ -800,9 +798,6 @@ h2 {
 }
 
 /* Mini live audio signifiers inside each instrument card */
-.track-grid {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
-}
 .track-card.healthy {
   border-color: rgba(127,154,99,.28);
 }
@@ -963,7 +958,6 @@ main,
   .nav-arrow { font-size: 1.8rem; }
   .nav-label { display: none; }
   .site-header, .site-footer, main { width: calc(100% - 74px); }
-  .track-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); }
 }
 @media (prefers-reduced-motion: reduce) {
   .track-card.decaying .track-visual::after,
