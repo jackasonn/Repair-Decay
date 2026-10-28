@@ -19,9 +19,9 @@ for (const name of ['index.html', 'about.html']) {
 const css = fs.readFileSync(path.join(root, 'css/style.css'), 'utf8');
 for (const m of css.matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)/g)) check(m[1], 'css/style.css', path.join(root, 'css'));
 const script = fs.readFileSync(path.join(root, 'js/app.js'), 'utf8');
-for (const m of script.matchAll(/assets\/[\w./% -]+?\.(?:png|jpg|jpeg|mp3)/g)) check(m[0], 'js/app.js');
+for (const m of script.matchAll(/assets\/[\w./% -]+?\.(?:png|jpg|jpeg|webp|mp3)/g)) check(m[0], 'js/app.js');
 // Also check paths assembled by JavaScript rather than stored as complete literals.
-for (const name of ['drums', 'bass', 'guitars', 'keys', 'vocal', 'bass-headstock']) check('assets/images/instruments/' + name + '.png', 'instrument lookup');
+for (const name of ['drums', 'bass', 'guitars', 'keys', 'vocal', 'bass-headstock']) check('assets/images/optimized/instruments/' + name + '.webp', 'instrument lookup');
 for (const angle of [0, 30, 70, 90]) check('assets/images/instruments/bass-tuner-' + angle + '.png', 'bass animation');
 for (const name of ['js/app.js', 'js/audio/pitch-shifter.js', 'js/lyrics/on-time.js', 'js/lyrics/there-is-love.js']) check(name, 'runtime script');
 console.log('PASS: ' + verified + ' local image, audio, CSS and script references resolve');

@@ -5,7 +5,7 @@ const SONGS = [
   {
     id: 'on-time',
     titleImage: 'assets/images/lettering/on-time.png',
-    cover: 'assets/images/covers/on-time.png',
+    cover: 'assets/images/optimized/covers/on-time.webp',
     title: 'ON TIME',
     number: 1,
     artist: 'TAYLA KANE AND JACKSON MOORE',
@@ -20,7 +20,7 @@ const SONGS = [
   {
     id: 'reconcile',
     titleImage: 'assets/images/lettering/reconcile.png',
-    cover: 'assets/images/covers/reconcile.png',
+    cover: 'assets/images/optimized/covers/reconcile.webp',
     title: 'RECONCILE',
     number: 2,
     artist: 'JACKSON MOORE',
@@ -34,7 +34,7 @@ const SONGS = [
   {
     id: 'rainy-night',
     titleImage: 'assets/images/lettering/rainy-night.png',
-    cover: 'assets/images/covers/rainy-night.png',
+    cover: 'assets/images/optimized/covers/rainy-night.webp',
     title: 'RAINY NIGHT',
     number: 3,
     artist: 'TAYLA KANE',
@@ -48,7 +48,7 @@ const SONGS = [
   },
   {
     id: 'there-is-love',
-    cover: 'assets/images/covers/there-is-love.png',
+    cover: 'assets/images/optimized/covers/there-is-love.webp',
     title: 'THERE IS LOVE',
     number: 4,
     artist: 'JACKSON MOORE',
@@ -183,7 +183,7 @@ function renderTracks() {
     return '<button class="track-card healthy" type="button" data-track="' + t.id + '" aria-label="Open ' + t.name + ' track diagnostics">' +
       '<div class="track-visual" aria-hidden="true"></div>' +
       '<div class="track-artwork-stage">' +
-        '<img class="track-instrument-image" src="assets/images/instruments/' + (t.id === 'vocals' ? 'vocal' : t.id) + '.png" alt="" loading="lazy" decoding="async">' +
+        '<img class="track-instrument-image" src="assets/images/optimized/instruments/' + (t.id === 'vocals' ? 'vocal' : t.id) + '.webp" alt="" loading="lazy" decoding="async">' +
       '</div>' +
       '<div class="track-signal" aria-hidden="true">' +
         '<div class="signal-bars">' + bars + '</div>' +
@@ -1351,7 +1351,7 @@ function updateDialog() {
   els.switchesHeadingHelp.textContent = 'FLIP ACTIVE SWITCHES OFF TO REPAIR';
 
   if (els.dialogInstrumentImage.dataset.track !== track.id) {
-    els.dialogInstrumentImage.src = 'assets/images/instruments/' + (track.id === 'vocals' ? 'vocal' : track.id) + '.png';
+    els.dialogInstrumentImage.src = 'assets/images/optimized/instruments/' + (track.id === 'vocals' ? 'vocal' : track.id) + '.webp';
     els.dialogInstrumentImage.alt = track.name.toLowerCase() + ' instrument illustration';
     els.dialogInstrumentImage.dataset.track = track.id;
   }
@@ -1554,10 +1554,10 @@ function updatePlaybackClock() {
 function renderCurrentSong() {
   const song = SONGS[currentSongIndex];
   const songBackgrounds = {
-    'on-time': 'assets/images/backgrounds/on-time.png',
-    'reconcile': 'assets/images/backgrounds/reconcile.png',
-    'rainy-night': 'assets/images/backgrounds/rainy-night.png',
-    'there-is-love': 'assets/images/backgrounds/there-is-love.png'
+    'on-time': 'assets/images/optimized/backgrounds/on-time.webp',
+    'reconcile': 'assets/images/optimized/backgrounds/reconcile.webp',
+    'rainy-night': 'assets/images/optimized/backgrounds/rainy-night.webp',
+    'there-is-love': 'assets/images/optimized/backgrounds/there-is-love.webp'
   };
   document.body.style.setProperty('--song-background', 'url("' + new URL(songBackgrounds[song.id], document.baseURI).href + '")');
   els.songTitle.innerHTML = song.id === 'there-is-love'

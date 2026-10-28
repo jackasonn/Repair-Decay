@@ -23,6 +23,10 @@ An interactive music album and Upkeep installation. As individual Web Audio stem
 | `tests/` | Regression tests |
 | `tools/` | Static asset-reference verifier |
 
+## Optimized display images
+
+The site serves WebP image variants in `assets/images/optimized/`, generated from the original PNG/JPEG files by `tools/optimise_images.py` and a GitHub Actions workflow. Source images are kept unchanged; the transparent tuning peg frames and small custom-lettering PNGs remain PNGs. Browser artwork is substantially smaller to download.
+
 ## Running locally
 
 Start a local HTTP server from the repository root, for example `python3 -m http.server 8000`, then open `http://localhost:8000`. Opening `index.html` directly as a `file://` page may break `fetch` and AudioWorklet operations.
