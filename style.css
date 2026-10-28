@@ -2829,53 +2829,83 @@ a.portfolio-card:focus-visible {
 }
 
 
-/* Decay-state identity and a darker, but still legible, album backdrop. */
-body {
-  background-color: var(--bg);
+/* Final header, backdrop and title refinements. */
+body,
+body.decay-calm,
+body.decay-warning,
+body.decay-critical {
+  background-color: #030302;
   background-image:
-    linear-gradient(135deg, rgba(4,3,3,.84), rgba(5,4,3,.79) 52%, rgba(3,3,3,.86)),
+    linear-gradient(135deg, rgba(2,2,2,.94), rgba(3,3,3,.92) 52%, rgba(1,1,1,.95)),
     var(--song-background, url('assets/On%20time%20cover%20BW.png'));
+  background-position: center center;
+  background-size: cover;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
 }
+/* Restore the About page's original warm radial-gradient background (without album art). */
 body.about-page {
-  background-color: var(--bg);
-  background-image: none !important;
+  background: radial-gradient(circle at 50% 0%, rgba(118,91,37,.18), transparent 35rem),
+    linear-gradient(135deg, #0c0a07, #100d08 52%, #080705) !important;
 }
-.wordmark-image {
-  filter: brightness(0) saturate(100%) invert(86%) sepia(17%) saturate(786%) hue-rotate(354deg) brightness(96%) contrast(86%);
-  transition: filter .3s ease;
-}
-body.decay-calm .wordmark-image {
-  filter: brightness(0) saturate(100%) invert(59%) sepia(16%) saturate(777%) hue-rotate(43deg) brightness(91%) contrast(88%);
-}
-body.decay-warning .wordmark-image {
-  filter: brightness(0) saturate(100%) invert(86%) sepia(17%) saturate(786%) hue-rotate(354deg) brightness(96%) contrast(86%);
-}
-body.decay-critical .wordmark-image {
-  filter: brightness(0) saturate(100%) invert(39%) sepia(40%) saturate(1037%) hue-rotate(320deg) brightness(92%) contrast(92%);
-}
-/* Use the same warm yellow as the other repair/decay interface accents. */
-.song-title-image {
-  filter: brightness(0) saturate(100%) invert(86%) sepia(17%) saturate(786%) hue-rotate(354deg) brightness(96%) contrast(86%);
-}
-/* Keep the short project credit tucked alongside the logo at laptop widths. */
-.brand-lockup {
+/* The textual logo keeps the wordmark yellow; only its slash follows the decay accent. */
+.wordmark {
+  display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
-  flex-wrap: nowrap;
-  column-gap: 10px;
+  white-space: nowrap;
+  color: var(--cream);
 }
-.album-credit { max-width: 350px; }
+.wordmark span {
+  color: var(--decay-accent, var(--red));
+  transition: color .3s ease;
+}
+body.about-page .wordmark span { color: var(--cream); }
+/* Keep the header credit immediately next to the wordmark instead of spreading across the header. */
+.brand-lockup {
+  display: flex;
+  flex: 0 1 auto;
+  width: fit-content;
+  max-width: calc(100% - 150px);
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
+  column-gap: 14px;
+  row-gap: 4px;
+  margin-right: auto;
+}
+.album-credit {
+  flex: 0 1 auto;
+  max-width: 350px;
+  margin: 0;
+  text-align: left;
+  color: var(--muted);
+}
+.song-title-text {
+  display: block;
+  color: var(--cream);
+  font-family: 'VT323', monospace;
+  font-size: clamp(2.2rem, 4vw, 3.1rem);
+  line-height: .95;
+  letter-spacing: .08em;
+  font-weight: 400;
+}
 @media (max-width: 850px) {
   .brand-lockup {
-    align-items: center;
+    max-width: calc(100% - 135px);
     flex-direction: row;
     flex-wrap: nowrap;
-    gap: 8px;
+    align-items: center;
+    gap: 9px;
   }
   .album-credit { max-width: 245px; }
 }
 @media (max-width: 560px) {
   .site-header { flex-wrap: wrap; align-items: flex-start; gap: 10px; }
-  .brand-lockup { flex-wrap: wrap; column-gap: 8px; row-gap: 4px; }
-  .wordmark-image { width: min(100%, 205px); }
-  .album-credit { max-width: 165px; font-size: .53rem; }
+  .brand-lockup { max-width: 100%; flex-wrap: wrap; column-gap: 8px; row-gap: 4px; }
+  .wordmark { font-size: clamp(1.8rem, 7vw, 2.3rem); }
+  .album-credit { max-width: 175px; font-size: .53rem; }
 }
+/* Guitar repair dots are now positioned at the calculated centre of each physical string. */
+.guitar-target-wrap { top: var(--dot-y); }
