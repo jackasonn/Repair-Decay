@@ -31,3 +31,4 @@ jobs:
           sleep 2
           node tests/browser-layout.cjs
           node tests/browser-explode.cjs
+          node tests/browser-warp.cjs
