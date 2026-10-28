@@ -7,7 +7,7 @@ An interactive music album and Upkeep installation. As individual Web Audio stem
 | Directory | Purpose |
 | --- | --- |
 | `index.html`, `about.html` | GitHub Pages website and credits |
-| `css/style.css` | Share Tech Mono typography, layout, visuals and responsive design |
+| `css/style.css` + `css/components.css` + `css/about.css` + `css/repair-details.css` + `css/typography.css` + `css/layout.css` | Share Tech Mono typography, layout, visuals and responsive design |
 | `js/app.js` | Player, decay scheduling, Web Audio and minigame code |
 | `js/audio/pitch-shifter.js` | Pitch-shifting AudioWorklet |
 | `js/lyrics/` | On Time / There Is Love keyword timing tables |
@@ -46,3 +46,5 @@ Run `npm test` using Node.js 20 or later. This checks JavaScript syntax, static 
 ## Manual release checklist
 
 Verify the four songs, synchronized pause/play, navigation, each repair minigame, global switches, error/success sounds, About page, mobile viewport and actual exhibition audio setup. Automated tests do **not** substitute for browser playback or listening tests.
+
+The stylesheet is now ordered as foundations, interactive components, About sections, repair details, PNG/pixel title typography and stable-layout overrides. Duplicate keyframes and superseded background gradients were removed.

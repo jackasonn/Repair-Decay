@@ -16,8 +16,10 @@ for (const name of ['index.html', 'about.html']) {
   const html = fs.readFileSync(path.join(root, name), 'utf8');
   for (const m of html.matchAll(/\b(?:src|href)=["']([^"']+)["']/g)) check(m[1], name);
 }
-const css = fs.readFileSync(path.join(root, 'css/style.css'), 'utf8');
-for (const m of css.matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)/g)) check(m[1], 'css/style.css', path.join(root, 'css'));
+for (const styleFile of ['style.css','components.css','about.css','repair-details.css','typography.css','layout.css']) {
+  const css = fs.readFileSync(path.join(root,'css',styleFile),'utf8');
+  for (const m of css.matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)/g)) check(m[1], 'css/'+styleFile, path.join(root,'css'));
+}
 for (const scriptName of ['js/app.js','js/repair/drums.js','js/repair/guitar.js','js/repair/keys.js','js/repair/vocals.js','js/repair/bass.js']) {
   const source = fs.readFileSync(path.join(root, scriptName), 'utf8');
   for (const match of source.matchAll(/assets\/[\w./% -]+?\.(?:png|jpg|jpeg|webp|mp3)/g)) check(match[0], scriptName);
