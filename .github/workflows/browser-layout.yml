@@ -1,0 +1,32 @@
+name: Browser layout smoke test
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'about.html'
+      - 'css/**'
+      - 'js/**'
+      - 'tests/browser-layout.cjs'
+      - '.github/workflows/browser-layout.yml'
+  workflow_dispatch:
+jobs:
+  chromium-layout:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium test runner
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Run browser layout checks
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 > /tmp/repair-decay-site.log 2>&1 &
+          sleep 2
+          node tests/browser-layout.cjs
