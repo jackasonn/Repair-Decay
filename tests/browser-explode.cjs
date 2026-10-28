@@ -3,7 +3,7 @@ const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 
 (async () => {
-  const browser = await chromium.launch({headless:true,args:['--disable-dev-shm-usage','--autoplay-policy=no-user-gesture-required']});
+  const browser = await chromium.launch({headless:true,args:['--disable-dev-shm-usage']});
   try {
     const page=await browser.newPage();
     // Do not download every full album stem just to check a short UI sound.
@@ -49,7 +49,69 @@ const assert = require('node:assert/strict');
     }));
     console.log('Explode Web Audio play on real click:',JSON.stringify(scheduled));
     assert.equal(scheduled.starts,1,'One click must schedule one explosion sound');
-    assert.equal(scheduled.contextState,'running','AudioContext must be unlocked');
+    assert.equal(scheduled.contextState,'running','AudioContext must be unlocked by the user click');
+    const boostedPeak=await page.evaluate(()=>{
+      const samples=state.switchSoundBuffers.explode.getChannelData(0);
+      let peak=0;
+      for(const sample of samples)peak=Math.max(peak,Math.abs(sample));
+      return peak;
+    });
+    assert.ok(boostedPeak>=0.94&&boostedPeak<=1.0,
+      'Explosion must be normalized to stand out over song stems; got '+boostedPeak);
+    console.log('Normalized explosion peak:',boostedPeak);
+
+    // Exercise the real game completion functions while checking actual Web Audio
+    // BufferSource.start calls, instead of mocking out the sound-playing function.
+    await page.evaluate(()=>{
+      currentSongIndex=0;
+      TRACKS=SONGS[0].tracks;
+      trackState=songTrackStates[SONGS[0].id];
+      trackState.guitars.events=[{type:'lowpass',severity:30}];
+      openTrackDialog('guitars');
+      const target=guitarRepair.targets[0];
+      if(!target)throw new Error('Guitar target absent');
+      target.visible=true;
+      renderGuitarTargets();
+      const button=document.querySelector('[data-guitar-target="'+target.id+'"]');
+      if(!button)throw new Error('Guitar target not rendered');
+      button.click();
+    });
+    await page.waitForFunction(()=>window.__explodeStarts>=2,{timeout:10000});
+    assert.equal(await page.evaluate(()=>window.__explodeStarts),2,
+      'Guitar target explosion should start one sound');
+    console.log('PASS: guitar target starts the sound');
+
+    await page.evaluate(()=>{
+      closeTrackDialog();
+      trackState.keys.events=[{type:'lowpass',severity:30}];
+      openTrackDialog('keys');
+      const note=keysRepair.notes[0];
+      if(!note)throw new Error('Keys arrow absent');
+      const now=performance.now();
+      if(!completeKeysTarget(note,now,now-keysRepair.startedAt,44))
+        throw new Error('Keys arrow repair was not completed');
+    });
+    await page.waitForFunction(()=>window.__explodeStarts>=3,{timeout:10000});
+    assert.equal(await page.evaluate(()=>window.__explodeStarts),3,
+      'Keys arrow explosion should start one sound');
+    console.log('PASS: keys arrow starts the sound');
+
+    await page.evaluate(()=>{
+      closeTrackDialog();
+      trackState.drums.events=[{type:'lowpass',severity:30}];
+      state.selectedTrack='drums';
+      updateDialog();
+      els.dialog.showModal();
+      startRhythmRepair(false);
+      const note=rhythm.targets[0];
+      if(!note)throw new Error('Drum repair line absent');
+      if(!completeDrumTarget(note,rhythm.elapsed,200,115))
+        throw new Error('Drum line repair was not completed');
+    });
+    await page.waitForFunction(()=>window.__explodeStarts>=4,{timeout:10000});
+    assert.equal(await page.evaluate(()=>window.__explodeStarts),4,
+      'Drum line explosion should start one sound');
+    console.log('PASS: drums line starts the sound');
     await page.close();
   } finally { await browser.close(); }
 })().catch(error=>{console.error(error);process.exitCode=1;});

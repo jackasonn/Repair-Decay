@@ -482,16 +482,18 @@ async function loadSwitchSounds() {
       const response = await fetch(url);
       if (!response.ok) throw new Error('HTTP ' + response.status);
       const buffer = await context.decodeAudioData(await response.arrayBuffer());
-      // The pluck recordings are quiet source files. Peak-normalise only these six
-      // samples so their transients come through clearly above the backing track.
-      if (name.startsWith('guitar')) {
+      // Guitar plucks and the explosion are quiet recordings. The explosion
+      // peaks near 0.31 before normalization and gets masked by song stems and
+      // repair clicks; boost its decoded buffer before applying the normal UI gain.
+      const targetPeak = name === 'explode' ? 0.96 : (name.startsWith('guitar') ? 0.985 : null);
+      if (targetPeak !== null) {
         let peak = 0;
         for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
           const samples = buffer.getChannelData(channel);
           for (let i = 0; i < samples.length; i++) peak = Math.max(peak, Math.abs(samples[i]));
         }
-        if (peak > 0 && peak < 0.985) {
-          const scale = 0.985 / peak;
+        if (peak > 0 && peak < targetPeak) {
+          const scale = targetPeak / peak;
           for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
             const samples = buffer.getChannelData(channel);
             for (let i = 0; i < samples.length; i++) samples[i] *= scale;
