@@ -1,12 +1,13 @@
 // Run with node tests/keys-repair.cjs; current main's live effect-target rules.
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 let now=0;const elements=new Map();
-const document={addEventListener(){},getElementById(id){if(!elements.has(id))elements.set(id,{textContent:'',innerHTML:''});return elements.get(id);}};
+function element(){return {textContent:'',innerHTML:'',style:{setProperty(){}},addEventListener(){},appendChild(){}};}
+const document={addEventListener(){},createElement:element,getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id);}};
 const c=vm.createContext({document,console,Math,Date,Set,Map,WeakMap,Float32Array,performance:{now:()=>now}});
 vm.runInContext(fs.readFileSync('js/app.js','utf8'),c);const run=s=>vm.runInContext(s,c);
 run(`drawKeysRepair=()=>{};showKeysHitLabel=()=>{};updateUI=()=>{};updateDialog=()=>{};
 updateTrackAudioVisuals=()=>{};addLog=()=>{};playUISound=()=>{};playSwitchSound=()=>{};startSources=()=>{};
-els.dialog={open:false,showModal(){this.open=true;},close(){this.open=false;}};els.keysTargetLabels={innerHTML:''};
+els.dialog={open:false,showModal(){this.open=true;},close(){this.open=false;}};els.keysTargetLabels=element();
 function press(lane,extra={}){handleKeysRepairKey({code:KEYS_CODES[lane],target:{tagName:'BODY'},preventDefault(){},...extra});}`);
 for(let song=0;song<4;song++){
  now=0;run(`currentSongIndex=${song};TRACKS=SONGS[currentSongIndex].tracks;trackState=songTrackStates[SONGS[currentSongIndex].id];
