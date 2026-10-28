@@ -40,11 +40,14 @@ for(let song=0;song<4;song++){
  assert.equal(run('trackState.guitars.delayDepth'),0);
  assert.equal(run('trackState.guitars.events.length'),0);
  assert.equal(run('trackState.bass.events.length'),1);
- assert.equal(run('els.dialog.open'),true,'wait for hit animation before closing');
+ assert.equal(run('els.dialog.open'),true,'hit feedback remains visible');
  now=1400;run('updateGuitarRepair()');
+ assert.equal(run('els.dialog.open'),true,'completed Guitar game stays open');
+ assert.notEqual(run('guitarRepair'),null);
+ assert.equal(run('state.playing'),true);
+ run('closeTrackDialog()');
  assert.equal(run('els.dialog.open'),false);
  assert.equal(run('guitarRepair'),null);
- assert.equal(run('state.playing'),true);
 }
 // New decay within an open session creates a matching target; closing cancels.
 now=0;run("trackState.guitars.events=[];openTrackDialog('guitars');");
@@ -56,4 +59,4 @@ now=5000;run('clickDot(0);updateGuitarRepair()');
 assert.equal(run('trackState.guitars.events.length'),1);
 now=0;run("openTrackDialog('guitars');state.songGeneration++;clickDot(0)");
 assert.equal(run('guitarRepair.repairedCount'),0);
-console.log('PASS: current Guitar effect-target repair on all four songs, matching audio effects, duplicate/hidden input, animations, auto-close, cancellation and song isolation');
+console.log('PASS: current Guitar effect-target repair on all four songs, matching audio effects, duplicate/hidden input, animations, manual close, cancellation and song isolation');
