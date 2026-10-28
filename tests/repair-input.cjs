@@ -35,11 +35,11 @@ for(var song=0;song<4;song++){
  rhythm.targets=[{type:'lowpass',name:'LOW PASS FILTER',status:'active',at:0}];
  var good=key();handleRepairKey(good);handleRepairKeyUp(key());`);
  assert.equal(run('trackState.drums.events.length'),1);assert.equal(run('els.dialog.open'),true);
- // The final hit may legitimately auto-close; releasing the held key must not activate restored page focus.
+ // The completed game remains open; releasing Space must not activate another focused control.
  run(`rhythm.targets=[{type:'delay',name:'DELAY',status:'active',at:0}];
  var final=key();handleRepairKey(final);var after=key('A',true);handleRepairKey(after);
  var up=key('A');handleRepairKeyUp(up);`);
- assert.equal(run('els.dialog.open'),false);assert.equal(run('trackState.drums.events.length'),0);
+ assert.equal(run('els.dialog.open'),true,'completed Drum mini-game stays open');assert.equal(run('trackState.drums.events.length'),0);
  assert.equal(run('after.prevented&&after.stopped&&up.prevented&&up.stopped'),true);
  run('var outside=key();handleRepairKey(outside)');assert.equal(run('outside.prevented'),false,'normal page shortcuts stay intact');
  run('setupDrum();var typing=key("INPUT");handleRepairKey(typing)');assert.equal(run('typing.prevented'),false);
@@ -63,4 +63,4 @@ for(var i=0;i<4;i++){
  assert.match(run(`pegs[${i}].children.at(-1).className`),/repair-empty-notice/);
 }
 assert.equal(run('bassRepair.repairedCount'),0);assert.equal(run('trackState.bass.events.length'),0);assert.equal(run('els.dialog.open'),true);
-console.log('PASS: Drum Space on focused buttons, repeats and keyup after completion; normal typing/other controls; four clickable empty Bass pegs and shared no-decay notices');
+console.log('PASS: Drum Space on focused buttons, repeats and keyup after completion; manual close remains available; normal typing/other controls; four clickable empty Bass pegs and shared no-decay notices');
