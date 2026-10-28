@@ -163,11 +163,11 @@
                 </section>
                 <section class="vocal-panel" id="vocal-panel" aria-label="Vocal lyric typing repair" hidden>
                     <div class="panel-heading"><span>VOCAL REPAIR</span><span id="vocal-section">LIVE LYRICS</span></div>
-                    <p>Type the underlined keywords while each lyric is being sung. Each completed lyric repairs one active vocal decay event. Capitals, spaces and punctuation are optional.</p>
+                    <p>Type the underlined word while each lyric is being sung. Each completed word repairs one active vocal decay event. Capitals, spaces and punctuation are optional.</p>
                     <p class="vocal-lyric" id="vocal-lyric" aria-live="polite"></p>
                     <p class="vocal-words" id="vocal-words">WAITING FOR THE NEXT LYRIC</p>
-                    <label for="vocal-input">TYPE ONLY THE WORDS ABOVE</label>
-                    <input id="vocal-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type the short keyword set…" aria-describedby="vocal-feedback">
+                    <label for="vocal-input">TYPE ONLY THE WORD ABOVE</label>
+                    <input id="vocal-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type the highlighted word…" aria-describedby="vocal-feedback">
                     <button class="solo-button" id="vocal-play" type="button" hidden>RESUME SONG</button>
                     <p id="vocal-feedback" role="status">FOLLOW THE CURRENT VOCAL LINE</p>
                     <p id="vocal-progress">0 DECAY EVENTS REPAIRED</p>
@@ -186,14 +186,14 @@
         </div>
         <div class="signal-lock-toast" id="repair-lock-toast" role="status" aria-live="polite" hidden>Click a glowing line or press Space as it reaches the centre to repair its decay event.</div>
     </dialog>
-    <script src="js/lyrics/there-is-love.js?v=20261027-keywords"></script>
-    <script src="js/lyrics/on-time.js?v=20261027-keywords"></script>
+    <script src="js/lyrics/there-is-love.js?v=20261029-single-word-vocals"></script>
+    <script src="js/lyrics/on-time.js?v=20261029-single-word-vocals"></script>
     <script src="js/audio/stem-loader.js?v=20261028-stem-loader"></script>
     <script src="js/app.js?v=20261029-audible-warp"></script>
     <script src="js/repair/drums.js?v=20261029-audible-warp"></script>
     <script src="js/repair/guitar.js?v=20261029-audible-warp"></script>
     <script src="js/repair/keys.js?v=20261029-audible-warp"></script>
-    <script src="js/repair/vocals.js?v=20261029-audible-warp"></script>
+    <script src="js/repair/vocals.js?v=20261029-single-word-vocals"></script>
     <script src="js/repair/bass.js?v=20261029-audible-warp"></script>
 </body>
 </html>

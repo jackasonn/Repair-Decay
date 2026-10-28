@@ -1,5 +1,5 @@
 // User-supplied lyrics aligned to the On Time vocal stem (seconds), including repeats.
-// keywords are zero-based word indices: only these 2–3 words need typing.
+// keywords are zero-based word indices: only this selected word needs typing.
 const ON_TIME_LYRICS = [
   {
     "start": 21,
@@ -7,8 +7,7 @@ const ON_TIME_LYRICS = [
     "section": "VERSE 1",
     "text": "Sunday, 10 o'clock",
     "keywords": [
-      0,
-      2
+      0
     ]
   },
   {
@@ -17,8 +16,7 @@ const ON_TIME_LYRICS = [
     "section": "VERSE 1",
     "text": "I was waiting patiently",
     "keywords": [
-      2,
-      3
+      2
     ]
   },
   {
@@ -27,8 +25,7 @@ const ON_TIME_LYRICS = [
     "section": "VERSE 1",
     "text": "2 hours from the time",
     "keywords": [
-      1,
-      4
+      1
     ]
   },
   {
@@ -37,9 +34,7 @@ const ON_TIME_LYRICS = [
     "section": "VERSE 1",
     "text": "you said the you would meet me",
     "keywords": [
-      1,
-      5,
-      6
+      5
     ]
   },
   {
@@ -48,7 +43,6 @@ const ON_TIME_LYRICS = [
     "section": "VERSE 1",
     "text": "Did it happen once again?",
     "keywords": [
-      2,
       4
     ]
   },
@@ -58,8 +52,7 @@ const ON_TIME_LYRICS = [
     "section": "VERSE 1",
     "text": "Did I get my hopes to high?",
     "keywords": [
-      4,
-      6
+      4
     ]
   },
   {
@@ -68,8 +61,6 @@ const ON_TIME_LYRICS = [
     "section": "VERSE 1",
     "text": "Is it such a crime to hope that you would meet me here on time?",
     "keywords": [
-      4,
-      6,
       14
     ]
   },
@@ -79,8 +70,7 @@ const ON_TIME_LYRICS = [
     "section": "VERSE 2",
     "text": "Monday, 12 AM",
     "keywords": [
-      0,
-      2
+      0
     ]
   },
   {
@@ -89,9 +79,7 @@ const ON_TIME_LYRICS = [
     "section": "VERSE 2",
     "text": "I'm back at home again",
     "keywords": [
-      1,
-      3,
-      4
+      3
     ]
   },
   {
@@ -100,8 +88,6 @@ const ON_TIME_LYRICS = [
     "section": "VERSE 2",
     "text": "saying I would never go back out my hearts in too much pain",
     "keywords": [
-      3,
-      8,
       12
     ]
   },
@@ -111,7 +97,6 @@ const ON_TIME_LYRICS = [
     "section": "VERSE 2",
     "text": "Cause it happened once again",
     "keywords": [
-      2,
       4
     ]
   },
@@ -121,8 +106,7 @@ const ON_TIME_LYRICS = [
     "section": "VERSE 2",
     "text": "I got my hopes to high",
     "keywords": [
-      3,
-      5
+      3
     ]
   },
   {
@@ -131,9 +115,7 @@ const ON_TIME_LYRICS = [
     "section": "VERSE 2",
     "text": "they don't respect me enough to go and meet me there on time",
     "keywords": [
-      2,
-      8,
-      12
+      2
     ]
   },
   {
@@ -142,7 +124,6 @@ const ON_TIME_LYRICS = [
     "section": "REPEAT",
     "text": "Did it happen once again?",
     "keywords": [
-      2,
       4
     ]
   },
@@ -152,7 +133,6 @@ const ON_TIME_LYRICS = [
     "section": "REPEAT",
     "text": "Did I get my hopes to high?",
     "keywords": [
-      4,
       6
     ]
   },
@@ -162,9 +142,7 @@ const ON_TIME_LYRICS = [
     "section": "REPEAT",
     "text": "Is it such a crime to hope that you would meet me here on time?",
     "keywords": [
-      4,
-      6,
-      14
+      6
     ]
   },
   {
@@ -173,7 +151,6 @@ const ON_TIME_LYRICS = [
     "section": "REPEAT",
     "text": "Cause it happened once again",
     "keywords": [
-      2,
       4
     ]
   },
@@ -183,8 +160,7 @@ const ON_TIME_LYRICS = [
     "section": "REPEAT",
     "text": "I got my hopes to high",
     "keywords": [
-      3,
-      5
+      3
     ]
   },
   {
@@ -193,8 +169,6 @@ const ON_TIME_LYRICS = [
     "section": "REPEAT",
     "text": "they don't respect me enough to go and meet me there on time",
     "keywords": [
-      2,
-      8,
       12
     ]
   }

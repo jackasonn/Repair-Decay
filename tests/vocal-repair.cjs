@@ -56,7 +56,9 @@ for(const song of [0,3]){
   const line=lines[i];assert.ok(line.start>=0&&line.start<line.end&&line.end<=(song===0?107.05:228.9));
   if(i)assert.ok(lines[i-1].end<=line.start);
   c.testLine=line;const challenge=run('vocalChallenge(testLine)');
-  assert.ok(challenge.words.length>=2&&challenge.words.length<=3,'only 2–3 words per line');
+  assert.equal(line.keywords.length,1,'each lyric has exactly one selected keyword');
+  assert.equal(challenge.words.length,1,'visitor types just one word');
+  assert.equal(challenge.expected,run('vocalLetters(vocalChallenge(testLine).words[0])'));
   assert.ok(challenge.expected.length<=run('vocalLetters(testLine.text).length'));
   if(line.text.split(/\s+/).length>3)assert.ok(challenge.expected.length<run('vocalLetters(testLine.text).length'),'long lines require only a subset');
   assert.equal(new Set(challenge.letters).size,challenge.letters.length);
@@ -65,13 +67,13 @@ for(const song of [0,3]){
 }
 // Requested example: selected letters jump over unneeded words in the full lyric.
 run('setupSong(3);testPosition=THERE_IS_LOVE_LYRICS[12].start+.1;updateVocalRepair()');
-assert.deepEqual(Array.from(run('vocalChallenge(THERE_IS_LOVE_LYRICS[12]).words')),['Look','find','love']);
-run('type("Look f")');assert.equal(run('vocalRepair.correct'),5);
+assert.deepEqual(Array.from(run('vocalChallenge(THERE_IS_LOVE_LYRICS[12]).words')),['love']);
+run('type("lo")');assert.equal(run('vocalRepair.correct'),2);
 const chars=elements.get('vocal-lyric').children;
-assert.equal(chars.filter(e=>e.className.includes('is-typed')).length,5);
-assert.ok(!chars[5].className.includes('is-typed'),'around stays grey');
-assert.ok(chars[25].className.includes('is-typed'),'f in find lights up');
-run('type("Look find love")');assert.equal(run('vocalRepair.completed.size'),1);
+assert.equal(chars.filter(e=>e.className.includes('is-typed')).length,2);
+assert.ok(!chars[0].className.includes('is-typed'),'unselected words stay unlit');
+run('type("Look")');assert.equal(run('vocalRepair.completed.size'),0,'unselected words cannot repair decay');
+run('type("LOVE")');assert.equal(run('vocalRepair.completed.size'),1,'one selected word repairs one Vocal decay event');
 // Mid-song position and boundary protection stay intact.
 run('testPosition=THERE_IS_LOVE_LYRICS[13].start+.1;updateVocalRepair();els.vocalInput.value=vocalChallenge(THERE_IS_LOVE_LYRICS[13]).expected;testPosition=THERE_IS_LOVE_LYRICS[14].start+.1;handleVocalInput({})');
 assert.equal(run('vocalRepair.completed.size'),1,'stale text cannot score new line');
@@ -81,4 +83,4 @@ run('closeTrackDialog()');assert.equal(run('vocalRepair'),null);
 for(const song of [1,2])assert.equal(run(`currentSongIndex=${song};vocalTypingAvailable()`),false);
 run('currentSongIndex=0');assert.equal(run('vocalLyricAt(45)'),-1);
 run('currentSongIndex=3');assert.equal(run('vocalLyricAt(120)'),-1);
-console.log('PASS: On Time and There Is Love keyword-only repair, 2–3 words per line, exact selected-letter highlighting, mistakes/backspace, pause, two-set completion, current-song timing and cancellation');
+console.log('PASS: On Time and There Is Love one-word repair, exactly one highlighted word per line, exact selected-letter highlighting, mistakes/backspace, pause, two-set completion, current-song timing and cancellation');

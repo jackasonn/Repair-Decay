@@ -1,4 +1,4 @@
-// Keyword typing repair for On Time and There Is Love. Lyrics follow the shared audible song position;
+// Single-word typing repair for On Time and There Is Love. Lyrics follow the shared audible song position;
 // each correctly completed lyric repairs exactly one active vocal decay event.
 let vocalRepair = null;
 function vocalLyricsForSong() {
@@ -10,7 +10,8 @@ function vocalLyricsForSong() {
 function vocalTypingAvailable() { return ['there-is-love', 'on-time'].includes(SONGS[currentSongIndex].id); }
 function vocalChallenge(line) {
   const words = Array.from(line.text.matchAll(/[A-Za-z0-9]+(?:['’][A-Za-z]+)*/g), match => ({text:match[0], start:match.index}));
-  const selected = line.keywords.map(index => words[index]);
+  // Always require only one highlighted word, even with older lyric data.
+  const selected = line.keywords.slice(0, 1).map(index => words[index]);
   const letters = [];
   selected.forEach(word => {
     for (let i = 0; i < word.text.length; i++) if (/[a-z]/i.test(word.text[i])) letters.push(word.start + i);
@@ -84,7 +85,7 @@ function updateVocalRepair() {
     ? 'VOCALS FINISHED — REPLAY THE SONG TO CONTINUE REPAIR' : 'WAITING FOR THE NEXT SUNG LINE';
   else if (!activeEvents) document.getElementById('vocal-feedback').textContent = 'NO DECAY EVENT TO FIX — WAIT FOR AN ACTIVE EVENT';
   else if (done) document.getElementById('vocal-feedback').textContent = 'LYRIC RESTORED — WAIT FOR THE NEXT LYRIC';
-  else if (changed) document.getElementById('vocal-feedback').textContent = 'TYPE THE UNDERLINED KEYWORDS WHILE THIS LYRIC IS SUNG';
+  else if (changed) document.getElementById('vocal-feedback').textContent = 'TYPE THE UNDERLINED WORD WHILE THIS LYRIC IS SUNG';
 }
 function handleVocalInput(event) {
   if (event?.isComposing || !currentVocalRepair()) return;
