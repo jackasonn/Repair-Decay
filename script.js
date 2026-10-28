@@ -997,7 +997,7 @@ function closeRepairedDialog(expectedTrack = null) {
   if (expectedTrack && (state.overallDialog || state.selectedTrack !== expectedTrack)) return;
   const selectedIsMiniGame = ['bass', 'drums', 'guitars', 'keys'].includes(state.selectedTrack) ||
     (state.selectedTrack === 'vocals' && vocalTypingAvailable());
-  if (!state.overallDialog && selectedIsMiniGame) return;
+  if (expectedTrack && !state.overallDialog && selectedIsMiniGame) return;
   const repaired = state.overallDialog
     ? TRACKS.every(track => trackState[track.id].events.length === 0)
     : state.selectedTrack && trackState[state.selectedTrack]?.events.length === 0;
