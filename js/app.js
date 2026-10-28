@@ -79,7 +79,7 @@ const EVENT_TYPES=[ {
   id:'phase',name:'PHASE DRIFT',description:'Stereo image becoming unstable',severity:[8,20]
 }
 , {
-  id:'warp',name:'WARP',description:'Tiny fluctuations in pitch without changing playback speed',severity:[8,18]
+  id:'warp',name:'WARP',description:'Strong moving pitch wobble and flutter without changing playback speed',severity:[12,25]
 }
 , {
   id:'delay',name:'DELAY',description:'Three progressively quieter echoes after the original signal',severity:[8,22]
@@ -354,7 +354,7 @@ function disposeTrackChain(chain, stopSource = true) {
       try { chain.source.stop(); } catch (_) {}
     }
   }
-  [chain.phaseLfo, chain.warp, chain.lfo].forEach(oscillator => {
+  [chain.phaseLfo, chain.warp, chain.warpFlutter, chain.lfo].forEach(oscillator => {
     if (!oscillator) return;
     try { oscillator.stop(); } catch (_) {}
   });
@@ -362,7 +362,7 @@ function disposeTrackChain(chain, stopSource = true) {
     chain.source, chain.pitchShift, chain.crush, chain.highpass, chain.lowpass,
     chain.artifactGain, chain.phase, chain.gain, chain.analyser,
     chain.lfo, chain.lfoDepth, chain.phaseLfo, chain.phaseDepth,
-    chain.warp, chain.warpDepth,
+    chain.warp, chain.warpDepth, chain.warpFlutter, chain.warpFlutterDepth,
     chain.delayOne, chain.delayTwo, chain.delayThree,
     chain.delayGainOne, chain.delayGainTwo, chain.delayGainThree
   ].forEach(node => {
@@ -677,6 +677,8 @@ function makeTrackChain(id, source) {
   const phaseDepth = state.audio.createGain();
   const warp = state.audio.createOscillator();
   const warpDepth = state.audio.createGain();
+  const warpFlutter = state.audio.createOscillator();
+  const warpFlutterDepth = state.audio.createGain();
   const delayOne = state.audio.createDelay(1.5);
   const delayTwo = state.audio.createDelay(1.5);
   const delayThree = state.audio.createDelay(1.5);
@@ -718,15 +720,25 @@ function makeTrackChain(id, source) {
   phaseDepth.connect(phase.pan);
   phaseLfo.start();
 
+  // Both oscillators modulate the pitch shifter's cents parameter, not the
+  // stem's playback rate. Audio timing and shared song clock remain unchanged.
   warp.type = 'sine';
-  warp.frequency.value = 0.23;
-  warpDepth.gain.value = s.warpDepth * 1000;
+  warp.frequency.value = 1.65;
+  warpDepth.gain.value = s.warpDepth; // Store WARP depth directly in cents.
   warp.connect(warpDepth);
+  warpFlutter.type = 'sine';
+  warpFlutter.frequency.value = 5.2;
+  warpFlutterDepth.gain.value = s.warpDepth * 0.22;
+  warpFlutter.connect(warpFlutterDepth);
   if (pitchShift) {
     const pitchParam = pitchShift.parameters.get('pitchCents');
-    if (pitchParam) warpDepth.connect(pitchParam);
+    if (pitchParam) {
+      warpDepth.connect(pitchParam);
+      warpFlutterDepth.connect(pitchParam);
+    }
   }
   warp.start();
+  warpFlutter.start();
 
   crush.curve = makeBitCurve(s.bitDepth);
   crush.oversample = 'none';
@@ -757,7 +769,7 @@ function makeTrackChain(id, source) {
 
   return {
     source, highpass: hp, lowpass: lp, gain, artifactGain,
-    phase, phaseLfo, phaseDepth, warp, warpDepth,
+    phase, phaseLfo, phaseDepth, warp, warpDepth, warpFlutter, warpFlutterDepth,
     delayOne, delayTwo, delayThree, delayGainOne, delayGainTwo, delayGainThree,
     crush, pitchShift, analyser,
     analyserData: new Uint8Array(analyser.frequencyBinCount)
@@ -909,7 +921,15 @@ function stopPlayback(finished = false) {
 // Apply one randomly selected decay event to one stem.
 function applyEvent() {
   if(!state.playing)return;
-  const t=TRACKS[Math.floor(Math.random()*TRACKS.length)],et=EVENT_TYPES[Math.floor(Math.random()*EVENT_TYPES.length)],sev=Math.round(et.severity[0]+Math.random()*(et.severity[1]-et.severity[0])),s=trackState[t.id],e= {
+  // Don't schedule inaudible pitch events if the browser's worklet is unavailable.
+  const supportedEvents = state.pitchReady
+    ? EVENT_TYPES
+    : EVENT_TYPES.filter(event => event.id !== 'detune' && event.id !== 'warp');
+  const et = supportedEvents[Math.floor(Math.random() * supportedEvents.length)];
+  const eligibleTracks = et.id === 'warp' ? TRACKS.filter(track => track.id !== 'drums') : TRACKS;
+  const t = eligibleTracks[Math.floor(Math.random() * eligibleTracks.length)];
+  const sev = Math.round(et.severity[0] + Math.random() * (et.severity[1] - et.severity[0]));
+  const s=trackState[t.id],e= {
     type:et.id,name:et.name,description:et.description,severity:sev,time:new Date()
   }
   ;
@@ -943,13 +963,14 @@ function applyEvent() {
     if(d)d.phaseDepth.gain.setTargetAtTime(s.phaseDepth,state.audio.currentTime,.15)
   }
   if(et.id==='warp') {
-    if(t.id==='drums') {
-      scheduleNextEvent();
-      return
+    // One event is approximately a semitone of wobble; repeated events
+    // increase movement up to ±180 cents plus a gentler secondary flutter.
+    s.warpDepth = Math.min(180, s.warpDepth + 90 + Math.random() * 30);
+    e.detail = '±' + Math.round(s.warpDepth) + ' CENTS / PITCH WOBBLE';
+    if (d) {
+      d.warpDepth.gain.setTargetAtTime(s.warpDepth, state.audio.currentTime, .18);
+      d.warpFlutterDepth.gain.setTargetAtTime(s.warpDepth * 0.22, state.audio.currentTime, .18);
     }
-    s.warpDepth=Math.min(.018,s.warpDepth+.004+Math.random()*.004);
-    e.detail='±'+Math.round(s.warpDepth*1000)+' CENTS PITCH';
-    if(d)d.warpDepth.gain.setTargetAtTime(s.warpDepth*1000,state.audio.currentTime,.15)
   }
   if(et.id==='delay') {
     s.delayDepth = Math.min(1, s.delayDepth + .22 + Math.random() * .18);
@@ -1174,7 +1195,10 @@ function resetTrackEventEffect(trackId, typeId) {
       break;
     case 'warp':
       s.warpDepth = 0;
-      if (chain) chain.warpDepth.gain.setTargetAtTime(0, now, .12);
+      if (chain) {
+        chain.warpDepth.gain.setTargetAtTime(0, now, .12);
+        chain.warpFlutterDepth.gain.setTargetAtTime(0, now, .12);
+      }
       break;
     case 'delay':
       s.delayDepth = 0;
