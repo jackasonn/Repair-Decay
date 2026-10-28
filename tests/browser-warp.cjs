@@ -11,7 +11,7 @@ const assert=require('node:assert/strict');
       const rate=44100, duration=2.6, baseHz=220;
       async function render(depth){
         const context=new OfflineAudioContext(1,Math.round(duration*rate),rate);
-        await context.audioWorklet.addModule('js/audio/pitch-shifter.js');
+        await context.audioWorklet.addModule('js/audio/pitch-shifter.js?v=20261029-true-pitch-shift');
         const source=context.createOscillator();
         source.type='sine';source.frequency.value=baseHz;
         const shifter=new AudioWorkletNode(context,'pitch-shifter',{

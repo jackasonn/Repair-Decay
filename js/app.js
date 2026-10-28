@@ -419,7 +419,7 @@ async function initialiseAudio() {
 
   if (context.audioWorklet) {
     try {
-      await context.audioWorklet.addModule('js/audio/pitch-shifter.js');
+      await context.audioWorklet.addModule('js/audio/pitch-shifter.js?v=20261029-true-pitch-shift');
       state.pitchReady = true;
     } catch (error) {
       state.pitchReady = false;
