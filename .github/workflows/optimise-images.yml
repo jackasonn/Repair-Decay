@@ -1,0 +1,40 @@
+name: Generate optimized image variants
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/optimise_images.py'
+      - '.github/workflows/optimise-images.yml'
+      - 'assets/images/covers/*.png'
+      - 'assets/images/covers/*.jpg'
+      - 'assets/images/backgrounds/*.png'
+      - 'assets/images/instruments/*.png'
+      - 'assets/images/ui/*.png'
+  workflow_dispatch:
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Generate WebP versions (originals are untouched)
+        run: |
+          python -m pip install Pillow
+          python tools/optimise_images.py
+      - name: Commit optimized image files
+        run: |
+          git add assets/images/optimized/
+          if git diff --cached --quiet; then
+            echo 'Optimized images are already up to date.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Generate optimized WebP artwork variants'
+          git push origin HEAD:main
