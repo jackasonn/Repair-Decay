@@ -3,7 +3,7 @@ function element(){return {textContent:'',dataset:{},disabled:false,attrs:{},set
 const elements=new Map();
 const document={addEventListener(){},getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id);}};
 const c=vm.createContext({document,console,Date,Math,Set,Map,WeakMap,Float32Array,performance:{now:()=>c.now}});c.now=0;
-vm.runInContext(fs.readFileSync('js/app.js','utf8'),c);
+for (const file of ['js/app.js','js/repair/drums.js','js/repair/guitar.js','js/repair/keys.js','js/repair/vocals.js','js/repair/bass.js']) vm.runInContext(fs.readFileSync(file,'utf8'),c);
 const run=s=>vm.runInContext(s,c);
 run(`
 updateUI=()=>{};updateDialog=()=>{};updateTrackAudioVisuals=()=>{};addLog=()=>{};playSwitchSound=()=>{};playUISound=()=>{};

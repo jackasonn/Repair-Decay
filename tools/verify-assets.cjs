@@ -18,8 +18,10 @@ for (const name of ['index.html', 'about.html']) {
 }
 const css = fs.readFileSync(path.join(root, 'css/style.css'), 'utf8');
 for (const m of css.matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)/g)) check(m[1], 'css/style.css', path.join(root, 'css'));
-const script = fs.readFileSync(path.join(root, 'js/app.js'), 'utf8');
-for (const m of script.matchAll(/assets\/[\w./% -]+?\.(?:png|jpg|jpeg|webp|mp3)/g)) check(m[0], 'js/app.js');
+for (const scriptName of ['js/app.js','js/repair/drums.js','js/repair/guitar.js','js/repair/keys.js','js/repair/vocals.js','js/repair/bass.js']) {
+  const source = fs.readFileSync(path.join(root, scriptName), 'utf8');
+  for (const match of source.matchAll(/assets\/[\w./% -]+?\.(?:png|jpg|jpeg|webp|mp3)/g)) check(match[0], scriptName);
+}
 // Also check paths assembled by JavaScript rather than stored as complete literals.
 for (const name of ['drums', 'bass', 'guitars', 'keys', 'vocal', 'bass-headstock']) check('assets/images/optimized/instruments/' + name + '.webp', 'instrument lookup');
 for (const angle of [0, 30, 70, 90]) check('assets/images/instruments/bass-tuner-' + angle + '.png', 'bass animation');

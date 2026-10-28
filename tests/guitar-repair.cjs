@@ -6,7 +6,7 @@ const document={addEventListener(){},getElementById(id){
 }};
 let now=0;
 const c=vm.createContext({document,console,Math,Date,Set,Map,WeakMap,Float32Array,performance:{now:()=>now}});
-vm.runInContext(fs.readFileSync('js/app.js','utf8'),c);
+for (const file of ['js/app.js','js/repair/drums.js','js/repair/guitar.js','js/repair/keys.js','js/repair/vocals.js','js/repair/bass.js']) vm.runInContext(fs.readFileSync(file,'utf8'),c);
 const run=s=>vm.runInContext(s,c);
 run(`
 updateUI=()=>{};updateDialog=()=>{};updateTrackAudioVisuals=()=>{};addLog=()=>{};

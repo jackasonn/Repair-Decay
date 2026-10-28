@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const assert = require('node:assert/strict');
 const html = fs.readFileSync('index.html', 'utf8');
 const about = fs.readFileSync('about.html', 'utf8');
-const js = fs.readFileSync('js/app.js', 'utf8');
+const js = ['js/app.js','js/repair/drums.js','js/repair/guitar.js','js/repair/keys.js','js/repair/vocals.js','js/repair/bass.js'].map(path => fs.readFileSync(path, 'utf8')).join('\n');
 const ids = text => Array.from(text.matchAll(/\bid=["']([^"']+)["']/g), match => match[1]);
 for (const [page, source] of [['index.html',html],['about.html',about]]) {
   const all = ids(source);
