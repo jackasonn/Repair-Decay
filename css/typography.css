@@ -1,0 +1,28 @@
+/* Pixel display font for text-only titles; custom PNG artwork is unchanged. */
+@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+:root { --title-yellow: var(--cream); --display-font: 'VT323', 'Share Tech Mono', monospace; }
+.wordmark, h1, h2, h3, .song-title-text, .decay-number,
+.panel-heading > span:first-child, .switches-heading > span:first-child,
+.soundcloud-cta-title {
+  font-family: var(--display-font);
+  font-weight: 400;
+  color: var(--title-yellow);
+}
+/* The logo slash is the only title character whose colour follows website decay. */
+.wordmark { color: var(--title-yellow); }
+.wordmark > span { color: var(--decay-accent, var(--green)); }
+body.about-page .wordmark > span { color: var(--decay-accent, var(--green)); }
+/* Custom transparent PNG lettering is recoloured consistently, including song titles. */
+.song-title-image, .track-name-art, .dialog-title-art,
+.about-main .about-title-art img, .soundcloud-cta-title .soundcloud-title-art {
+  filter: brightness(0) saturate(100%) invert(86%) sepia(17%) saturate(786%) hue-rotate(354deg) brightness(96%) contrast(86%);
+}
+.dialog-title-art {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: clamp(2rem, 3.2vw, 2.65rem);
+  object-fit: contain;
+  object-position: left center;
+}
+.song-title-text { letter-spacing: .02em; }
