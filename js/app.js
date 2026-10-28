@@ -48,6 +48,7 @@ const SONGS = [
   },
   {
     id: 'there-is-love',
+    titleImage: 'assets/images/lettering/there-is-love.png',
     cover: 'assets/images/optimized/covers/there-is-love.webp',
     title: 'THERE IS LOVE',
     number: 4,
@@ -1587,9 +1588,7 @@ function renderCurrentSong() {
     'there-is-love': 'assets/images/optimized/backgrounds/there-is-love.webp'
   };
   document.body.style.setProperty('--song-background', 'url("' + new URL(songBackgrounds[song.id], document.baseURI).href + '")');
-  els.songTitle.innerHTML = song.id === 'there-is-love'
-    ? '<span class="song-title-text">THERE IS LOVE</span>'
-    : '<img class="song-title-image" src="' + encodeURI(song.titleImage) + '" alt="' + song.title + '">';
+  els.songTitle.innerHTML = '<img class="song-title-image" src="' + encodeURI(song.titleImage) + '" alt="' + song.title + '">';
   els.songNumber.textContent = String(song.number).padStart(2, '0') + ' OF ' + String(SONGS.length).padStart(2, '0');
   els.songArtist.textContent = song.artist;
   els.artNoise.textContent = String(currentSongIndex + 1).padStart(3, '0');

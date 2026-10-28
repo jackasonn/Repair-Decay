@@ -42,7 +42,7 @@ With Node.js 20 or newer, run `npm test` to check script syntax, file paths, HTM
 - Keep the script order in `index.html`: lyrics and audio loader, shared app, then five repair scripts. The scripts use shared browser globals and are deliberately not ES modules yet.
 - Asset URLs in JS resolve relative to the **HTML document** rather than the JS file. CSS image URLs resolve relative to the stylesheet in `css/`.
 - The CSS files must remain in their published order to preserve the existing cascade while making later consolidation safer.
-- Custom PNGs remain the primary song/instrument lettering; other headings use VT323 and body/UI text uses Share Tech Mono. **There Is Love** is text because its old artwork incorrectly read *This Is Love*.
+- Custom PNGs remain the primary song/instrument lettering; other headings use VT323 and body/UI text uses Share Tech Mono. **There Is Love** uses the supplied transparent title artwork, recoloured with the same shared filter as the other three songs.
 - The browser uses generated WebP artwork from `assets/images/optimized/`. Original PNGs/JPEGs are never overwritten. Run `python3 tools/optimise_images.py` (requires Pillow) to regenerate locally or use the GitHub Actions workflow.
 - Song changes cancel stale stem downloads. Two parallel workers fetch/decode the selected song's stems without altering the common audio playback clock.
 - Layout uses consistent cover/player dimensions and fixed track-card column counts within each responsive breakpoint. CSS no longer depends on measuring the player panel in JavaScript.
