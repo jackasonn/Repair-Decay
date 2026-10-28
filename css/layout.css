@@ -49,8 +49,17 @@
 #playback-state { min-width: 0; overflow-wrap: anywhere; }
 #playback-time { flex: 0 0 auto; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .track-grid {
+  --track-gap: 14px;
+  gap: var(--track-gap);
   grid-template-columns: repeat(5, minmax(0, 1fr));
   align-items: stretch;
+}
+@media (min-width: 851px) {
+  /* Four instruments keep the same card width, with equal space on both sides. */
+  .track-grid:has(> .track-card:nth-child(4):last-child) {
+    grid-template-columns: repeat(4, minmax(0, calc((100% - 4 * var(--track-gap)) / 5)));
+    justify-content: center;
+  }
 }
 .track-card { min-width: 0; height: 100%; }
 .track-info, .track-info .track-name { min-width: 0; }

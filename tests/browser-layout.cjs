@@ -15,7 +15,8 @@ async function sample(page, song){
       return {width:r.width,height:r.height,left:r.left,right:r.right};
     };
     const cards=Array.from(document.querySelectorAll('.track-card'),el=>el.getBoundingClientRect().width);
-    return {cover:rect('#album-art'),panel:rect('#player-panel'),title:rect('#song-title'),
+    return {grid:rect('.track-grid'),firstCard:rect('.track-card:first-child'),lastCard:rect('.track-card:last-child'),
+      cover:rect('#album-art'),panel:rect('#player-panel'),title:rect('#song-title'),
       play:rect('#play-button'),card:rect('.track-card'),log:rect('.log-panel'),
       header:rect('.site-header'),cardWidths:cards,
       columns:getComputedStyle(document.querySelector('.track-grid')).gridTemplateColumns.split(' ').length,
@@ -63,7 +64,13 @@ async function verify(browser, viewport){
     if(viewport.width>850){
       assert.ok(near(row.cover.width,row.cover.height),'Desktop cover is not square');
       assert.ok(near(row.cover.height,row.panel.height),'Desktop player and cover not equal height');
-      assert.equal(row.columns,5,'Desktop grid must have stable five columns');
+      assert.equal(row.columns,song===1?4:5,'Desktop grid must match the song instrument count');
+      if(song===1) {
+        const leftSpace=row.firstCard.left-row.grid.left;
+        const rightSpace=row.grid.right-row.lastCard.right;
+        assert.ok(near(leftSpace,rightSpace),'Reconcile instrument row is not centred');
+        assert.ok(leftSpace>0,'Four-card row should preserve the existing card size');
+      }
     }else{
       assert.equal(row.columns,viewport.width<=560?1:2,'Incorrect responsive track grid');
     }
