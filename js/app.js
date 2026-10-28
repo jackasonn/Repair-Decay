@@ -468,6 +468,7 @@ async function loadSwitchSounds() {
     button: 'assets/audio/ui/button-press.mp3',
     error: 'assets/audio/ui/error.mp3',
     success: 'assets/audio/ui/success.mp3',
+    explode: 'assets/audio/ui/explode.mp3',
     plink: 'assets/audio/ui/plink.mp3',
     guitarLowE: 'assets/audio/guitar-strings/low-e.mp3',
     guitarA: 'assets/audio/guitar-strings/a.mp3',
@@ -552,7 +553,7 @@ async function playUISound(name, volume) {
     }
     if (context.state !== 'running') return;
 
-    const defaultVolumes = { on: 0.62, off: 0.62, button: 0.62, error: 0.72, success: 0.85, plink: 0.05 };
+    const defaultVolumes = { on: 0.62, off: 0.62, button: 0.62, error: 0.72, success: 0.85, explode: 0.9, plink: 0.05 };
     const outputVolume = Number.isFinite(volume) ? volume : (defaultVolumes[name] ?? 0.62);
     const source = context.createBufferSource();
     const gain = context.createGain();

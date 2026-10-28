@@ -6,7 +6,7 @@ const document={addEventListener(){},createElement:element,getElementById(id){if
 const c=vm.createContext({document,console,Date,Math,Set,Map,WeakMap,Float32Array,performance:{now:()=>c.now}});c.now=0;
 for (const file of ['js/app.js','js/repair/drums.js','js/repair/guitar.js','js/repair/keys.js','js/repair/vocals.js','js/repair/bass.js']) vm.runInContext(fs.readFileSync(file,'utf8'),c);const run=s=>vm.runInContext(s,c);
 run(`
-updateUI=()=>{};updateDialog=()=>{};updateTrackAudioVisuals=()=>{};addLog=()=>{};playSwitchSound=()=>{};playUISound=()=>{};
+updateUI=()=>{};updateDialog=()=>{};updateTrackAudioVisuals=()=>{};addLog=()=>{};playSwitchSound=()=>{};var explosionPlays=0;playUISound=(name)=>{if(name==='explode') explosionPlays++};
 drawRepairSignal=()=>{};
 els.rhythmCanvas={getBoundingClientRect:()=>({left:0,top:0,width:400,height:230})};
 els.rhythmTargetLabels=document.createElement('div');els.rhythmPanel={};
@@ -27,6 +27,7 @@ for(var song=0;song<4;song++){
  assert.equal(run('els.dialog.open'),true,'empty Space never closes');
  const labels=run('els.rhythmTargetLabels.children');
  assert.equal(labels.at(-1).textContent,'NO DECAY EVENT TO FIX');assert.match(labels.at(-1).className,/repair-empty-notice/);
+ assert.equal(run('explosionPlays'),song*2,'empty drum presses do not play an explosion');
  const count=labels.length;run('var repeat=key("BUTTON",true);handleRepairKey(repeat)');
  assert.equal(run('repeat.prevented&&repeat.stopped'),true);assert.equal(labels.length,count,'held key gives no extra hits or notices');
  run('var release=key();handleRepairKeyUp(release)');assert.equal(run('release.prevented&&release.stopped'),true);
@@ -35,11 +36,13 @@ for(var song=0;song<4;song++){
  rhythm.targets=[{type:'lowpass',name:'LOW PASS FILTER',status:'active',at:0}];
  var good=key();handleRepairKey(good);handleRepairKeyUp(key());`);
  assert.equal(run('trackState.drums.events.length'),1);assert.equal(run('els.dialog.open'),true);
+ assert.equal(run('explosionPlays'),song*2+1,'one actual Drum line explosion triggers one sound');
  // The completed game remains open; releasing Space must not activate another focused control.
  run(`rhythm.targets=[{type:'delay',name:'DELAY',status:'active',at:0}];
  var final=key();handleRepairKey(final);var after=key('A',true);handleRepairKey(after);
  var up=key('A');handleRepairKeyUp(up);`);
  assert.equal(run('els.dialog.open'),true,'completed Drum mini-game stays open');assert.equal(run('trackState.drums.events.length'),0);
+ assert.equal(run('explosionPlays'),song*2+2,'second Drum line explosion plays exactly once');
  assert.equal(run('after.prevented&&after.stopped&&up.prevented&&up.stopped'),true);
  // Completed minigames remain open for visual feedback: Space is still captured until Close.
  run('closeTrackDialog()');

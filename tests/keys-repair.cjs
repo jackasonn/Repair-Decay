@@ -6,7 +6,7 @@ const document={addEventListener(){},createElement:element,getElementById(id){if
 const c=vm.createContext({document,console,Math,Date,Set,Map,WeakMap,Float32Array,performance:{now:()=>now}});
 for (const file of ['js/app.js','js/repair/drums.js','js/repair/guitar.js','js/repair/keys.js','js/repair/vocals.js','js/repair/bass.js']) vm.runInContext(fs.readFileSync(file,'utf8'),c);const run=s=>vm.runInContext(s,c);
 run(`drawKeysRepair=()=>{};showKeysHitLabel=()=>{};updateUI=()=>{};updateDialog=()=>{};
-updateTrackAudioVisuals=()=>{};addLog=()=>{};playUISound=()=>{};playSwitchSound=()=>{};startSources=()=>{};
+updateTrackAudioVisuals=()=>{};addLog=()=>{};var explosionPlays=0;playUISound=(name)=>{if(name==='explode') explosionPlays++};playSwitchSound=()=>{};startSources=()=>{};
 els.dialog={open:false,showModal(){this.open=true;},close(){this.open=false;}};els.keysTargetLabels=document.createElement('div');
 function press(lane,extra={}){handleKeysRepairKey({code:KEYS_CODES[lane],target:{tagName:'BODY'},preventDefault(){},...extra});}`);
 for(let song=0;song<4;song++){
@@ -22,12 +22,14 @@ for(let song=0;song<4;song++){
  assert.equal(run('trackState.keys.lowpass'),20000);
  assert.equal(run('trackState.keys.events.length'),1);
  assert.equal(run("keysRepair.bursts.filter(b=>b.kind==='hit').length"),1,'one successful burst despite extra feedback');
+ assert.equal(run('explosionPlays'),song*2+1,'hit arrow triggers one explosion sound; empty key presses do not');
  now=5000;run('updateKeysRepair()');
  assert.equal(run('keysRepair.missCount'),1,'missed live effect returns as an arrow');
  assert.equal(run('trackState.keys.events.length'),1);
  now=run('keysRepair.notes[1].at');run('press(keysRepair.notes[1].lane)');
  assert.equal(run('trackState.keys.delayDepth'),0);
  assert.equal(run('trackState.keys.events.length'),0);
+ assert.equal(run('explosionPlays'),song*2+2,'each repaired arrow explodes once');
  assert.equal(run('trackState.bass.events.length'),1);
  assert.equal(run('els.dialog.open'),true,'hit feedback finishes before closing');
  now+=800;run('updateKeysRepair()');
@@ -40,4 +42,5 @@ for(let song=0;song<4;song++){
 now=0;run("trackState.keys.events=[{type:'crackle',severity:10}];openTrackDialog('keys');closeTrackDialog()");
 now=10000;run('updateKeysRepair()');
 assert.equal(run('trackState.keys.events.length'),1);
+assert.equal(run('explosionPlays'),8,'closed/stale Keys games do not trigger explosion sounds');
 console.log('PASS: current live-effect Keys game on all four songs, correct direction, held-input rejection, returning misses, particles, audio reset, manual close and cancellation');

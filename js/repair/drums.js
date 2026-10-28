@@ -123,6 +123,8 @@ function syncDrumTargets(elapsed) {
 }
 function burstDrumTarget(note, elapsed, x, y, colour, kind) {
   rhythm.bursts.push({at:elapsed, x, y, colour, kind});
+  // Only a real line bursting triggers the explosion; empty canvas presses do not.
+  void playUISound('explode');
   showDrumFeedbackLabel(kind === 'success' ? note.name + ' REPAIRED' : 'TRY AGAIN', x, y - 22, kind);
 }
 function missDrumTarget(note, elapsed, x, y, message = 'MISSED ' + note.name + ' — TRY AGAIN WHEN ITS LINE RETURNS') {

@@ -86,6 +86,8 @@ function showKeysHitLabel(note, y) {
 function failKeysTargetEarly(note, now, elapsed, y) {
   if (!currentKeysRepair() || note.status !== 'active') return false;
   keysRepair.bursts.push({lane:note.lane, at:elapsed, y, colour:'#e35b50', kind:'early'});
+  // A mistimed arrow bursts red, so accompany that actual explosion too.
+  void playUISound('explode');
   showKeysFeedbackLabel('TRY AGAIN', note.lane, y - 27, 'early');
   note.misses++;
   keysRepair.missCount++;
@@ -109,6 +111,7 @@ function completeKeysTarget(note, now, elapsed, y) {
   note.hitAt = now;
   keysRepair.repairedCount++;
   keysRepair.bursts.push({lane:note.lane, at:elapsed, y:y, colour:note.colour, kind:'hit'});
+  void playUISound('explode');
   showKeysHitLabel(note, y);
   playSwitchSound('off');
   playRepairSuccess();

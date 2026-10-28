@@ -10,7 +10,7 @@ for (const file of ['js/app.js','js/repair/drums.js','js/repair/guitar.js','js/r
 const run=s=>vm.runInContext(s,c);
 run(`
 updateUI=()=>{};updateDialog=()=>{};updateTrackAudioVisuals=()=>{};addLog=()=>{};
-playUISound=()=>{};playSwitchSound=()=>{};startSources=()=>{};vibrateGuitarString=()=>{};showGuitarHitLabel=()=>{};
+var explosionPlays=0;playUISound=(name)=>{if(name==='explode') explosionPlays++};playSwitchSound=()=>{};startSources=()=>{};vibrateGuitarString=()=>{};showGuitarHitLabel=()=>{};
 els.guitarTargets={innerHTML:'',contains:button=>button.inside!==false};
 els.guitarNotices={innerHTML:''};
 els.dialog={open:false,showModal(){this.open=true;},close(){this.open=false;}};
@@ -33,12 +33,14 @@ for(let song=0;song<4;song++){
  assert.equal(run('trackState.guitars.events.length'),2);
  run('clickDot(0);clickDot(0)');
  assert.equal(run('guitarRepair.repairedCount'),1,'repeat click cannot score twice');
+ assert.equal(run('explosionPlays'),song*2+1,'explosion sound plays once per successful visible target');
  assert.equal(run('trackState.guitars.lowpass'),20000,'target immediately resets matching effect');
  assert.equal(run('trackState.guitars.events.length'),1,'other effect remains');
  assert.match(run('els.guitarTargets.innerHTML'),/is-exploding/);
  run('clickDot(1)');
  assert.equal(run('trackState.guitars.delayDepth'),0);
  assert.equal(run('trackState.guitars.events.length'),0);
+ assert.equal(run('explosionPlays'),song*2+2,'second exploded target produces exactly one additional sound');
  assert.equal(run('trackState.bass.events.length'),1);
  assert.equal(run('els.dialog.open'),true,'hit feedback remains visible');
  now=1400;run('updateGuitarRepair()');
@@ -59,4 +61,5 @@ now=5000;run('clickDot(0);updateGuitarRepair()');
 assert.equal(run('trackState.guitars.events.length'),1);
 now=0;run("openTrackDialog('guitars');state.songGeneration++;clickDot(0)");
 assert.equal(run('guitarRepair.repairedCount'),0);
+assert.equal(run('explosionPlays'),8,'invisible/stale guitar targets never explode audibly');
 console.log('PASS: current Guitar effect-target repair on all four songs, matching audio effects, duplicate/hidden input, animations, manual close, cancellation and song isolation');

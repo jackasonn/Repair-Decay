@@ -242,6 +242,8 @@ function handleGuitarTarget(event) {
   target.status = 'hit';
   target.hitAt = now;
   guitarRepair.repairedCount++;
+  // This target has just entered its exploding visual state.
+  void playUISound('explode');
   vibrateGuitarString(target.string, true);
   playSwitchSound('off');
   playRepairSuccess();
