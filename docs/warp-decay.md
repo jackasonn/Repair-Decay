@@ -9,3 +9,7 @@ WARP modulates the existing fixed-latency AudioWorklet pitch shifter on pitched 
 - If a browser can't load the pitch shifter, WARP and DETUNE are excluded from randomly scheduled decay events rather than silently doing nothing.
 
 Source: `js/app.js` and `js/audio/pitch-shifter.js`. Unit test: `tests/warp.cjs`. Listening on the real exhibition speakers is still recommended.
+
+## Processor correction
+
+A Chromium offline audio-rendering test revealed that the original granular processor produced nearly unchanged fundamental frequency even when the pitch parameter changed. The processor now uses two complementary, continuously time-warped delay read heads; their wrap points are crossfaded so the output really changes pitch while producing the original number of audio frames. The unmodified path still uses the same fixed delay across all stems.
