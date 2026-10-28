@@ -40,27 +40,31 @@ for(let song=0;song<4;song++){
   assert.equal(run('els.dialog.open'),true,`${id} stays open during partial repair`);
   assert.equal(run(`trackState['${id}'].events.length`),1);
   run(`hit('${id}','delay')`);
-  assert.equal(run('els.dialog.open'),false,`${id} closes after final repair, song ${song}`);
+  const remainsOpen = ['drums', 'guitars', 'keys'].includes(id);
+  assert.equal(run('els.dialog.open'),remainsOpen,`${id} completion keeps visual feedback visible, song ${song}`);
   assert.equal(run(`trackState['${id}'].events.length`),0);
   assert.equal(run(`trackState['${id}'].lowpass`),20000);
   assert.equal(run(`trackState['${id}'].delayDepth`),0);
-  assert.equal(run('state.soloTrack'),null);
+  assert.equal(run('state.soloTrack'),remainsOpen ? id : null);
   assert.equal(run('state.playing'),true);
+  if (remainsOpen) run('closeTrackDialog()');
+  assert.equal(run('els.dialog.open'),false,'manual close remains available');
   assert.equal(run('guitarRepair'),null);assert.equal(run('keysRepair'),null);
  }
 }
 // Track restoration must not close a different instrument's panel.
 run("setup(0,'vocals');trackState.bass.events=[{type:'lowpass'}];repairTrack('bass')");
 assert.equal(run('els.dialog.open'),true);
-run("repairTrack('vocals')");assert.equal(run('els.dialog.open'),false);
+run("repairTrack('vocals')");assert.equal(run('els.dialog.open'),true,'lyric mini-game stays open after its final event');
+run('closeTrackDialog()');
 // Global repair stays open while any other effect remains.
 run("setup(0,'bass');state.overallDialog=true;repairGlobalEventType('lowpass')");
 assert.equal(run('els.dialog.open'),true);
 run("repairGlobalEventType('delay')");assert.equal(run('els.dialog.open'),false);
 assert.equal(run('state.selectedTrack'),null);
 assert.equal(run('SONGS[2].title'), 'RAINY NIGHT');
-assert.equal(run("SONGS[2].tracks.some(t=>t.id==='vocals')"),false);
-assert.equal(run("songTrackStates[SONGS[2].id].vocals"),undefined);
-assert.equal(run('SONGS[2].tracks.length'),4);
+assert.equal(run("SONGS[2].tracks.some(t=>t.id==='vocals')"),true);
+assert.ok(run("songTrackStates[SONGS[2].id].vocals"));
+assert.equal(run('SONGS[2].tracks.length'),5);
 for(const song of [0,3])assert.equal(run(`SONGS[${song}].tracks.some(t=>t.id==='vocals')`),true);
-console.log('PASS: all four songs close repaired Drum/Guitar/Keys/Bass panels; partial/global repairs, playback, session cleanup, Vocal restoration and Rainy Night without vocals');
+console.log('PASS: completed mini-games remain open for feedback; switch-based/global repairs, playback, session cleanup, vocal restoration and Rainy Night vocals');
