@@ -1,5 +1,5 @@
 /* Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
 /* Colour palette */
 :root {
   --bg:#0a0805;
@@ -71,7 +71,7 @@ button {
   border-bottom:1px solid rgba(228,211,140,.16)
 }
 .wordmark {
-  font-family:'VT323',monospace;
+  font-family:'Share Tech Mono','Courier New',monospace;
   font-size:clamp(2rem,4vw,3.3rem);
   letter-spacing:.13em;
   text-decoration:none;
@@ -142,7 +142,7 @@ main {
 .art-label {
   position:relative;
   z-index:1;
-  font-family:'VT323',monospace;
+  font-family:'Share Tech Mono','Courier New',monospace;
   font-size:2.1rem;
   line-height:.85;
   text-align:center;
@@ -177,7 +177,7 @@ main {
 }
 h1,h2 {
   margin:0;
-  font-family:'VT323',monospace;
+  font-family:'Share Tech Mono','Courier New',monospace;
   font-weight:400;
   letter-spacing:.08em
 }
@@ -312,7 +312,7 @@ h2 {
 }
 .track-name {
   position:relative;
-  font-family:'VT323',monospace;
+  font-family:'Share Tech Mono','Courier New',monospace;
   font-size:1.55rem;
   letter-spacing:.1em
 }
@@ -402,7 +402,7 @@ h2 {
 }
 .decay-number {
   margin:20px 0 10px;
-  font-family:'VT323',monospace;
+  font-family:'Share Tech Mono','Courier New',monospace;
   font-size:3.8rem;
   line-height:1;
   color:var(--green)
@@ -776,7 +776,7 @@ h2 {
 .song-arrow-left { left: 14px; }
 .song-arrow-right { right: 14px; }
 .nav-arrow {
-  font-family: 'VT323', monospace;
+  font-family:'Share Tech Mono','Courier New',monospace;
   font-size: 3rem;
   line-height: .8;
 }
@@ -2041,7 +2041,7 @@ main,
 .dialog-overall-art > strong {
   display: block;
   color: var(--green);
-  font-family: 'VT323', monospace;
+  font-family:'Share Tech Mono','Courier New',monospace;
   font-size: clamp(6rem, 13vw, 10rem);
   font-weight: 400;
   line-height: .72;
@@ -2329,7 +2329,7 @@ a.portfolio-card:focus-visible {
   outline-offset: 3px;
 }
 .portfolio-name {
-  font-family: 'VT323', monospace;
+  font-family:'Share Tech Mono','Courier New',monospace;
   font-size: 1.9rem;
   line-height: 1;
   letter-spacing: .045em;
@@ -2438,14 +2438,14 @@ a.portfolio-card:focus-visible {
   align-items: center;
   gap: 18px;
   max-width: 100%;
-  font-family: 'VT323', monospace;
+  font-family:'Share Tech Mono','Courier New',monospace;
   font-size: clamp(2.4rem, 6vw, 4.8rem);
   line-height: .95;
   letter-spacing: .015em;
 }
 .soundcloud-cta-title > span {
   color: var(--green);
-  font-family: sans-serif;
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
   font-size: .45em;
 }
 .soundcloud-cta-platform {
@@ -2885,7 +2885,7 @@ body.about-page .wordmark span { color: var(--cream); }
 .song-title-text {
   display: block;
   color: var(--cream);
-  font-family: 'VT323', monospace;
+  font-family:'Share Tech Mono','Courier New',monospace;
   font-size: clamp(2.2rem, 4vw, 3.1rem);
   line-height: .95;
   letter-spacing: .08em;
@@ -2910,26 +2910,16 @@ body.about-page .wordmark span { color: var(--cream); }
 /* Guitar repair dots are now positioned at the calculated centre of each physical string. */
 .guitar-target-wrap { top: var(--dot-y); }
 
-/* Shared title treatment: custom lettering and text headings use the album yellow. */
-@font-face {
-  font-family: 'Monument Extended';
-  src: url('assets/monumentextended-ultrabold.otf') format('opentype');
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-}
-:root {
-  --title-font: 'Monument Extended', 'VT323', monospace;
-  --title-yellow: var(--cream);
-}
+/* Single live typeface: custom PNG titles keep their artwork; all actual text uses Share Tech Mono. */
+:root { --title-yellow: var(--cream); }
 .wordmark, h1, h2, h3, .song-title-text,
 .panel-heading > span:first-child, .switches-heading > span:first-child,
 .soundcloud-cta-title {
-  font-family: var(--title-font);
-  font-weight: 700;
+  font-family: 'Share Tech Mono','Courier New',monospace;
+  font-weight: 400;
   color: var(--title-yellow);
 }
-/* The slash alone communicates system condition; all wordmark letters stay yellow. */
+/* The logo slash is the only title character whose colour follows website decay. */
 .wordmark { color: var(--title-yellow); }
 .wordmark > span { color: var(--decay-accent, var(--green)); }
 body.about-page .wordmark > span { color: var(--decay-accent, var(--green)); }

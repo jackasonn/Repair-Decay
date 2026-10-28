@@ -2078,7 +2078,7 @@ function drawRepairSignal(elapsed) {
     ctx.beginPath(); ctx.moveTo(x, 24); ctx.lineTo(x, height - 17); ctx.stroke();
     ctx.lineWidth = 1; ctx.shadowBlur = 9; ctx.beginPath();
     ctx.moveTo(x - 8, 24); ctx.lineTo(x - 8, height - 17); ctx.stroke();
-    ctx.fillStyle = note.colour; ctx.font = width < 440 ? '8px monospace' : '10px monospace';
+    ctx.fillStyle = note.colour; ctx.font = width < 440 ? '8px "Share Tech Mono", monospace' : '10px "Share Tech Mono", monospace';
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
     ctx.shadowBlur = 10; ctx.fillText(note.name, x, 7, Math.max(28, width * 0.24));
     ctx.restore();
@@ -2605,7 +2605,7 @@ function drawKeysRepair(elapsed) {
     const y=receptorY+until/KEYS_TRAVEL_MS*(height-receptorY-15);
     arrow(note.lane,y,note.colour,true);
     ctx.save();
-    ctx.font=width<480?'8px monospace':'9px monospace';
+    ctx.font=width<480?'8px "Share Tech Mono", monospace':'9px "Share Tech Mono", monospace';
     ctx.textAlign='center';ctx.textBaseline='bottom';
     ctx.fillStyle=note.colour;ctx.shadowColor=note.colour;ctx.shadowBlur=6;
     ctx.fillText(note.name,width*(note.lane+.5)/4,y-size-5,width/4-8);
