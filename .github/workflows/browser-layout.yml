@@ -30,3 +30,4 @@ jobs:
           python3 -m http.server 8765 --bind 127.0.0.1 > /tmp/repair-decay-site.log 2>&1 &
           sleep 2
           node tests/browser-layout.cjs
+          node tests/browser-explode.cjs
