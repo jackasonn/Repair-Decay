@@ -419,7 +419,7 @@ async function initialiseAudio() {
 
   if (context.audioWorklet) {
     try {
-      await context.audioWorklet.addModule('pitch-shifter.js');
+      await context.audioWorklet.addModule('js/audio/pitch-shifter.js');
       state.pitchReady = true;
     } catch (error) {
       state.pitchReady = false;
@@ -1559,7 +1559,7 @@ function renderCurrentSong() {
     'rainy-night': 'assets/images/backgrounds/rainy-night.png',
     'there-is-love': 'assets/images/backgrounds/there-is-love.png'
   };
-  document.body.style.setProperty('--song-background', 'url("' + encodeURI(songBackgrounds[song.id]) + '")');
+  document.body.style.setProperty('--song-background', 'url("' + new URL(songBackgrounds[song.id], document.baseURI).href + '")');
   els.songTitle.innerHTML = song.id === 'there-is-love'
     ? '<span class="song-title-text">THERE IS LOVE</span>'
     : '<img class="song-title-image" src="' + encodeURI(song.titleImage) + '" alt="' + song.title + '">';

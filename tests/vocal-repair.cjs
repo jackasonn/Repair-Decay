@@ -4,7 +4,7 @@ const elements=new Map();
 function element(){return {textContent:'',value:'',hidden:false,disabled:false,children:[],attrs:{},setAttribute(k,v){this.attrs[k]=v;},focus(){},replaceChildren(){this.children=[];},appendChild(child){this.children.push(child);}};}
 const document={addEventListener(){},createElement:element,getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id);}};
 const c=vm.createContext({document,console,Date,Math,Set,Map,WeakMap,Float32Array,performance:{now:()=>0}});
-for(const file of ['there-is-love-lyrics.js','on-time-lyrics.js','script.js'])vm.runInContext(fs.readFileSync(file,'utf8'),c);
+for(const file of ['js/lyrics/there-is-love.js','js/lyrics/on-time.js','js/app.js'])vm.runInContext(fs.readFileSync(file,'utf8'),c);
 const run=s=>vm.runInContext(s,c);
 run(`
 let testPosition=0;audibleSongPosition=()=>testPosition;currentMasterOffset=()=>testPosition;

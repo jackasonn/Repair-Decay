@@ -6,7 +6,7 @@ const document={addEventListener(){},getElementById(id){
 }};
 let now=0;
 const c=vm.createContext({document,console,Math,Date,Set,Map,WeakMap,Float32Array,performance:{now:()=>now}});
-vm.runInContext(fs.readFileSync('script.js','utf8'),c);
+vm.runInContext(fs.readFileSync('js/app.js','utf8'),c);
 const run=s=>vm.runInContext(s,c);
 run(`
 updateUI=()=>{};updateDialog=()=>{};updateTrackAudioVisuals=()=>{};addLog=()=>{};

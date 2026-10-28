@@ -3,7 +3,7 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
 let now=0;const elements=new Map();
 const document={addEventListener(){},getElementById(id){if(!elements.has(id))elements.set(id,{textContent:'',innerHTML:''});return elements.get(id);}};
 const c=vm.createContext({document,console,Math,Date,Set,Map,WeakMap,Float32Array,performance:{now:()=>now}});
-vm.runInContext(fs.readFileSync('script.js','utf8'),c);const run=s=>vm.runInContext(s,c);
+vm.runInContext(fs.readFileSync('js/app.js','utf8'),c);const run=s=>vm.runInContext(s,c);
 run(`drawKeysRepair=()=>{};showKeysHitLabel=()=>{};updateUI=()=>{};updateDialog=()=>{};
 updateTrackAudioVisuals=()=>{};addLog=()=>{};playUISound=()=>{};playSwitchSound=()=>{};startSources=()=>{};
 els.dialog={open:false,showModal(){this.open=true;},close(){this.open=false;}};els.keysTargetLabels={innerHTML:''};

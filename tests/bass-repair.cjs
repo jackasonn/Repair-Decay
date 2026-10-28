@@ -3,7 +3,7 @@ function element(){return {textContent:'',dataset:{},disabled:false,attrs:{},set
 const elements=new Map();
 const document={addEventListener(){},getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id);}};
 const c=vm.createContext({document,console,Date,Math,Set,Map,WeakMap,Float32Array,performance:{now:()=>c.now}});c.now=0;
-vm.runInContext(fs.readFileSync('script.js','utf8'),c);
+vm.runInContext(fs.readFileSync('js/app.js','utf8'),c);
 const run=s=>vm.runInContext(s,c);
 run(`
 updateUI=()=>{};updateDialog=()=>{};updateTrackAudioVisuals=()=>{};addLog=()=>{};playSwitchSound=()=>{};playUISound=()=>{};

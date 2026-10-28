@@ -2,7 +2,7 @@
 const fs = require('node:fs'), vm = require('node:vm'), assert = require('node:assert/strict');
 const document = {addEventListener(){}, getElementById(){return {textContent:''};}};
 const c = vm.createContext({document, console, Date, Math, Set, Map, WeakMap, Float32Array, performance:{now:()=>100}});
-vm.runInContext(fs.readFileSync('script.js','utf8'), c);
+vm.runInContext(fs.readFileSync('js/app.js','utf8'), c);
 const run = code => vm.runInContext(code,c);
 run(`
 updateUI=()=>{};updateDialog=()=>{};updateTrackAudioVisuals=()=>{};addLog=()=>{};
