@@ -53,7 +53,8 @@ for(let song=0;song<4;song++){
   tick(start+1499);assert.equal(run('els.dialog.open'),true);
   tick(start+1500);
  }
- assert.equal(repaired.size,8);assert.equal(run('els.dialog.open'),false);assert.equal(run('bassRepair'),null);
+ assert.equal(repaired.size,8);assert.equal(run('els.dialog.open'),true,'completed Bass game remains open for feedback');assert.notEqual(run('bassRepair'),null);
+ run('closeTrackDialog()');assert.equal(run('els.dialog.open'),false);assert.equal(run('bassRepair'),null);
  assert.equal(run('trackState.drums.events.length'),1);assert.equal(run('state.playing'),true);
  for(const [key,value] of Object.entries({detune:0,highpass:20,lowpass:20000,bitDepth:16,phaseDepth:0,warpDepth:0,delayDepth:0,crackleDepth:0}))assert.equal(run(`trackState.bass.${key}`),value);
 }
@@ -68,4 +69,4 @@ tick(600);assert.equal(run('trackState.bass.events.length'),0);
 run("trackState.bass.events.push({type:'delay'});updateBassRepair()");
 assert.equal(run("bassRepair.slots.some(s=>s.status==='active'&&s.type==='delay')"),true);
 tick(1600);assert.equal(run('els.dialog.open'),true,'new decay prevents premature close');
-console.log('PASS: Bass tuning in all four songs, four pegs, eight queued effects, four image frames, audio resets, feedback-before-close, duplicate clicks, new decay and stale-session cancellation');
+console.log('PASS: Bass tuning in all four songs, four pegs, eight queued effects, four image frames, audio resets, feedback and persistent completion state, duplicate clicks, new decay and stale-session cancellation');
