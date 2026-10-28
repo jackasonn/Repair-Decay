@@ -25,3 +25,13 @@
 ## Testing
 
 Use `npm test` after installing Node 20+ (no npm dependencies required). The GitHub Actions workflow checks the same steps. Browser and hardware listening checks remain manual.
+
+## Follow-up improvements (28 October 2026)
+
+- Restored VT323 only for text-based display titles using a separate `css/typography.css`; Share Tech Mono remains the body/UI font. Custom PNG lettering is unchanged.
+- Extracted a bounded two-worker stem loading helper to `js/audio/stem-loader.js`, with loading progress, user retries, song-switch cancellation and dedicated Node regression tests.
+- Generated sixteen browser-sized WebP variants and switched runtime image paths to use them. Original art files remain in place. Image-generation source: `tools/optimise_images.py`.
+- Removed confirmed abandoned CSS selectors for old rhythm stability/retry and Keys retry widgets, and corrected obsolete on-screen Drum instructions.
+- Added a static HTML/JS element-ID validator, run with the other checks in GitHub Actions.
+
+Remaining high-value tasks are a browser-based smoke test, hardware audio latency checks, cautious CSS consolidation with screenshots, and possibly further division of the large player JavaScript into independent game modules. These require more extensive verification than simple static checks.
