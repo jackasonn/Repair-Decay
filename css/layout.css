@@ -89,7 +89,9 @@ body.decay-critical::after {
   .track-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 560px) {
-  .player-panel { min-height: 285px; }
+  /* Reserve a stable mobile player footprint even when title/artist wrapping changes. */
+  .player-panel { height: 355px; min-height: 355px; }
+  @supports (height: 1cqh) { .player-panel { height: 355px; } }
   .song-heading { gap: 12px; }
   #song-title { min-height: 56px; }
   .song-title-image { height: 46px; max-height: 46px; }
