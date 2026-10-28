@@ -140,7 +140,7 @@
 #repair-signal {
   display: block; width: 100%; height: 230px;
   border: 1px solid var(--line);
-  background: radial-gradient(ellipse at 62% 50%, rgba(127,154,99,.08), transparent 38%), linear-gradient(#11150f,#090a07);
+  background: radial-gradient(ellipse at 62% 50%, rgba(105,170,119,.08), transparent 38%), linear-gradient(#11150f,#090a07);
   cursor: crosshair; touch-action: manipulation;
 }
 .rhythm-target-labels { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
@@ -281,7 +281,7 @@ body.decay-warning,
 body.decay-critical {
   background-color: #030302;
   background-image:
-    linear-gradient(135deg, rgba(2,2,2,.94), rgba(3,3,3,.92) 52%, rgba(1,1,1,.95)),
+    linear-gradient(135deg, rgba(3,3,3,.84), rgba(5,5,4,.82) 52%, rgba(2,2,2,.87)),
     var(--song-background, url('../assets/images/optimized/backgrounds/on-time.webp'));
   background-position: center center;
   background-size: cover;
@@ -306,7 +306,7 @@ body.about-page {
   transition: color .3s ease;
 }
 body.about-page .wordmark span { color: var(--cream); }
-/* Keep the header credit immediately next to the wordmark instead of spreading across the header. */
+/* Player credit is laid out beneath the wordmark in css/layout.css. */
 .brand-lockup {
   display: flex;
   flex: 0 1 auto;

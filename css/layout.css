@@ -57,20 +57,46 @@
 .site-header { border-bottom: 0; }
 .site-footer { border-top: 0; }
 
-/* Pulsing light belongs to the backdrop, behind the navigation and interface.
-   The original overlay was compounded to ~3% opacity at warning level. */
+/* Header credit is a subtitle, never an element beside the logo. */
+.brand-lockup {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  flex-wrap: nowrap;
+  row-gap: 3px;
+  column-gap: 0;
+}
+.album-credit {
+  display: block;
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: 100%;
+  line-height: 1.3;
+  text-align: left;
+}
+
+
+/* Calm states have a gentle leafy-green tint. As decay rises, more noticeable
+   gold and coral flashes colour the background without obscuring the UI. */
 body::after { z-index: 0; }
+body.decay-calm::after {
+  opacity: .29;
+  background: radial-gradient(ellipse at 50% 45%,
+    rgba(105,170,119,.78) 0%,
+    rgba(105,170,119,.48) 55%,
+    rgba(105,170,119,.16) 94%);
+}
 body.decay-warning::after {
   background: radial-gradient(ellipse at 50% 45%,
-    rgba(240, 172, 39, .84) 0%,
-    rgba(240, 172, 39, .45) 54%,
-    rgba(240, 172, 39, .12) 88%);
+    rgba(234, 180, 102, .89) 0%,
+    rgba(234, 180, 102, .57) 54%,
+    rgba(234, 180, 102, .19) 94%);
 }
 body.decay-critical::after {
   background: radial-gradient(ellipse at 50% 45%,
-    rgba(238, 55, 39, .90) 0%,
-    rgba(238, 55, 39, .52) 55%,
-    rgba(238, 55, 39, .15) 90%);
+    rgba(214, 93, 113, .94) 0%,
+    rgba(214, 93, 113, .60) 55%,
+    rgba(214, 93, 113, .22) 94%);
 }
 @media (max-width: 850px) {
   .player-section {
@@ -99,5 +125,5 @@ body.decay-critical::after {
   .track-grid { grid-template-columns: minmax(0, 1fr); }
 }
 @media (prefers-reduced-motion: reduce) {
-  body.decay-warning::after, body.decay-critical::after { animation: none !important; opacity: 0; }
+  body.decay-warning::after, body.decay-critical::after { animation: none !important; opacity: .35; }
 }

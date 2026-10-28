@@ -264,11 +264,11 @@ function updateUI() {
   document.body.classList.toggle('decay-calm', state.overallDecay < 30);
   document.body.classList.toggle('decay-warning', state.overallDecay >= 30 && state.overallDecay < 70);
   document.body.classList.toggle('decay-critical', state.overallDecay >= 70);
-  const decayAccent = state.overallDecay >= 70 ? '#b94b42' : state.overallDecay >= 30 ? '#d7a72d' : '#7f9a63';
+  const decayAccent = state.overallDecay >= 70 ? '#d65d71' : state.overallDecay >= 30 ? '#eab466' : '#69aa77';
   document.body.style.setProperty('--decay-accent', decayAccent);
   state.waveformColour = decayAccent;
-  document.body.style.setProperty('--screen-flash-low', Math.max(0.01, state.overallDecay / 100 * 0.08).toFixed(3));
-  document.body.style.setProperty('--screen-flash-high', Math.min(0.85, 0.26 + state.overallDecay / 100 * 0.58).toFixed(3));
+  document.body.style.setProperty('--screen-flash-low', (0.14 + state.overallDecay / 100 * 0.18).toFixed(3));
+  document.body.style.setProperty('--screen-flash-high', Math.min(0.84, 0.52 + state.overallDecay / 100 * 0.30).toFixed(3));
   document.body.style.setProperty('--screen-flash-duration', (3.2 - state.overallDecay / 100 * 2.0).toFixed(2) + 's');
 
   els.systemStatus.textContent = state.demoMode
@@ -555,7 +555,7 @@ async function playUISound(name, volume) {
     }
     if (context.state !== 'running') return;
 
-    const defaultVolumes = { on: 0.62, off: 0.62, button: 0.62, error: 0.72, success: 0.85, explode: 0.9, plink: 0.05 };
+    const defaultVolumes = { on: 0.62, off: 0.62, button: 0.62, error: 0.72, success: 0.40, explode: 0.35, plink: 0.05 };
     const outputVolume = Number.isFinite(volume) ? volume : (defaultVolumes[name] ?? 0.62);
     const source = context.createBufferSource();
     const gain = context.createGain();
@@ -1118,7 +1118,7 @@ function renderDialogParticles(trackId, decay) {
         '--shake-x1:0px;--shake-y1:0px;--shake-x2:0px;--shake-y2:0px;' +
         '--shake-x3:0px;--shake-y3:0px;--shake-x4:0px;--shake-y4:0px;' +
         shakeVars +
-        'background:#7f9a63;color:#7f9a63"></span>';
+        'background:var(--green);color:var(--green)"></span>';
     }).join('');
     state.particleSignature = signature;
   }

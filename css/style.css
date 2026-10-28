@@ -7,9 +7,9 @@
   --cream:#e4d38c;
   --cream-dim:#8e8154;
   --line:#4d4122;
-  --green:#7f9a63;
-  --yellow:#d7a72d;
-  --red:#b94b42;
+  --green:#69aa77;
+  --yellow:#eab466;
+  --red:#d65d71;
   --muted:#6c6757
 }
 /* Base layout and background */
@@ -119,13 +119,13 @@ main {
   place-items:center;
   overflow:hidden;
   border:1px solid var(--line);
-  background:radial-gradient(circle at 50% 45%,rgba(215,167,45,.18),transparent 25%),repeating-linear-gradient(135deg,transparent 0 7px,rgba(228,211,140,.035) 8px 9px),#17120b;
+  background:radial-gradient(circle at 50% 45%,rgba(234,180,102,.18),transparent 25%),repeating-linear-gradient(135deg,transparent 0 7px,rgba(228,211,140,.035) 8px 9px),#17120b;
   box-shadow:inset 0 0 35px #000,0 0 28px rgba(0,0,0,.55)
 }
 .album-art:before,.album-art:after {
   content:'';
   position:absolute;
-  background:rgba(185,75,66,.55);
+  background:rgba(214,93,113,.55);
   filter:blur(5px)
 }
 .album-art:before {
@@ -290,12 +290,12 @@ h2 {
   pointer-events:none
 }
 .track-card.decaying {
-  border-color:rgba(215,167,45,.7);
-  box-shadow:0 0 25px rgba(215,167,45,.06)
+  border-color:rgba(234,180,102,.7);
+  box-shadow:0 0 25px rgba(234,180,102,.06)
 }
 .track-card.critical {
-  border-color:rgba(185,75,66,.85);
-  box-shadow:0 0 30px rgba(185,75,66,.12)
+  border-color:rgba(214,93,113,.85);
+  box-shadow:0 0 30px rgba(214,93,113,.12)
 }
 .track-visual {
   position:absolute;
@@ -799,10 +799,10 @@ h2 {
 
 /* Mini live audio signifiers inside each instrument card */
 .track-card.healthy {
-  border-color: rgba(127,154,99,.28);
+  border-color: rgba(105,170,119,.28);
 }
 .track-card.healthy .track-visual {
-  background: radial-gradient(circle at 50% 30%, rgba(127,154,99,.11), transparent 58%);
+  background: radial-gradient(circle at 50% 30%, rgba(105,170,119,.11), transparent 58%);
 }
 .track-visual::after {
   content: '';
@@ -877,7 +877,7 @@ h2 {
   flex: 1;
   background: var(--green);
   opacity: .85;
-  box-shadow: 0 0 7px rgba(127,154,99,.2);
+  box-shadow: 0 0 7px rgba(105,170,119,.2);
   transition: height .09s linear, background .25s ease;
 }
 .signal-reading {
@@ -898,11 +898,11 @@ body::after {
   opacity: 0;
 }
 body.decay-warning::after {
-  background: rgba(215,167,45,.22);
+  background: rgba(234,180,102,.22);
   animation: screenFlash var(--screen-flash-duration, 2.8s) ease-in-out infinite;
 }
 body.decay-critical::after {
-  background: rgba(185,43,37,.36);
+  background: rgba(214,93,113,.36);
   animation: screenFlash var(--screen-flash-duration, 1.6s) ease-in-out infinite;
 }
 @keyframes screenFlash {
@@ -1041,8 +1041,8 @@ main,
   transition: transform .2s ease, opacity .25s ease;
 }
 .track-card:hover .track-instrument-image { transform: translateY(-2px) scale(1.025); }
-.track-card.decaying .track-instrument-image { filter: drop-shadow(0 0 7px rgba(215,167,45,.22)); }
-.track-card.critical .track-instrument-image { filter: drop-shadow(0 0 9px rgba(185,75,66,.32)); }
+.track-card.decaying .track-instrument-image { filter: drop-shadow(0 0 7px rgba(234,180,102,.22)); }
+.track-card.critical .track-instrument-image { filter: drop-shadow(0 0 9px rgba(214,93,113,.32)); }
 .track-index { z-index: 3; }
 .track-signal {
   position: absolute;
@@ -1080,10 +1080,10 @@ main,
   overflow: hidden;
   isolation: isolate;
   border-right: 1px solid rgba(228,211,140,.12);
-  background: radial-gradient(circle at 50% 48%, rgba(127,154,99, calc(.035 + var(--instrument-decay, 0) * .12)), transparent 64%), linear-gradient(150deg, rgba(255,255,255,.025), transparent 65%);
+  background: radial-gradient(circle at 50% 48%, rgba(105,170,119, calc(.035 + var(--instrument-decay, 0) * .12)), transparent 64%), linear-gradient(150deg, rgba(255,255,255,.025), transparent 65%);
 }
-.dialog-art-stage.instrument-warning { background: radial-gradient(circle at 50% 50%, rgba(215,167,45,.1), transparent 68%); }
-.dialog-art-stage.instrument-critical { background: radial-gradient(circle at 50% 50%, rgba(185,75,66,.16), transparent 68%); }
+.dialog-art-stage.instrument-warning { background: radial-gradient(circle at 50% 50%, rgba(234,180,102,.1), transparent 68%); }
+.dialog-art-stage.instrument-critical { background: radial-gradient(circle at 50% 50%, rgba(214,93,113,.16), transparent 68%); }
 .dialog-instrument-image {
   position: relative;
   z-index: 1;
@@ -1173,8 +1173,8 @@ main,
   background: rgba(255,255,255,.015);
 }
 .fault-switch-row.fault-active {
-  border-color: rgba(215,167,45,.35);
-  background: rgba(215,167,45,.045);
+  border-color: rgba(234,180,102,.35);
+  background: rgba(234,180,102,.045);
 }
 .fault-switch-copy { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .fault-switch-name { color: var(--cream); font-size: .69rem; letter-spacing: .055em; }
@@ -1215,7 +1215,7 @@ main,
   box-shadow: 0 1px 4px #000;
   transition: transform .2s ease, background .2s ease;
 }
-.fault-switch.is-on .fault-switch-track { background: rgba(215,167,45,.28); border-color: var(--yellow); }
+.fault-switch.is-on .fault-switch-track { background: rgba(234,180,102,.28); border-color: var(--yellow); }
 .fault-switch.is-on .fault-switch-thumb { background: var(--yellow); transform: translateX(19px); }
 .fault-switch:disabled { cursor: default; opacity: .48; }
 .solo-button.solo-compact {
@@ -1233,7 +1233,7 @@ main,
 }
 .solo-button.solo-compact:hover,.solo-button.solo-compact.active {
   border-color: var(--decay-accent, var(--cream-dim));
-  background: rgba(127,154,99,.1);
+  background: rgba(105,170,119,.1);
 }
 .solo-indicator { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .65; }
 .solo-button.active .solo-indicator { opacity: 1; box-shadow: 0 0 8px currentColor; }
@@ -1257,7 +1257,7 @@ main,
 }
 .site-footer a.about-button:hover {
   border-color: var(--decay-accent, var(--cream-dim));
-  background: rgba(127,154,99,.1);
+  background: rgba(105,170,119,.1);
   color: var(--decay-accent, var(--cream));
   transform: translateY(-2px);
 }

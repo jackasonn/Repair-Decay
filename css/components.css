@@ -212,8 +212,8 @@
   background: radial-gradient(circle at 29% 23%, #c9c2ae 0, #918a76 31%, #5b5547 66%, #24221b 100%);
 }
 .fault-switch.is-on {
-  border-color: rgba(185,75,66,.43);
-  background: linear-gradient(145deg, rgba(185,75,66,.07), rgba(0,0,0,.22)), #100c0a;
+  border-color: rgba(214,93,113,.43);
+  background: linear-gradient(145deg, rgba(214,93,113,.07), rgba(0,0,0,.22)), #100c0a;
 }
 .fault-switch.is-on .fault-switch-housing {
   border-color: #77604d;
@@ -320,8 +320,8 @@
   width: auto;
   margin: 0 18px 18px;
   padding: 17px 18px 18px;
-  border-color: rgba(127,154,99,.35);
-  background: linear-gradient(145deg, rgba(127,154,99,.045), rgba(0,0,0,.12)), #0b0a07;
+  border-color: rgba(105,170,119,.35);
+  background: linear-gradient(145deg, rgba(105,170,119,.045), rgba(0,0,0,.12)), #0b0a07;
 }
 #rhythm-panel .panel-heading {
   align-items: center;
@@ -338,12 +338,12 @@
   min-height: 38px;
   padding: 9px 13px;
   border: 1px solid var(--green);
-  background: rgba(127,154,99,.08);
+  background: rgba(105,170,119,.08);
   color: var(--cream);
   cursor: pointer;
 }
 .rhythm-start-button:hover {
-  background: rgba(127,154,99,.17);
+  background: rgba(105,170,119,.17);
   border-color: var(--cream-dim);
 }
 .signal-lock-toast {
@@ -351,11 +351,11 @@
   z-index: 100;
   max-width: min(280px, calc(100vw - 24px));
   padding: 10px 12px;
-  border: 1px solid rgba(215,167,45,.7);
+  border: 1px solid rgba(234,180,102,.7);
   border-radius: 3px;
   background: rgba(14,12,8,.97);
   color: var(--cream);
-  box-shadow: 0 6px 22px rgba(0,0,0,.55), 0 0 16px rgba(215,167,45,.13);
+  box-shadow: 0 6px 22px rgba(0,0,0,.55), 0 0 16px rgba(234,180,102,.13);
   font-size: .66rem;
   line-height: 1.45;
   letter-spacing: .015em;
@@ -614,9 +614,9 @@
   gap: 9px;
   margin: 0;
   padding: 11px 17px;
-  border: 1px solid rgba(127,154,99,.58);
+  border: 1px solid rgba(105,170,119,.58);
   border-radius: 2px;
-  background: rgba(127,154,99,.09);
+  background: rgba(105,170,119,.09);
   color: var(--cream);
   font-size: .72rem;
   letter-spacing: .1em;
@@ -625,7 +625,7 @@
 .solo-button.solo-compact:hover,
 .solo-button.solo-compact.active {
   border-color: var(--decay-accent, var(--cream-dim));
-  background: rgba(127,154,99,.2);
+  background: rgba(105,170,119,.2);
 }
 
 /* Image-based song navigation */
@@ -665,7 +665,7 @@
   outline-offset: 3px;
 }
 .decay-panel.decay-panel-critical {
-  border-color: rgba(185,75,66,.55);
+  border-color: rgba(214,93,113,.55);
 }
 .decay-panel.decay-panel-critical .panel-code {
   color: var(--red);
@@ -674,13 +674,13 @@
 /* The system-level dialog shares the instrument dialog and mechanical switches. */
 .dialog-art-stage.system-decay-art-stage {
   padding: 28px;
-  background: radial-gradient(circle at 50% 45%, rgba(127,154,99,.13), transparent 66%), linear-gradient(150deg, rgba(255,255,255,.025), transparent 65%);
+  background: radial-gradient(circle at 50% 45%, rgba(105,170,119,.13), transparent 66%), linear-gradient(150deg, rgba(255,255,255,.025), transparent 65%);
 }
 .dialog-art-stage.system-decay-art-stage.system-decay-warning {
-  background: radial-gradient(circle at 50% 45%, rgba(215,167,45,.14), transparent 66%), linear-gradient(150deg, rgba(255,255,255,.025), transparent 65%);
+  background: radial-gradient(circle at 50% 45%, rgba(234,180,102,.14), transparent 66%), linear-gradient(150deg, rgba(255,255,255,.025), transparent 65%);
 }
 .dialog-art-stage.system-decay-art-stage.system-decay-critical {
-  background: radial-gradient(circle at 50% 45%, rgba(185,75,66,.22), transparent 66%), linear-gradient(150deg, rgba(255,255,255,.025), transparent 65%);
+  background: radial-gradient(circle at 50% 45%, rgba(214,93,113,.22), transparent 66%), linear-gradient(150deg, rgba(255,255,255,.025), transparent 65%);
 }
 .dialog-overall-art {
   position: relative;
@@ -708,15 +708,15 @@
   font-weight: 400;
   line-height: .72;
   letter-spacing: -.025em;
-  text-shadow: 0 0 20px rgba(127,154,99,.18);
+  text-shadow: 0 0 20px rgba(105,170,119,.18);
 }
 .dialog-overall-art.warning > strong {
   color: var(--yellow);
-  text-shadow: 0 0 24px rgba(215,167,45,.22);
+  text-shadow: 0 0 24px rgba(234,180,102,.22);
 }
 .dialog-overall-art.danger > strong {
   color: var(--red);
-  text-shadow: 0 0 26px rgba(185,75,66,.34);
+  text-shadow: 0 0 26px rgba(214,93,113,.34);
 }
 .dialog-overall-meter {
   width: 100%;

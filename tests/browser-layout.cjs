@@ -34,6 +34,22 @@ async function verify(browser, viewport){
   });
   await page.goto('http://127.0.0.1:8765/',{waitUntil:'load',timeout:45000});
   await page.evaluate(()=>document.fonts.ready);
+  const visual=await page.evaluate(()=>{
+    const logo=document.querySelector('.brand-lockup .wordmark').getBoundingClientRect();
+    const credit=document.querySelector('.album-credit').getBoundingClientRect();
+    const root=getComputedStyle(document.documentElement);
+    const body=getComputedStyle(document.body);
+    return {logoBottom:logo.bottom,creditTop:credit.top,
+      lockupDirection:getComputedStyle(document.querySelector('.brand-lockup')).flexDirection,
+      colors:['--green','--yellow','--red'].map(name=>root.getPropertyValue(name).trim()),
+      background:body.backgroundImage};
+  });
+  assert.equal(visual.lockupDirection,'column','Header credit must stack beneath logo');
+  assert.ok(visual.creditTop>=visual.logoBottom-2,'Header credit is still next to the logo');
+  assert.deepEqual(visual.colors,['#69aa77','#eab466','#d65d71'],
+    'UI state colours should match the chosen cover-art palette');
+  assert.ok(visual.background.includes('rgba(3, 3, 3, 0.84)'),
+    'Dark backdrop should allow slightly more image detail through');
   const rows=[];
   for(let song=0;song<4;song++){
     const row=await sample(page,song);
@@ -76,6 +92,18 @@ async function verify(browser, viewport){
   assert.equal(flash.z,'0','Flash overlay must stay behind controls');
   assert.ok(flash.background.includes('radial-gradient'),'Warning backdrop flash not found');
   assert.ok(flash.animation.includes('screenFlash'),'Warning flash not animated');
+  assert.ok(flash.background.includes('234, 180, 102'),'Yellow flash must use the cover-art gold');
+  const tints=await page.evaluate(()=>{
+    document.body.classList.remove('decay-warning','decay-critical');
+    document.body.classList.add('decay-calm');
+    const green=getComputedStyle(document.body,'::after').backgroundImage;
+    document.body.classList.remove('decay-calm');
+    document.body.classList.add('decay-critical');
+    const red=getComputedStyle(document.body,'::after').backgroundImage;
+    return {green,red};
+  });
+  assert.ok(tints.green.includes('105, 170, 119'),'Calm state needs a green backdrop tint');
+  assert.ok(tints.red.includes('214, 93, 113'),'Critical state needs a coral backdrop tint');
   await page.goto('http://127.0.0.1:8765/about.html',{waitUntil:'load'});
   assert.equal(await page.locator('.site-header').evaluate(el=>getComputedStyle(el).borderBottomWidth),'0px');
   assert.deepEqual(errors,[],'Uncaught browser JavaScript errors');
