@@ -5,7 +5,11 @@ const document={addEventListener(){},getElementById(id){
  if(!elements.has(id))elements.set(id,{textContent:'',innerHTML:'',hidden:false});return elements.get(id);
 }};
 let now=0;
-const c=vm.createContext({document,console,Math,Date,Set,Map,WeakMap,Float32Array,performance:{now:()=>now}});
+const pendingCompletionTimers = new Map();
+let nextCompletionTimer = 0;
+const c=vm.createContext({
+  setTimeout(callback,delay){const id=++nextCompletionTimer;pendingCompletionTimers.set(id,{callback,delay});return id;},
+  clearTimeout(id){pendingCompletionTimers.delete(id);},document,console,Math,Date,Set,Map,WeakMap,Float32Array,performance:{now:()=>now}});
 for (const file of ['js/app.js','js/repair/drums.js','js/repair/guitar.js','js/repair/keys.js','js/repair/vocals.js','js/repair/bass.js']) vm.runInContext(fs.readFileSync(file,'utf8'),c);
 const run=s=>vm.runInContext(s,c);
 run(`

@@ -16,7 +16,7 @@ for (const name of ['index.html', 'about.html']) {
   const html = fs.readFileSync(path.join(root, name), 'utf8');
   for (const m of html.matchAll(/\b(?:src|href)=["']([^"']+)["']/g)) check(m[1], name);
 }
-for (const styleFile of ['style.css','components.css','about.css','repair-details.css','typography.css','layout.css']) {
+for (const styleFile of ['style.css','components.css','about.css','repair-details.css','typography.css','layout.css','repair-complete.css']) {
   const css = fs.readFileSync(path.join(root,'css',styleFile),'utf8');
   for (const m of css.matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)/g)) check(m[1], 'css/'+styleFile, path.join(root,'css'));
 }

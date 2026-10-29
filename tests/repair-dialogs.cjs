@@ -1,7 +1,12 @@
 // Current event-based game completion paths; run from the repository root.
 const fs = require('node:fs'), vm = require('node:vm'), assert = require('node:assert/strict');
-const document = {addEventListener(){}, getElementById(){return {textContent:''};}};
-const c = vm.createContext({document, console, Date, Math, Set, Map, WeakMap, Float32Array, performance:{now:()=>100}});
+const elements = new Map();
+const document = {addEventListener(){},getElementById(id){if(!elements.has(id))elements.set(id,{textContent:'',hidden:true});return elements.get(id);}};
+const pendingCompletionTimers = new Map();
+let nextCompletionTimer = 0;
+const c=vm.createContext({
+  setTimeout(callback,delay){const id=++nextCompletionTimer;pendingCompletionTimers.set(id,{callback,delay});return id;},
+  clearTimeout(id){pendingCompletionTimers.delete(id);},document, console, Date, Math, Set, Map, WeakMap, Float32Array, performance:{now:()=>100}});
 for (const file of ['js/app.js','js/repair/drums.js','js/repair/guitar.js','js/repair/keys.js','js/repair/vocals.js','js/repair/bass.js']) vm.runInContext(fs.readFileSync(file,'utf8'), c);
 const run = code => vm.runInContext(code,c);
 run(`
@@ -40,23 +45,31 @@ for(let song=0;song<4;song++){
   assert.equal(run('els.dialog.open'),true,`${id} stays open during partial repair`);
   assert.equal(run(`trackState['${id}'].events.length`),1);
   run(`hit('${id}','delay')`);
-  const remainsOpen = ['drums', 'guitars', 'keys'].includes(id);
-  assert.equal(run('els.dialog.open'),remainsOpen,`${id} completion keeps visual feedback visible, song ${song}`);
+  assert.equal(run('els.dialog.open'),true,`${id} stays open for the green-tick animation, song ${song}`);
+  assert.equal(run('repairCompletion.trackId'),id,`${id} starts its own completion animation`);
+  assert.equal(elements.get('repair-complete-overlay').hidden,false,'green tick visible');
+  assert.equal(pendingCompletionTimers.size,1,'one auto-close timer per completion');
   assert.equal(run(`trackState['${id}'].events.length`),0);
   assert.equal(run(`trackState['${id}'].lowpass`),20000);
   assert.equal(run(`trackState['${id}'].delayDepth`),0);
-  assert.equal(run('state.soloTrack'),remainsOpen ? id : null);
+  assert.equal(run('state.soloTrack'),id,'solo stays in place during celebration');
   assert.equal(run('state.playing'),true);
-  if (remainsOpen) run('closeTrackDialog()');
-  assert.equal(run('els.dialog.open'),false,'manual close remains available');
+  const timer=[...pendingCompletionTimers.values()][0];
+  assert.equal(timer.delay,2000,'tick and title have two seconds to animate');
+  pendingCompletionTimers.clear();timer.callback();
+  assert.equal(run('els.dialog.open'),false,'dialog closes after completion animation');
+  assert.equal(elements.get('repair-complete-overlay').hidden,true,'overlay resets on close');
+  assert.equal(run('repairCompletion'),null,'completion timer is cleared');
   assert.equal(run('guitarRepair'),null);assert.equal(run('keysRepair'),null);
  }
 }
 // Track restoration must not close a different instrument's panel.
 run("setup(0,'vocals');trackState.bass.events=[{type:'lowpass'}];repairTrack('bass')");
 assert.equal(run('els.dialog.open'),true);
-run("repairTrack('vocals')");assert.equal(run('els.dialog.open'),true,'lyric mini-game stays open after its final event');
+run("repairTrack('vocals')");assert.equal(run('els.dialog.open'),true,'vocal game shows the green tick');
+assert.equal(run('repairCompletion.trackId'),'vocals');
 run('closeTrackDialog()');
+assert.equal(pendingCompletionTimers.size,0,'manual close cancels pending completion');
 // Global repair stays open while any other effect remains.
 run("setup(0,'bass');state.overallDialog=true;repairGlobalEventType('lowpass')");
 assert.equal(run('els.dialog.open'),true);
@@ -67,4 +80,4 @@ assert.equal(run("SONGS[2].tracks.some(t=>t.id==='vocals')"),true);
 assert.ok(run("songTrackStates[SONGS[2].id].vocals"));
 assert.equal(run('SONGS[2].tracks.length'),5);
 for(const song of [0,3])assert.equal(run(`SONGS[${song}].tracks.some(t=>t.id==='vocals')`),true);
-console.log('PASS: completed mini-games remain open for feedback; switch-based/global repairs, playback, session cleanup, vocal restoration and Rainy Night vocals');
+console.log('PASS: all mini-games show a timed completion tick and auto-close; switch-based/global repairs, playback, session cleanup, vocal restoration and Rainy Night vocals');

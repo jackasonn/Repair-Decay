@@ -2,7 +2,11 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
 function element(){return {textContent:'',dataset:{},disabled:false,attrs:{},setAttribute(k,v){this.attrs[k]=v;},toggleAttribute(k,v){if(v)this.attrs[k]='';else delete this.attrs[k];}};}
 const elements=new Map();
 const document={addEventListener(){},getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id);}};
-const c=vm.createContext({document,console,Date,Math,Set,Map,WeakMap,Float32Array,performance:{now:()=>c.now}});c.now=0;
+const pendingCompletionTimers = new Map();
+let nextCompletionTimer = 0;
+const c=vm.createContext({
+  setTimeout(callback,delay){const id=++nextCompletionTimer;pendingCompletionTimers.set(id,{callback,delay});return id;},
+  clearTimeout(id){pendingCompletionTimers.delete(id);},document,console,Date,Math,Set,Map,WeakMap,Float32Array,performance:{now:()=>c.now}});c.now=0;
 for (const file of ['js/app.js','js/repair/drums.js','js/repair/guitar.js','js/repair/keys.js','js/repair/vocals.js','js/repair/bass.js']) vm.runInContext(fs.readFileSync(file,'utf8'),c);
 const run=s=>vm.runInContext(s,c);
 run(`
