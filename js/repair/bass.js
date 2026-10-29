@@ -69,8 +69,8 @@ function updateBassRepair(now = performance.now()) {
     assigned.add(effect.id);
   }
   renderBassRepair(game, active.length);
-  // Let the final rotation and success label finish before automatically closing.
-  if (game.hadDecay && !active.length && game.slots.every(slot => slot.status === 'idle')) {
+  // Start the celebration immediately after the last peg-turn finishes.
+  if (game.hadDecay && !active.length && game.slots.every(slot => slot.status !== 'turning')) {
     closeRepairedDialog('bass');
   }
 }

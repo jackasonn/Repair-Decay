@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="css/repair-details.css?v=20261029-cover-art-palette">
     <link rel="stylesheet" href="css/typography.css?v=20261028-pixel-headings">
     <link rel="stylesheet" href="css/layout.css?v=20261029-centered-instruments">
+    <link rel="stylesheet" href="css/repair-complete.css?v=20261029-fully-repaired">
 </head>
 <body>
     <div class="scanlines" aria-hidden="true"></div>
@@ -184,16 +185,25 @@
                 </section>
             </div>
         </div>
+        <div class="repair-complete-overlay" id="repair-complete-overlay" role="status" aria-live="polite" aria-atomic="true" hidden>
+            <div class="repair-complete-content">
+                <svg class="repair-complete-tick" viewBox="0 0 144 144" role="img" aria-label="Repair successful">
+                    <circle class="repair-complete-ring" cx="72" cy="72" r="57"></circle>
+                    <path class="repair-complete-check" d="M 38 72 L 62 96 L 108 48"></path>
+                </svg>
+                <strong class="repair-complete-message">FULLY REPAIRED</strong>
+            </div>
+        </div>
         <div class="signal-lock-toast" id="repair-lock-toast" role="status" aria-live="polite" hidden>Click a glowing line or press Space as it reaches the centre to repair its decay event.</div>
     </dialog>
     <script src="js/lyrics/there-is-love.js?v=20261029-single-word-vocals"></script>
     <script src="js/lyrics/on-time.js?v=20261029-single-word-vocals"></script>
     <script src="js/audio/stem-loader.js?v=20261028-stem-loader"></script>
-    <script src="js/app.js?v=20261029-decay-15s"></script>
+    <script src="js/app.js?v=20261029-fully-repaired"></script>
     <script src="js/repair/drums.js?v=20261029-audible-warp"></script>
     <script src="js/repair/guitar.js?v=20261029-audible-warp"></script>
     <script src="js/repair/keys.js?v=20261029-audible-warp"></script>
-    <script src="js/repair/vocals.js?v=20261029-single-word-vocals"></script>
-    <script src="js/repair/bass.js?v=20261029-audible-warp"></script>
+    <script src="js/repair/vocals.js?v=20261029-fully-repaired"></script>
+    <script src="js/repair/bass.js?v=20261029-fully-repaired"></script>
 </body>
 </html>

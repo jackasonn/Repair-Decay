@@ -1002,6 +1002,8 @@ function applyEvent() {
     }
   }
   s.events.push(e);
+  // A new decay event interrupts a pending celebration on this instrument.
+  if (repairCompletion?.trackId === t.id) cancelRepairCompletion();
   if (!switchWasAlreadyOn) playSwitchSound('on');
   addLog(t.name+': '+et.name+(e.detail?' / '+e.detail:''),'event');
   updateUI();
@@ -1039,18 +1041,58 @@ function repairTrack(id) {
   if (state.selectedTrack === id) updateDialog();
   closeRepairedDialog(id);
 }
+// Shared two-second completion sequence for every instrument minigame.
+const FULLY_REPAIRED_DURATION_MS = 2000;
+let repairCompletion = null;
+function cancelRepairCompletion() {
+  if (repairCompletion) clearTimeout(repairCompletion.timer);
+  repairCompletion = null;
+  const overlay = document.getElementById('repair-complete-overlay');
+  if (overlay) overlay.hidden = true;
+}
+function showFullyRepaired(trackId) {
+  if (!els.dialog?.open || state.overallDialog || state.selectedTrack !== trackId ||
+      !trackState[trackId] || trackState[trackId].events.length) return;
+  if (repairCompletion?.trackId === trackId &&
+      repairCompletion.song === currentSongIndex &&
+      repairCompletion.generation === state.songGeneration) return;
+  cancelRepairCompletion();
+  const overlay = document.getElementById('repair-complete-overlay');
+  if (!overlay) return;
+  const completion = {trackId, song: currentSongIndex, generation: state.songGeneration, timer: null};
+  repairCompletion = completion;
+  overlay.hidden = false;
+  completion.timer = setTimeout(() => {
+    if (repairCompletion !== completion) return;
+    if (!els.dialog?.open || state.overallDialog ||
+        state.selectedTrack !== trackId || currentSongIndex !== completion.song ||
+        state.songGeneration !== completion.generation) {
+      cancelRepairCompletion();
+      return;
+    }
+    if (trackState[trackId]?.events.length) {
+      cancelRepairCompletion();
+      updateDialog();
+      return;
+    }
+    closeTrackDialog();
+  }, FULLY_REPAIRED_DURATION_MS);
+}
+
 function closeRepairedDialog(expectedTrack = null) {
   if (!els.dialog?.open) return;
   if (expectedTrack && (state.overallDialog || state.selectedTrack !== expectedTrack)) return;
   const selectedIsMiniGame = ['bass', 'drums', 'guitars', 'keys'].includes(state.selectedTrack) ||
     (state.selectedTrack === 'vocals' && vocalTypingAvailable());
-  if (expectedTrack && !state.overallDialog && selectedIsMiniGame) return;
   const repaired = state.overallDialog
     ? TRACKS.every(track => trackState[track.id].events.length === 0)
     : state.selectedTrack && trackState[state.selectedTrack]?.events.length === 0;
-  if (repaired) closeTrackDialog();
+  if (!repaired) return;
+  if (!state.overallDialog && selectedIsMiniGame) showFullyRepaired(state.selectedTrack);
+  else closeTrackDialog();
 }
 function openTrackDialog(id) {
+  cancelRepairCompletion();
   state.overallDialog = false;
   state.selectedTrack = id;
   updateDialog();
@@ -1063,6 +1105,7 @@ function openTrackDialog(id) {
   void playUISound('button');
 }
 function closeTrackDialog(fromUserAction = false) {
+  cancelRepairCompletion();
   bassRepair = null;
   guitarRepair = null;
   keysRepair = null;
@@ -1086,6 +1129,7 @@ function closeTrackDialog(fromUserAction = false) {
 }
 function openOverallDecayDialog() {
   if (els.dialog.open) return;
+  cancelRepairCompletion();
   state.overallDialog = true;
   state.selectedTrack = null;
   state.soloTrack = null;
@@ -1724,7 +1768,10 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   els.bassTuners.addEventListener('click', handleBassTuner);
   els.guitarTargets.addEventListener('click', handleGuitarTarget);
-  els.dialog.addEventListener('close', () => { bassRepair = null; guitarRepair = null; keysRepair = null; vocalRepair = null; });
+  els.dialog.addEventListener('close', () => {
+    cancelRepairCompletion();
+    bassRepair = null; guitarRepair = null; keysRepair = null; vocalRepair = null;
+  });
   els.vocalPlay.addEventListener('click', async () => {
     if (!currentVocalRepair()) return;
     await startPlayback(true);

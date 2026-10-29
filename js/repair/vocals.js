@@ -127,5 +127,6 @@ function handleVocalInput(event) {
     updateTrackAudioVisuals();
     updateDialog();
     updateVocalRepair();
+    closeRepairedDialog('vocals');
   }
 }
