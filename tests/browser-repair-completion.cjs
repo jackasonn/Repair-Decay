@@ -47,6 +47,8 @@ async function complete(page,track) {
     }
     if(trackState[id].events.length)throw Error('Final decay still active: '+id);
   },track);
+  // The tick scales in from a small size: measure it after the pop animation.
+  await page.waitForTimeout(700);
   const overlay=await page.evaluate(()=>{
     const o=document.getElementById('repair-complete-overlay');
     const tick=o.querySelector('.repair-complete-tick').getBoundingClientRect();
