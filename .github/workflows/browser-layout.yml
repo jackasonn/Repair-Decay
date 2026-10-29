@@ -8,6 +8,7 @@ on:
       - 'css/**'
       - 'js/**'
       - 'tests/browser-layout.cjs'
+      - 'tests/browser-repair-completion.cjs'
       - '.github/workflows/browser-layout.yml'
   workflow_dispatch:
 jobs:
