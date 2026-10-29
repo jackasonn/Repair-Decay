@@ -34,6 +34,7 @@ const context=vm.createContext({
   setTimeout(){return 1;},clearTimeout(){}
 });
 vm.runInContext(fs.readFileSync('js/app.js','utf8'),context);
+vm.runInContext(fs.readFileSync('js/repair/vocals.js','utf8'),context);
 const run=code=>vm.runInContext(code,context);
 run("updateUI=()=>{};updateDialog=()=>{};updateTrackAudioVisuals=()=>{};addLog=()=>{};playSwitchSound=()=>{};playRepairSuccess=()=>{};closeRepairedDialog=()=>{};scheduleNextEvent=()=>{};state.playing=true;state.pitchReady=true;state.audio=mockAudio;state.crackleBuffer={duration:2};");
 function mockChain(){
