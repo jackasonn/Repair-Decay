@@ -9,6 +9,7 @@ on:
       - 'js/**'
       - 'tests/browser-layout.cjs'
       - 'tests/browser-repair-completion.cjs'
+      - 'tests/browser-audio-repairs.cjs'
       - '.github/workflows/browser-layout.yml'
   workflow_dispatch:
 jobs:
@@ -34,3 +35,4 @@ jobs:
           node tests/browser-explode.cjs
           node tests/browser-warp.cjs
           node tests/browser-repair-completion.cjs
+          node tests/browser-audio-repairs.cjs
