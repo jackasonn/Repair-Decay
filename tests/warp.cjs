@@ -50,7 +50,8 @@ try{
   assert.ok(Math.abs(run('state.sources.keys.warpFlutterDepth.gain.value')-intensity*.22)<1e-7);
   assert.equal(source.playbackRate.value,1);
   run('applyEvent()');
-  assert.equal(run('trackState.keys.warpDepth'),180,'repeated WARP reaches ±180 cents');
+  assert.equal(run('trackState.keys.warpDepth'),intensity,'identical active WARP cannot stack again');
+  assert.equal(run("trackState.keys.events.filter(e=>e.type==='warp').length"),1,'only one WARP per stem');
   run('resetTrackEventEffect("keys","warp")');
   assert.equal(run('trackState.keys.warpDepth'),0);
   assert.equal(run('state.sources.keys.warpDepth.gain.value'),0);

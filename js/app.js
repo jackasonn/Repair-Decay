@@ -99,7 +99,7 @@ const state= {
   }
   ,offsets: {
   }
-  ,analyser:null,masterGain:null,loaded:false,loadedSongIndex:null,loading:false,loadingPromise:null,stemLoadController:null,stemLoadingGeneration:null,songGeneration:0,demoMode:false,noiseBuffer:null,pitchReady:false,waveformCtx:null,waveformData:null,waveformPixelWidth:0,waveformPixelHeight:0,waveformDrawAt:0,lastTrackVisualAt:0,lastClockTextAt:0,waveformColour:'#7f9a63',particlePulse:0,lastParticlePulseAt:0,repairLockToastTimer:null,decayTimer:null,switchSoundBuffers:{},switchSoundLoadPromise:null,switchSoundAssetsLoaded:false
+  ,analyser:null,masterGain:null,loaded:false,loadedSongIndex:null,loading:false,loadingPromise:null,stemLoadController:null,stemLoadingGeneration:null,songGeneration:0,demoMode:false,noiseBuffer:null,crackleBuffer:null,pitchReady:false,waveformCtx:null,waveformData:null,waveformPixelWidth:0,waveformPixelHeight:0,waveformDrawAt:0,lastTrackVisualAt:0,lastClockTextAt:0,waveformColour:'#7f9a63',particlePulse:0,lastParticlePulseAt:0,repairLockToastTimer:null,decayTimer:null,switchSoundBuffers:{},switchSoundLoadPromise:null,switchSoundAssetsLoaded:false
 }
 ;
 function createTrackState(tracks) {
@@ -356,7 +356,7 @@ function disposeTrackChain(chain, stopSource = true) {
       try { chain.source.stop(); } catch (_) {}
     }
   }
-  [chain.phaseLfo, chain.warp, chain.warpFlutter, chain.lfo].forEach(oscillator => {
+  [chain.phaseLfo, chain.warp, chain.warpFlutter, chain.lfo, chain.crackleSource].forEach(oscillator => {
     if (!oscillator) return;
     try { oscillator.stop(); } catch (_) {}
   });
@@ -365,6 +365,7 @@ function disposeTrackChain(chain, stopSource = true) {
     chain.artifactGain, chain.phase, chain.gain, chain.analyser,
     chain.lfo, chain.lfoDepth, chain.phaseLfo, chain.phaseDepth,
     chain.warp, chain.warpDepth, chain.warpFlutter, chain.warpFlutterDepth,
+    chain.crackleSource, chain.crackleGain,
     chain.delayOne, chain.delayTwo, chain.delayThree,
     chain.delayGainOne, chain.delayGainTwo, chain.delayGainThree
   ].forEach(node => {
@@ -414,10 +415,24 @@ async function initialiseAudio() {
   state.masterGain = master;
   state.analyser = analyser;
 
+  // A reusable, sparse, two-second vinyl-style crackle loop. Every active
+  // Crackle event keeps this playing until that particular stem is repaired.
   const noise = context.createBuffer(1, context.sampleRate, context.sampleRate);
   const samples = noise.getChannelData(0);
   for (let i = 0; i < samples.length; i++) samples[i] = Math.random() * 2 - 1;
   state.noiseBuffer = noise;
+  const crackleBuffer = context.createBuffer(1, context.sampleRate * 2, context.sampleRate);
+  const crackleSamples = crackleBuffer.getChannelData(0);
+  for (let pulse = 0; pulse < 32; pulse++) {
+    const at = Math.floor(Math.random() * (crackleSamples.length - 500));
+    const length = Math.floor(90 + Math.random() * 390);
+    const amplitude = 0.4 + Math.random() * 0.6;
+    for (let i = 0; i < length; i++) {
+      crackleSamples[at + i] += (Math.random() * 2 - 1) *
+        amplitude * Math.exp(-6 * i / length);
+    }
+  }
+  state.crackleBuffer = crackleBuffer;
 
   if (context.audioWorklet) {
     try {
@@ -773,10 +788,55 @@ function makeTrackChain(id, source) {
     source, highpass: hp, lowpass: lp, gain, artifactGain,
     phase, phaseLfo, phaseDepth, warp, warpDepth, warpFlutter, warpFlutterDepth,
     delayOne, delayTwo, delayThree, delayGainOne, delayGainTwo, delayGainThree,
-    crush, pitchShift, analyser,
+    crush, pitchShift, analyser, crackleSource: null, crackleGain: null,
     analyserData: new Uint8Array(analyser.frequencyBinCount)
   };
 }
+// Persistent track-specific vinyl crackle. Its source exists only while this
+// stem actually has a Crackle event, so repairing it removes the audible noise.
+function setCrackleEffect(chain, depth, when = state.audio?.currentTime || 0) {
+  if (!chain || !state.audio) return;
+  const amount = Math.max(0, Math.min(0.7, Number(depth) || 0));
+  if (!amount) {
+    if (!chain.crackleSource) return;
+    const source = chain.crackleSource;
+    const gain = chain.crackleGain;
+    chain.crackleSource = null;
+    chain.crackleGain = null;
+    if (gain) {
+      gain.gain.cancelScheduledValues(when);
+      gain.gain.setTargetAtTime(0, when, .012);
+    }
+    try { source.stop(when + .08); } catch (_) {}
+    return;
+  }
+  if (!chain.crackleSource) {
+    if (!state.crackleBuffer) return;
+    const source = state.audio.createBufferSource();
+    const gain = state.audio.createGain();
+    source.buffer = state.crackleBuffer;
+    source.loop = true;
+    gain.gain.value = 0;
+    source.connect(gain);
+    gain.connect(chain.artifactGain);
+    source.onended = () => {
+      try { source.disconnect(); } catch (_) {}
+      try { gain.disconnect(); } catch (_) {}
+    };
+    source.start(when);
+    chain.crackleSource = source;
+    chain.crackleGain = gain;
+  }
+  // Increasing severity makes the existing pops louder and more frequent.
+  chain.crackleSource.playbackRate.setTargetAtTime(0.55 + amount * 1.2, when, .05);
+  chain.crackleGain.gain.setTargetAtTime(.06 + amount * .34, when, .04);
+}
+function restoreAudioParam(param, neutral, now, tau = .025) {
+  if (!param) return;
+  if (typeof param.cancelScheduledValues === 'function') param.cancelScheduledValues(now);
+  param.setTargetAtTime(neutral, now, tau);
+}
+
 // Enable or clear the delay's three progressively quieter repeat taps.
 function setDelayEffect(chain, depth, when = state.audio.currentTime) {
   if (!chain) return;
@@ -789,7 +849,10 @@ function setDelayEffect(chain, depth, when = state.audio.currentTime) {
     [chain.delayGainThree, firstEcho * 0.3]
   ];
   levels.forEach(([node, level]) => {
-    if (node) node.gain.setTargetAtTime(level, when, 0.06);
+    if (node) {
+      if (!enabled && typeof node.gain.cancelScheduledValues === 'function') node.gain.cancelScheduledValues(when);
+      node.gain.setTargetAtTime(level, when, enabled ? .06 : .018);
+    }
   });
 }
 
@@ -818,6 +881,8 @@ function startSources() {
     source.buffer = buffer;
     const chain = makeTrackChain(track.id, source);
     state.sources[track.id] = chain;
+    // Restore any persistent Crackle only for stems still carrying that event.
+    setCrackleEffect(chain, trackState[track.id].crackleDepth, startAt);
 
     const pitchParam = chain.pitchShift && chain.pitchShift.parameters.get('pitchCents');
     if (pitchParam) pitchParam.setValueAtTime(trackState[track.id].detune, startAt);
@@ -927,8 +992,19 @@ function applyEvent() {
   const supportedEvents = state.pitchReady
     ? EVENT_TYPES
     : EVENT_TYPES.filter(event => event.id !== 'detune' && event.id !== 'warp');
-  const et = supportedEvents[Math.floor(Math.random() * supportedEvents.length)];
-  const eligibleTracks = et.id === 'warp' ? TRACKS.filter(track => track.id !== 'drums') : TRACKS;
+  // One active occurrence of each effect per stem. Previously, stacked copies
+  // could display an apparent Vocal repair while leaving the audio unchanged.
+  const candidatesFor = definition => TRACKS.filter(track =>
+    !(definition.id === 'warp' && track.id === 'drums') &&
+    !trackState[track.id].events.some(event => event.type === definition.id)
+  );
+  const eligibleTypes = supportedEvents.filter(definition => candidatesFor(definition).length);
+  if (!eligibleTypes.length) {
+    scheduleNextEvent(); // All available effects are already active.
+    return;
+  }
+  const et = eligibleTypes[Math.floor(Math.random() * eligibleTypes.length)];
+  const eligibleTracks = candidatesFor(et);
   const t = eligibleTracks[Math.floor(Math.random() * eligibleTracks.length)];
   const sev = Math.round(et.severity[0] + Math.random() * (et.severity[1] - et.severity[0]));
   const s=trackState[t.id],e= {
@@ -982,24 +1058,8 @@ function applyEvent() {
   }
   if(et.id==='crackle') {
     s.crackleDepth=Math.min(.7,s.crackleDepth+.12+Math.random()*.12);
-    e.detail='ARTEFACT RATE '+Math.round(s.crackleDepth*100)+'%';
-    if(d) {
-      const bursts=Math.max(1,Math.round(2+s.crackleDepth*7));
-      for(let i=0;
-      i<bursts;
-      i++) {
-        const n=state.audio.createBufferSource(),ng=state.audio.createGain(),now=state.audio.currentTime,when=now+.03+Math.random()*.8;
-        n.buffer=state.noiseBuffer;
-        ng.gain.setValueAtTime(0,when);
-        ng.gain.linearRampToValueAtTime(.04+.08*s.crackleDepth,when+.002);
-        ng.gain.exponentialRampToValueAtTime(.001,when+.015+Math.random()*.025);
-        n.connect(ng);
-        ng.connect(d.artifactGain);
-        n.onended = () => { try { n.disconnect(); } catch (_) {} try { ng.disconnect(); } catch (_) {} };
-        n.start(when);
-        n.stop(when + .05)
-      }
-    }
+    e.detail='ARTEFACT INTENSITY '+Math.round(s.crackleDepth*100)+'%';
+    if (d) setCrackleEffect(d, s.crackleDepth);
   }
   s.events.push(e);
   // A new decay event interrupts a pending celebration on this instrument.
@@ -1014,23 +1074,11 @@ function repairTrack(id) {
   const s = trackState[id];
   if (!s || !s.events.length) return;
   const eventCount = s.events.length;
-  const sharedPosition = currentMasterOffset();
-
+  const activeTypes = new Set(s.events.map(event => event.type));
   s.events = [];
-  s.detune = 0;
-  s.highpass = 20;
-  s.lowpass = 20000;
-  s.bitDepth = 16;
-  s.phaseDepth = 0;
-  s.warpDepth = 0;
-  s.delayDepth = 0;
-  s.crackleDepth = 0;
-
-  alignAllOffsets(sharedPosition);
-  if (state.playing) {
-    // Reset every Web Audio source at the same clock instant to avoid drift.
-    startSources();
-  }
+  // Restore the existing audio graph without restarting or re-aligning
+  // any music stems. This avoids an unnecessary playback interruption.
+  activeTypes.forEach(typeId => resetTrackEventEffect(id, typeId));
 
   playRepairSuccess();
   const track = TRACKS.find(item => item.id === id);
@@ -1231,16 +1279,16 @@ function resetTrackEventEffect(trackId, typeId) {
       s.detune = 0;
       if (chain && chain.pitchShift) {
         const pitchParam = chain.pitchShift.parameters.get('pitchCents');
-        if (pitchParam) pitchParam.setTargetAtTime(0, now, .12);
+        if (pitchParam) restoreAudioParam(pitchParam, 0, now);
       }
       break;
     case 'highpass':
       s.highpass = 20;
-      if (chain) chain.highpass.frequency.setTargetAtTime(20, now, .12);
+      if (chain) restoreAudioParam(chain.highpass.frequency, 20, now);
       break;
     case 'lowpass':
       s.lowpass = 20000;
-      if (chain) chain.lowpass.frequency.setTargetAtTime(20000, now, .12);
+      if (chain) restoreAudioParam(chain.lowpass.frequency, 20000, now);
       break;
     case 'bitcrush':
       s.bitDepth = 16;
@@ -1248,13 +1296,13 @@ function resetTrackEventEffect(trackId, typeId) {
       break;
     case 'phase':
       s.phaseDepth = 0;
-      if (chain) chain.phaseDepth.gain.setTargetAtTime(0, now, .12);
+      if (chain) restoreAudioParam(chain.phaseDepth.gain, 0, now);
       break;
     case 'warp':
       s.warpDepth = 0;
       if (chain) {
-        chain.warpDepth.gain.setTargetAtTime(0, now, .12);
-        chain.warpFlutterDepth.gain.setTargetAtTime(0, now, .12);
+        restoreAudioParam(chain.warpDepth.gain, 0, now);
+        restoreAudioParam(chain.warpFlutterDepth.gain, 0, now);
       }
       break;
     case 'delay':
@@ -1263,6 +1311,7 @@ function resetTrackEventEffect(trackId, typeId) {
       break;
     case 'crackle':
       s.crackleDepth = 0;
+      if (chain) setCrackleEffect(chain, 0, now);
       break;
   }
 }
@@ -1281,8 +1330,53 @@ function repairSingleTrackEvent(trackId, eventToRemove) {
   const eventIndex = s.events.indexOf(eventToRemove);
   if (eventIndex < 0) return null;
   s.events.splice(eventIndex, 1);
-  if (!s.events.some(event => event.type === eventToRemove.type)) {
+  const remainingCopies = s.events.filter(event => event.type === eventToRemove.type).length;
+  if (!remainingCopies) {
     resetTrackEventEffect(trackId, eventToRemove.type);
+  } else {
+    // Defensive migration path for old sessions containing duplicate types:
+    // an individual Vocal repair must audibly improve the sound even if
+    // another copy remains. New decay events never stack identical types.
+    const factor = remainingCopies / (remainingCopies + 1);
+    const chain = state.sources[trackId];
+    const now = state.audio?.currentTime || 0;
+    switch (eventToRemove.type) {
+      case 'detune':
+        s.detune *= factor;
+        if (chain?.pitchShift) restoreAudioParam(chain.pitchShift.parameters.get('pitchCents'), s.detune, now);
+        break;
+      case 'highpass':
+        s.highpass = 20 + (s.highpass - 20) * factor;
+        if (chain) restoreAudioParam(chain.highpass.frequency, s.highpass, now);
+        break;
+      case 'lowpass':
+        s.lowpass = 20000 + (s.lowpass - 20000) * factor;
+        if (chain) restoreAudioParam(chain.lowpass.frequency, s.lowpass, now);
+        break;
+      case 'bitcrush':
+        s.bitDepth = Math.min(16, s.bitDepth + Math.max(1, Math.round((16 - s.bitDepth) * (1-factor))));
+        if (chain) chain.crush.curve = makeBitCurve(s.bitDepth);
+        break;
+      case 'phase':
+        s.phaseDepth *= factor;
+        if (chain) restoreAudioParam(chain.phaseDepth.gain, s.phaseDepth, now);
+        break;
+      case 'warp':
+        s.warpDepth *= factor;
+        if (chain) {
+          restoreAudioParam(chain.warpDepth.gain, s.warpDepth, now);
+          restoreAudioParam(chain.warpFlutterDepth.gain, s.warpDepth * .22, now);
+        }
+        break;
+      case 'delay':
+        s.delayDepth *= factor;
+        if (chain) setDelayEffect(chain, s.delayDepth, now);
+        break;
+      case 'crackle':
+        s.crackleDepth *= factor;
+        if (chain) setCrackleEffect(chain, s.crackleDepth, now);
+        break;
+    }
   }
   return eventToRemove;
 }
