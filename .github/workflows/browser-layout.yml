@@ -32,3 +32,4 @@ jobs:
           node tests/browser-layout.cjs
           node tests/browser-explode.cjs
           node tests/browser-warp.cjs
+          node tests/browser-repair-completion.cjs
