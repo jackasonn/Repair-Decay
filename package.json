@@ -5,7 +5,7 @@
   "description": "Interactive music installation",
   "scripts": {
     "check": "node --check js/audio/stem-loader.js && node --check js/app.js && node --check js/repair/drums.js && node --check js/repair/guitar.js && node --check js/repair/keys.js && node --check js/repair/vocals.js && node --check js/repair/bass.js && node --check js/audio/pitch-shifter.js && node --check js/lyrics/on-time.js && node --check js/lyrics/there-is-love.js && node tools/verify-assets.cjs && node tools/verify-dom.cjs",
-    "test:repairs": "node tests/bass-repair.cjs && node tests/guitar-repair.cjs && node tests/keys-repair.cjs && node tests/repair-dialogs.cjs && node tests/repair-input.cjs && node tests/vocal-repair.cjs && node tests/stem-loader.cjs && node tests/warp.cjs && node tests/decay-pacing.cjs",
+    "test:repairs": "node tests/bass-repair.cjs && node tests/guitar-repair.cjs && node tests/keys-repair.cjs && node tests/repair-dialogs.cjs && node tests/repair-input.cjs && node tests/vocal-repair.cjs && node tests/stem-loader.cjs && node tests/warp.cjs && node tests/decay-pacing.cjs && node tests/decay-repair-matrix.cjs",
     "test": "npm run check && npm run test:repairs"
   }
 }
