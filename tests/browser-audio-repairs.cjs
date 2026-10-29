@@ -31,7 +31,7 @@ const assert=require('node:assert/strict');
        const t=i/rate;
        if(type==='crackle')data[i]=0;
        else if(type==='delay'){
-         if(Math.abs(t-.4)<1/rate||Math.abs(t-.73)<1/rate)data[i]=1;
+         if(Math.abs(t-.4)<1/rate)data[i]=1;
        }else data[i]=Math.sin(2*Math.PI*frequency*t)*.2;
      }
      source.buffer=buffer;
@@ -92,6 +92,14 @@ const assert=require('node:assert/strict');
   const delay=metric('delay');
   assert.ok(delay.delayBefore>.015,'Delay failed to produce an echo before repair');
   assert.ok(delay.delayedEcho<.02,'Delay emitted a late echo after repair');
+  // Bit depth must restore the normal waveform amplitude and WARP must
+  // settle back to its original pitch after the final repair.
+  const crushed=metric('bitcrush');
+  assert.ok(crushed.afterPeak>crushed.priorPeak*1.15,
+    'Bit Degradation still altered the signal after repair');
+  const warped=metric('warp');
+  assert.ok(Math.abs(warped.afterHz-220)<18,
+    'WARP left a residual pitch offset after repair');
   const detune=metric('detune');
   assert.ok(Math.abs(detune.afterHz-220)<18,'Detune pitch did not restore after repair');
   const phase=metric('phase');

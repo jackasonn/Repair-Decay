@@ -192,6 +192,72 @@ if(firstType){
     assert.equal(new Set(active).size,active.length,'Duplicate effects must not stack on '+id);
   }
 }
+// Interacting effects must remain independent until their own event is fixed.
+fresh(0);
+run("trackState.keys.events=[{type:'delay'},{type:'crackle'}];trackState.keys.delayDepth=.6;trackState.keys.crackleDepth=.45;setDelayEffect(state.sources.keys,.6);setCrackleEffect(state.sources.keys,.45)");
+assert.ok(context.mockChains.keys.crackleSource);
+run("repairTrackEventType('keys','delay')");
+assert.deepEqual(Array.from(events('keys')),['crackle']);
+assert.ok(context.mockChains.keys.crackleSource,'Repairing Delay may not stop unrelated Crackle');
+assert.equal(context.mockChains.keys.delayGainOne.gain.value,0);
+run("repairTrackEventType('keys','crackle')");
+assert.equal(context.mockChains.keys.crackleSource,null);
+assert.equal(events('keys').length,0);
+fresh(0);
+run("trackState.keys.events=[{type:'detune'},{type:'warp'}];trackState.keys.detune=90;trackState.keys.warpDepth=115");
+context.mockChains.keys.pitchShift.parameters.get('pitchCents').value=90;
+context.mockChains.keys.warpDepth.gain.value=115;
+context.mockChains.keys.warpFlutterDepth.gain.value=25.3;
+run("repairTrackEventType('keys','detune')");
+assert.deepEqual(Array.from(events('keys')),['warp']);
+assert.equal(context.mockChains.keys.pitchShift.parameters.get('pitchCents').value,0);
+assert.equal(context.mockChains.keys.warpDepth.gain.value,115,'Detune repair must preserve Warp modulation');
+run("repairTrackEventType('keys','warp')");
+assert.equal(context.mockChains.keys.warpDepth.gain.value,0);
+assert.equal(context.mockChains.keys.warpFlutterDepth.gain.value,0);
+fresh(0);
+run("trackState.keys.events=[{type:'highpass'},{type:'lowpass'}];trackState.keys.highpass=900;trackState.keys.lowpass=1200");
+context.mockChains.keys.highpass.frequency.value=900;
+context.mockChains.keys.lowpass.frequency.value=1200;
+run("repairTrackEventType('keys','highpass')");
+assert.deepEqual(Array.from(events('keys')),['lowpass']);
+assert.equal(context.mockChains.keys.highpass.frequency.value,20);
+assert.equal(context.mockChains.keys.lowpass.frequency.value,1200);
+run("repairTrackEventType('keys','lowpass')");
+assert.equal(context.mockChains.keys.lowpass.frequency.value,20000);
+fresh(0);
+run("trackState.keys.events=[{type:'bitcrush'},{type:'phase'}];trackState.keys.bitDepth=3;trackState.keys.phaseDepth=.5");
+context.mockChains.keys.phaseDepth.gain.value=.5;
+run("repairTrackEventType('keys','bitcrush')");
+assert.deepEqual(Array.from(events('keys')),['phase']);
+assert.equal(context.mockChains.keys.phaseDepth.gain.value,.5);
+run("repairTrackEventType('keys','phase')");
+assert.equal(context.mockChains.keys.phaseDepth.gain.value,0);
+// Global repair only removes the selected type; other types stay on their stems.
+fresh(0);
+run("TRACKS.forEach(t=>{trackState[t.id].events.push({type:'lowpass'});trackState[t.id].lowpass=1350;state.sources[t.id].lowpass.frequency.value=1350});trackState.bass.events.push({type:'phase'});trackState.bass.phaseDepth=.4;state.sources.bass.phaseDepth.gain.value=.4;state.overallDialog=true");
+run("repairGlobalEventType('lowpass')");
+for(const id of Array.from(run('TRACKS.map(t=>t.id)')))assert.equal(state(id,'lowpass'),20000);
+assert.deepEqual(Array.from(events('bass')),['phase']);
+assert.equal(context.mockChains.bass.phaseDepth.gain.value,.4);
+// Rainy Night has a Vocal stem but no lyric challenge; its switches must work.
+fresh(2);
+assert.equal(run('vocalTypingAvailable()'),false);
+assert.equal(run("TRACKS.some(t=>t.id==='vocals')"),true);
+run("state.selectedTrack='vocals';trackState.vocals.events=[{type:'lowpass'}];trackState.vocals.lowpass=1000;state.sources.vocals.lowpass.frequency.value=1000;repairEventType('lowpass')");
+assert.equal(events('vocals').length,0);
+assert.equal(context.mockChains.vocals.lowpass.frequency.value,20000);
+// Exercise repeated random draws: all active types stay unique on each track.
+fresh(0);
+for(let i=0;i<90;i++){
+  draws=[0,0,.5,.5,.5,.5];
+  run('applyEvent()');
+}
+for(const id of Array.from(run('TRACKS.map(t=>t.id)'))){
+  const active=Array.from(events(id));
+  assert.equal(new Set(active).size,active.length,'Random decay stacked the same type on '+id);
+}
+
 // In a saturated song, decay must not throw or fabricate an event.
 fresh(1);
 run('TRACKS.forEach(t=>trackState[t.id].events=EVENT_TYPES.filter(e=>e.id!=="warp"||t.id!=="drums").map(e=>({type:e.id,severity:10})))');
