@@ -1041,7 +1041,9 @@ function repairTrack(id) {
   if (state.selectedTrack === id) updateDialog();
   closeRepairedDialog(id);
 }
-// Shared two-second completion sequence for every instrument minigame.
+// Keep the final hit visible before the green completion celebration.
+// Drum effects last 720 ms; Guitar and Keys hit bursts last 760 ms.
+const REPAIR_EFFECT_PREVIEW_MS = 850;
 const FULLY_REPAIRED_DURATION_MS = 1300;
 let repairCompletion = null;
 function cancelRepairCompletion() {
@@ -1049,6 +1051,12 @@ function cancelRepairCompletion() {
   repairCompletion = null;
   const overlay = document.getElementById('repair-complete-overlay');
   if (overlay) overlay.hidden = true;
+}
+function repairCompletionIsCurrent(completion) {
+  return repairCompletion === completion && els.dialog?.open && !state.overallDialog &&
+    state.selectedTrack === completion.trackId && currentSongIndex === completion.song &&
+    state.songGeneration === completion.generation &&
+    !!trackState[completion.trackId] && trackState[completion.trackId].events.length === 0;
 }
 function showFullyRepaired(trackId) {
   if (!els.dialog?.open || state.overallDialog || state.selectedTrack !== trackId ||
@@ -1059,24 +1067,27 @@ function showFullyRepaired(trackId) {
   cancelRepairCompletion();
   const overlay = document.getElementById('repair-complete-overlay');
   if (!overlay) return;
-  const completion = {trackId, song: currentSongIndex, generation: state.songGeneration, timer: null};
+  const completion = {
+    trackId, song: currentSongIndex, generation: state.songGeneration,
+    phase: 'preview', timer: null
+  };
   repairCompletion = completion;
-  overlay.hidden = false;
+  // Do not cover the explosion/pop until its exit animation finishes.
   completion.timer = setTimeout(() => {
-    if (repairCompletion !== completion) return;
-    if (!els.dialog?.open || state.overallDialog ||
-        state.selectedTrack !== trackId || currentSongIndex !== completion.song ||
-        state.songGeneration !== completion.generation) {
-      cancelRepairCompletion();
+    if (!repairCompletionIsCurrent(completion)) {
+      if (repairCompletion === completion) cancelRepairCompletion();
       return;
     }
-    if (trackState[trackId]?.events.length) {
-      cancelRepairCompletion();
-      updateDialog();
-      return;
-    }
-    closeTrackDialog();
-  }, FULLY_REPAIRED_DURATION_MS);
+    completion.phase = 'celebrating';
+    overlay.hidden = false;
+    completion.timer = setTimeout(() => {
+      if (!repairCompletionIsCurrent(completion)) {
+        if (repairCompletion === completion) cancelRepairCompletion();
+        return;
+      }
+      closeTrackDialog();
+    }, FULLY_REPAIRED_DURATION_MS);
+  }, REPAIR_EFFECT_PREVIEW_MS);
 }
 
 function closeRepairedDialog(expectedTrack = null) {
