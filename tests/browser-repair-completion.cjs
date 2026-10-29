@@ -52,8 +52,15 @@ async function complete(page,track) {
   assert.equal(await page.locator('#repair-complete-overlay').evaluate(el=>el.hidden),true,
     track+' should leave the final burst visible before the green tick');
   assert.equal(await page.locator('#track-dialog').evaluate(el=>el.open),true);
-  // 850 ms burst preview, then 500 ms of tick animation.
-  await page.waitForTimeout(1050);
+  // Wait for the *actual* preview timer to fire. Headless CI can briefly
+  // delay timers when a game's Web Audio or layout work runs on the same tick.
+  assert.equal(await page.evaluate(()=>repairCompletion?.trackId),track,
+    track+' should schedule its final repair sequence');
+  await page.waitForFunction(() => {
+    const overlay=document.getElementById('repair-complete-overlay');
+    return overlay && !overlay.hidden && repairCompletion?.phase==='celebrating';
+  }, null, {timeout:3500});
+  await page.waitForTimeout(420);
   const overlay=await page.evaluate(()=>{
     const o=document.getElementById('repair-complete-overlay');
     const tick=o.querySelector('.repair-complete-tick').getBoundingClientRect();
