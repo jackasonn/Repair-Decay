@@ -557,7 +557,7 @@ async function playUISound(name, volume) {
     }
     if (context.state !== 'running') return;
 
-    const defaultVolumes = { on: 0.62, off: 0.62, button: 0.62, error: 0.72, success: 0.40, explode: 0.35, plink: 0.05 };
+    const defaultVolumes = { on: 0.62, off: 0.62, button: 0.62, error: 0.72, success: 0.25, explode: 0.22, plink: 0.05 };
     const outputVolume = Number.isFinite(volume) ? volume : (defaultVolumes[name] ?? 0.62);
     const source = context.createBufferSource();
     const gain = context.createGain();
@@ -1042,7 +1042,7 @@ function repairTrack(id) {
   closeRepairedDialog(id);
 }
 // Shared two-second completion sequence for every instrument minigame.
-const FULLY_REPAIRED_DURATION_MS = 2000;
+const FULLY_REPAIRED_DURATION_MS = 1300;
 let repairCompletion = null;
 function cancelRepairCompletion() {
   if (repairCompletion) clearTimeout(repairCompletion.timer);

@@ -48,7 +48,7 @@ async function complete(page,track) {
     if(trackState[id].events.length)throw Error('Final decay still active: '+id);
   },track);
   // The tick scales in from a small size: measure it after the pop animation.
-  await page.waitForTimeout(700);
+  await page.waitForTimeout(480);
   const overlay=await page.evaluate(()=>{
     const o=document.getElementById('repair-complete-overlay');
     const tick=o.querySelector('.repair-complete-tick').getBoundingClientRect();
@@ -70,7 +70,7 @@ async function complete(page,track) {
   assert.ok(Math.abs(overlay.width-overlay.popupWidth)<3,track+' overlay must cover its popup');
   assert.ok(Math.abs(overlay.height-overlay.popupHeight)<3,track+' overlay must fill popup height');
   assert.equal(await page.locator('#track-dialog').evaluate(el=>el.open),true);
-  await page.waitForTimeout(2150);
+  await page.waitForTimeout(1450);
   assert.equal(await page.locator('#track-dialog').evaluate(el=>el.open),false,
     track+' popup must automatically close after the animation');
   assert.equal(await page.locator('#repair-complete-overlay').evaluate(el=>el.hidden),true,
@@ -109,7 +109,7 @@ async function checkViewport(browser,viewport){
       trackState.keys.events=[{type:'highpass',severity:20}];
       openTrackDialog('keys');
     });
-    await page.waitForTimeout(2150);
+    await page.waitForTimeout(1450);
     assert.equal(await page.locator('#track-dialog').evaluate(el=>el.open),true,
       'Old completion timer must not close another game');
     await page.evaluate(()=>closeTrackDialog());
@@ -119,7 +119,7 @@ async function checkViewport(browser,viewport){
       repairTrackEventType('guitars','lowpass');closeRepairedDialog('guitars');
       trackState.guitars.events.push({type:'delay',severity:20});
     });
-    await page.waitForTimeout(2150);
+    await page.waitForTimeout(1450);
     assert.equal(await page.locator('#track-dialog').evaluate(el=>el.open),true,
       'New decay must prevent auto-close');
     assert.equal(await page.locator('#repair-complete-overlay').evaluate(el=>el.hidden),true,

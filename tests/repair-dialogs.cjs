@@ -55,7 +55,7 @@ for(let song=0;song<4;song++){
   assert.equal(run('state.soloTrack'),id,'solo stays in place during celebration');
   assert.equal(run('state.playing'),true);
   const timer=[...pendingCompletionTimers.values()][0];
-  assert.equal(timer.delay,2000,'tick and title have two seconds to animate');
+  assert.equal(timer.delay,1300,'tick and title animate before a quicker 1.3-second auto-close');
   pendingCompletionTimers.clear();timer.callback();
   assert.equal(run('els.dialog.open'),false,'dialog closes after completion animation');
   assert.equal(elements.get('repair-complete-overlay').hidden,true,'overlay resets on close');

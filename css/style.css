@@ -1238,8 +1238,9 @@ main,
 .solo-indicator { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .65; }
 .solo-button.active .solo-indicator { opacity: 1; box-shadow: 0 0 8px currentColor; }
 
-/* Make the footer About link look interactive rather than like plain text. */
-.site-footer a.about-button {
+/* Shared navigation button styling for the main page ABOUT link and About page RETURN link. */
+.site-footer a.about-button,
+.about-main a.about-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1255,12 +1256,14 @@ main,
   letter-spacing: .12em;
   transition: border-color .2s ease, background .2s ease, transform .2s ease, color .2s ease;
 }
-.site-footer a.about-button:hover {
+.site-footer a.about-button:hover,
+.about-main a.about-button:hover {
   border-color: var(--decay-accent, var(--cream-dim));
   background: rgba(105,170,119,.1);
   color: var(--decay-accent, var(--cream));
   transform: translateY(-2px);
 }
+.about-main a.about-button { margin-top: 40px; }
 .about-arrow { font-size: .9rem; }
 
 @media (max-width: 820px) {

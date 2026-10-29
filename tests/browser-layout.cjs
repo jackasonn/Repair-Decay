@@ -111,8 +111,21 @@ async function verify(browser, viewport){
   });
   assert.ok(tints.green.includes('105, 170, 119'),'Calm state needs a green backdrop tint');
   assert.ok(tints.red.includes('214, 93, 113'),'Critical state needs a coral backdrop tint');
+  const mainButtonStyle=await page.locator('.site-footer a.about-button').evaluate(el=>{
+    const s=getComputedStyle(el);
+    return {padding:s.padding,border:s.borderWidth,background:s.backgroundColor,color:s.color,
+      display:s.display,fontSize:s.fontSize,letterSpacing:s.letterSpacing};
+  });
   await page.goto('http://127.0.0.1:8765/about.html',{waitUntil:'load'});
   assert.equal(await page.locator('.site-header').evaluate(el=>getComputedStyle(el).borderBottomWidth),'0px');
+  const returnButton=page.locator('.about-main a.about-button');
+  const returnButtonStyle=await returnButton.evaluate(el=>{
+    const s=getComputedStyle(el);
+    return {padding:s.padding,border:s.borderWidth,background:s.backgroundColor,color:s.color,
+      display:s.display,fontSize:s.fontSize,letterSpacing:s.letterSpacing};
+  });
+  assert.deepEqual(returnButtonStyle,mainButtonStyle,'About RETURN button should match main ABOUT button');
+  assert.equal(await returnButton.getAttribute('href'),'index.html','RETURN button links to player');
   assert.deepEqual(errors,[],'Uncaught browser JavaScript errors');
   console.log('PASS browser '+viewport.width+'x'+viewport.height+': four songs, fixed layout, five dialogs, flash, About page');
   console.log('  cover='+rows[0].cover.width.toFixed(1)+'x'+rows[0].cover.height.toFixed(1)+', card='+rows[0].card.width.toFixed(1)+', cols='+rows[0].columns);

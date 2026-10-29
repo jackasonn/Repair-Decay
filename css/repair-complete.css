@@ -16,7 +16,7 @@
     rgba(2, 9, 6, .98) 100%);
   isolation: isolate;
   pointer-events: auto;
-  animation: repairCompleteBackdrop .35s ease-out both;
+  animation: repairCompleteBackdrop .2s ease-out both;
 }
 .repair-complete-overlay::before,
 .repair-complete-overlay::after {
@@ -27,10 +27,10 @@
   background: radial-gradient(circle, rgba(105, 230, 137, .23), transparent 57%);
   filter: blur(26px);
   pointer-events: none;
-  animation: repairCompleteHalo 1.85s ease-out both;
+  animation: repairCompleteHalo 1.1s ease-out both;
 }
 .repair-complete-overlay::after {
-  animation-delay: .17s;
+  animation-delay: .08s;
   opacity: .45;
   transform: scale(1.28);
 }
@@ -56,19 +56,19 @@
   stroke-width: 11;
   filter: drop-shadow(0 0 12px rgba(105, 236, 142, .78))
           drop-shadow(0 0 38px rgba(105, 221, 131, .55));
-  animation: repairCompletePop .55s cubic-bezier(.18, 1.7, .28, 1) both;
+  animation: repairCompletePop .36s cubic-bezier(.18, 1.7, .28, 1) both;
 }
 .repair-complete-ring {
   stroke: rgba(148, 246, 170, .84);
   stroke-width: 7;
   stroke-dasharray: 360;
   stroke-dashoffset: 360;
-  animation: repairCompleteDraw .68s ease-out .08s forwards;
+  animation: repairCompleteDraw .4s ease-out .04s forwards;
 }
 .repair-complete-check {
   stroke-dasharray: 110;
   stroke-dashoffset: 110;
-  animation: repairCompleteDraw .53s cubic-bezier(.26, .9, .2, 1) .54s forwards;
+  animation: repairCompleteDraw .35s cubic-bezier(.26, .9, .2, 1) .32s forwards;
 }
 .repair-complete-message {
   max-width: 100%;
@@ -80,7 +80,7 @@
   color: #b3ffc1;
   text-shadow: 0 0 12px rgba(132, 255, 163, .9),
                0 0 40px rgba(84, 227, 118, .65);
-  animation: repairCompleteWords .64s cubic-bezier(.18, 1.25, .26, 1) .77s both;
+  animation: repairCompleteWords .37s cubic-bezier(.18, 1.25, .26, 1) .46s both;
 }
 @keyframes repairCompleteBackdrop {
   from { opacity: 0; }
