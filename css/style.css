@@ -1263,7 +1263,12 @@ main,
   color: var(--decay-accent, var(--cream));
   transform: translateY(-2px);
 }
-.about-main a.about-button { margin-top: 40px; }
+.about-main a.about-button {
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 40px;
+}
 .about-arrow { font-size: .9rem; }
 
 @media (max-width: 820px) {
