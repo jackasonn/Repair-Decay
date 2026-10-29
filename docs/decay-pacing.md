@@ -1,7 +1,7 @@
 # Automatic decay pacing
 
-Decay events now occur at a randomized interval of **20–35 seconds** of active playback, rather than every **4–7 seconds**. This is approximately five times less frequent, leaving more time for listeners to notice and repair each change.
+Decay events occur at a random interval of **10–20 seconds**, averaging **15 seconds** between events during active playback (uniform distribution). This replaces the previous 20–35-second interval.
 
-The timer is independent of visual rendering, is cancelled on pause, and restarts on playback. Each event still selects one eligible stem and decay effect using the existing logic. Decay strength, repair interactions and song synchronization remain unchanged.
+The timer operates independently of visual rendering, cancels when music is paused, and starts a new interval when music resumes. Each event still affects one eligible stem and effect. Decay severity, minigames, repair interactions, and audio synchronization are unchanged.
 
-Source: `js/app.js`, `scheduleNextEvent`. Regression test: `tests/decay-pacing.cjs`.
+Source: `js/app.js` (`scheduleNextEvent`). Regression test: `tests/decay-pacing.cjs`.

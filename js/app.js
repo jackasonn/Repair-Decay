@@ -296,10 +296,10 @@ function addLog(message,type='event') {
   state.logs=state.logs.slice(0,12);
   els.maintenance.innerHTML=state.logs.map(l=>'<div class="log-entry '+l.type+'"><span class="time">'+l.time+'</span><span>'+l.message+'</span></div>').join('')
 }
-// A new decay event occurs every 20–35 seconds of active playback (previously 4–7).
+// Decay intervals are randomly 10–20 seconds (15-second average) while playing.
 // The scheduler stops during pause and restarts when playback resumes.
-const DECAY_INTERVAL_MIN_MS = 20000;
-const DECAY_INTERVAL_MAX_MS = 35000;
+const DECAY_INTERVAL_MIN_MS = 10000;
+const DECAY_INTERVAL_MAX_MS = 20000;
 function scheduleNextEvent() {
   if (state.decayTimer) clearTimeout(state.decayTimer);
   state.decayTimer = null;
